@@ -1,0 +1,180 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Header from '@components/layout/Header.astro';
+import HeroCanvas from '@components/sections/HeroCanvas.astro';
+import ServicesTeaser from '@components/sections/ServicesTeaser.astro';
+import AboutSection from '@components/sections/AboutSection.astro';
+import LabSection from '@components/sections/LabSection.astro';
+import StackSection from '@components/sections/StackSection.astro';
+import ContactSection from '@components/sections/ContactSection.astro';
+import FaqSection from '@components/sections/FaqSection.astro';
+import VKVLogo from '@components/ui/VKVLogo.svelte';
+import SynapseApp from '@components/ui/SynapseApp.svelte';
+import NeuralWaypoints from '@components/ui/NeuralWaypoints.svelte';
+import ConstellationNav from '@components/ui/ConstellationNav.svelte';
+import { supportedLangs } from '@i18n/utils';
+import { FAQ } from '@/data/faq';
+import { SERVICES, SITE_ORIGIN } from '@/data/services';
+import { serviceNode } from '@/lib/services-jsonld';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({
+    params: { lang },
+  }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+// FAQPage lives HERE and only here — on the one page that actually renders
+// these questions and answers. It used to sit in BaseLayout and therefore on
+// all 12 pages, none of which showed the text; the privacy policy was carrying
+// "Can I hire Valerii?" in its structured data. Built from the same FAQ array
+// the visible section maps over, so the two cannot drift apart.
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map((item) => ({
+    '@type': 'Question',
+    name: item.q[lang],
+    acceptedAnswer: { '@type': 'Answer', text: item.a[lang] },
+  })),
+};
+
+// OfferCatalog for the four rungs ServicesTeaser renders on this page — same
+// shape as /services/'s own catalog node. Every rung page emits its own
+// Service+Offer via rungJsonLd(); without this, the root document (the one an
+// answer engine is likeliest to retrieve for "who is VKVstudio") carried no
+// priced offer at all. `embedded: true` on each serviceNode because it nests
+// inside itemListElement — a repeated "@context" there would read as a second
+// root document instead of one graph.
+const offerCatalogJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'OfferCatalog',
+  name: lang === 'ru' ? 'Услуги VKVstudio' : 'VKVstudio Services',
+  url: `${SITE_ORIGIN}/${lang}/services/`,
+  itemListElement: SERVICES.map((rung, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: serviceNode(lang, rung, { embedded: true }),
+  })),
+};
+---
+
+<BaseLayout lang={lang} jsonLd={[faqJsonLd, offerCatalogJsonLd]}>
+  {
+    /* Hero poster preload — the FCP element on mobile, and until now the ONE
+       image on this page the preload scanner could not see. HeroCanvas.astro
+       deliberately keeps `#hero-poster` empty in the static markup and injects
+       the <picture> from its init script, so desktop never fetches these bytes;
+       the cost was that the request started only after that module had been
+       fetched, parsed and run (measured: 149 ms, priority Low — the CSS and
+       fonts the scanner DID see left at 15–20 ms). This link restores the early
+       discovery without giving the bytes back to desktop:
+
+       - `media` mirrors the init script's gate in HeroCanvas.astro:147–152
+         (mobile OR short+coarse OR reduced motion) CHARACTER FOR CHARACTER —
+         if that query ever changes, change it here in the same commit, or
+         desktop starts downloading a poster it will never display;
+       - `type="image/avif"` means browsers without AVIF ignore this line
+         entirely, and browsers with it pick the very same `<source>` from the
+         injected <picture>. That is the guard against this project's old bug
+         where a preload fetched a URL <picture> then declined to use. */
+  }
+  <link
+    slot="head"
+    rel="preload"
+    as="image"
+    href="/hero-poster.avif"
+    type="image/avif"
+    fetchpriority="high"
+    media="(max-width: 767px), ((max-height: 767px) and (pointer: coarse)), (prefers-reduced-motion: reduce)"
+  />
+
+  {
+    /*
+    Phase 1.7 Navigation Revolution:
+    - Header: only MenuPill (three dots) — dispatches vkv:constellation-toggle event
+    - ConstellationNav: fullscreen overlay, self-contained (listens to window event)
+    - VKVLogo: scroll journey (hero → fade → career arc → fixed pill)
+    - SynapseBrain: bottom-right video scrub (brain → synapse morph)
+    - NeuralWaypoints: right-side vertical navigation dots
+  */
+  }
+  <Header lang={lang} />
+
+  {/* ConstellationNav — fullscreen overlay triggered by MenuPill */}
+  <ConstellationNav lang={lang} client:idle />
+
+  {/* VKV Logo — manages its own fixed/absolute positioning */}
+  <VKVLogo lang={lang} client:idle />
+
+  <main id="main-content">
+    <HeroCanvas lang={lang} />
+    <ServicesTeaser lang={lang} />
+    <AboutSection lang={lang} />
+    <LabSection lang={lang} />
+    <StackSection lang={lang} />
+    <FaqSection lang={lang} />
+    <ContactSection lang={lang} />
+  </main>
+
+  {/* Neural Waypoints — right-side vertical navigation (hidden on mobile) */}
+  <NeuralWaypoints lang={lang} client:visible />
+
+  {/* Synapse App — brain trigger + terminal overlay */}
+  <SynapseApp client:idle lang={lang} />
+</BaseLayout>
+
+<script>
+  // Dynamic import so a failed chunk fetch (flaky mobile network) degrades to
+  // "content visible, no animation" instead of "sections invisible forever":
+  // About/Lab/Stack/Contact all start at opacity:0 and only the animation
+  // module reveals them. The rescue selector list mirrors disableAnimations()
+  // in section-animations.ts — keep the two in sync (it can't be imported
+  // here: the whole point is that the import may have failed).
+  async function startSectionAnimations() {
+    try {
+      const { initSectionAnimations } = await import('@scripts/section-animations');
+      initSectionAnimations();
+    } catch (err) {
+      console.error('[index] section-animations chunk failed to load:', err);
+      document
+        .querySelectorAll<HTMLElement>(
+          '.js-about-reveal, .js-timeline-item, .js-timeline-dot, .js-timeline-card, .js-timeline-line, .js-lab-header, .js-lab-card, .lab__card-visual, .lab__card-content, .lab__card-cta, .js-stack-header, .js-stack-card, .js-stack-glass, .js-contact-reveal'
+        )
+        .forEach((el) => {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+          el.style.filter = 'none';
+        });
+    }
+  }
+
+  // Start AFTER the first paint, not on DOMContentLoaded.
+  //
+  // Why: initSectionAnimations() pulls in gsap + ScrollTrigger (45 KB over the
+  // wire) and builds a dozen triggers, each of which measures its element with
+  // getBoundingClientRect(). Every one of those measurements is about
+  // About/Lab/Stack/Contact — sections that are below the fold on every device
+  // and cannot appear in the first frame. On DOMContentLoaded (measured at
+  // 143 ms, first paint at 273 ms) all of it landed BEFORE the first pixel.
+  //
+  // Two racing starters, first one wins:
+  //   - double rAF fires immediately after the browser has painted a frame;
+  //   - the timeout is the safety net, because rAF is suspended in a background
+  //     tab and these sections start at opacity:0 — without it, a link opened in
+  //     a background tab could sit on invisible content.
+  // NOT a removal: without this module the sections never become visible, which
+  // is exactly what the catch-branch above exists for.
+  let sectionAnimationsStarted = false;
+  function startOnce(): void {
+    if (sectionAnimationsStarted) return;
+    sectionAnimationsStarted = true;
+    void startSectionAnimations();
+  }
+
+  requestAnimationFrame(() => requestAnimationFrame(startOnce));
+  setTimeout(startOnce, 1000);
+</script>

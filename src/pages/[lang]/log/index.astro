@@ -1,0 +1,1586 @@
+---
+import { getImage } from 'astro:assets';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import InnerHeader from '../../../components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import { t } from '../../../i18n/utils';
+import type { Lang } from '../../../i18n/utils';
+import LogTerminal from '../../../components/log/LogTerminal.svelte';
+import heroArt from '@/assets/log/log-hero.png';
+
+export function getStaticPaths() {
+  return [{ params: { lang: 'en' } }, { params: { lang: 'ru' } }];
+}
+
+const { lang } = Astro.params;
+const activeLang = (lang as Lang) || 'en';
+
+interface LogTool {
+  name: string;
+  desc: string;
+}
+
+interface LogEntry {
+  n: string;
+  slug: string;
+  date: string;
+  title: string;
+  lead: string;
+  options?: string[];
+  choice?: string[];
+  why?: string[];
+  result?: string[];
+  tools?: LogTool[];
+  body?: string[];
+}
+
+interface LogContent {
+  bootLines: string[];
+  intro: string[];
+  entries: LogEntry[];
+  outro: string[];
+}
+
+const content: Record<Lang, LogContent> = {
+  en: {
+    bootLines: [
+      '> boot build.log',
+      '> loading decisions ... 26',
+      '> stack: antigravity · gemma 4 · google cloud ai',
+      '> valerii :: still here',
+    ],
+    intro: [
+      'I keep this log mostly for myself. It is the reasoning behind how I built this thing, decision by decision, so future me remembers why I did what I did.',
+      'Fast version of who I am: about twenty years of making things that have to actually work. Product photography first, then marketing at factories, then websites, and now this, AI. Different jobs, same itch. I look at a system and want to know where it will break.',
+      'It is written the way I actually think, out loud, working through the calls I had to make, the ones I got right and the couple I did not at first. I kept it honest instead of tidy. If it is useful to someone else, even better.',
+      "One thing I am quietly glad about: it all came together inside Google's tools. I wrote it in Antigravity, their agentic IDE, with strong models built in, Claude among them. The pictures went through Gemini and Nano Banana. The product itself runs on Gemma 4, and it speaks through Google Cloud's Chirp 3, which went live this month. I did not set out to make that a theme. Every time I reached for the best tool for a piece, it happened to come from the same place, and after a while I stopped being surprised by it.",
+    ],
+    entries: [
+      {
+        n: '01',
+        slug: 'why-astro',
+        date: '2026-02-14',
+        title: 'Why Astro (and why islands)',
+        lead: 'I wanted the site to feel instant and still carry some heavy AI tools. Those two things usually fight.',
+        options: [
+          'Three ways to go. A single-page app that dumps a big pile of JavaScript on you up front. A plain static generator, fast but awkward the second you need something interactive. Or Astro, which gives you static HTML by default and lets you add interactive bits only where you actually need them.',
+        ],
+        choice: ['Astro. Static. On Cloudflare Pages.'],
+        why: [
+          'Most of this site is just words on a page. It has no business loading a whole framework to show you a paragraph. So Astro ships zero JavaScript by default, and I switch it on one island at a time: the tokenizer, the prompt tool, this terminal. Each one wakes up on its own, when you scroll to it or when the browser has a spare second.',
+          'The part I like most is quieter. The site does not need the AI backend to build. If the server is down, the assistant just falls back to a mock and everything still ships. No single piece can take the whole thing down with it, and honestly I cannot stop myself from building that way.',
+        ],
+        result: [
+          'Fast pages that stay light, with the heavy stuff loaded lazily and only where someone actually asks for it.',
+        ],
+      },
+      {
+        n: '02',
+        slug: 'why-svelte',
+        date: '2026-02-19',
+        title: 'Why Svelte 5 for the islands',
+        lead: 'Once I decided on islands, I had to pick what to build them with.',
+        options: ['React or Vue islands, plain hand-written code, or Svelte 5 with its new runes.'],
+        choice: ['Svelte 5. Runes, no stores.'],
+        why: [
+          'Svelte more or less compiles itself away. What actually ships is close to the code you would have written by hand, so each island stays tiny, which matters when you have four or five of them. The runes ($state, $derived, $effect) give me the reactivity without hauling in a virtual DOM.',
+          'One trap I respect now: never read and write the same piece of state inside one effect. y++ reads y and writes it in the same move, and boom, infinite loop. I found that out the annoying way on the tokenizer. It is a rule for me now.',
+        ],
+        result: [
+          'The tokenizer, the prompt tool, the embedding explorer, this terminal, all separate little islands. None of them knows about the others or slows them down.',
+        ],
+      },
+      {
+        n: '03',
+        slug: 'why-vanilla-css',
+        date: '2026-02-22',
+        title: 'Why plain CSS, no Tailwind',
+        lead: 'On a site whose whole point is craft, I was not going to phone in the styling.',
+        options: [
+          'A utility framework like Tailwind, some flavor of CSS-in-JS, or plain CSS on design tokens.',
+        ],
+        choice: ['Plain CSS and around eighty custom properties. No styling framework.'],
+        why: [
+          'I want to know every byte that ships, and I treat Lighthouse 100 as the floor, not a prize. Tokens give me one place to change color, spacing, type, motion, so the whole site speaks one language and nothing is hardcoded. Components point at tokens, never raw values. And I keep the word important out of the CSS, full stop.',
+          'The look has a name in my head, obsidian and neon. Dark graphite base, a green accent, a deep blue as the second voice. It stays consistent because it lives in a few variables instead of a hundred scattered decisions.',
+        ],
+        result: [
+          'A small CSS budget, one coherent system, and a site I can re-skin by touching tokens instead of digging through files. The whole thing still scores 99 on desktop and 100 for accessibility and SEO; mobile sits at 81, and the hero video is why.',
+        ],
+      },
+      {
+        n: '04',
+        slug: 'why-gsap-lenis',
+        date: '2026-03-03',
+        title: 'Why GSAP and Lenis for motion',
+        lead: 'The motion here is supposed to feel like a living thing, not a slideshow.',
+        options: [
+          'Lean entirely on native CSS scroll animation, or bring in JavaScript libraries.',
+        ],
+        choice: [
+          'Both, in layers. Native CSS for the simple reveals, GSAP with ScrollTrigger for timelines, pinning and video scrubbing, Lenis for the smooth scroll underneath. All of it behind prefers-reduced-motion.',
+        ],
+        why: [
+          'Native CSS scroll animation is great and cheap for a fade or a bit of parallax, so I use it where it fits. But the hero, where a video is scrubbed frame by frame as you scroll, and the brain that melts into the word Synapse, need real timelines and tight control. That is GSAP. Lenis just ties the scroll together so everything moves on one clock.',
+        ],
+        result: [
+          'The parts people remember: a hero you scrub by scrolling, a brain that turns into the assistant, and navigation built as a little neural constellation instead of a menu. And it all steps aside if you ask for less motion.',
+        ],
+      },
+      {
+        n: '05',
+        slug: 'why-gemma-qlora',
+        date: '2026-03-07',
+        title: 'Why a local Gemma 4, trained with QLoRA',
+        lead: 'The assistant, Synapse, is the heart of all this. Where it runs decided a lot.',
+        options: [
+          'Rent a hosted API and prompt it into a character, or run my own model and actually teach it who it is.',
+        ],
+        choice: [
+          "Google's Gemma 4: the small E2B for quick chat, the bigger multimodal E4B for the heavier stuff, trained with QLoRA on my own GPU.",
+        ],
+        why: [
+          'Small models on your own hardware, squeezed down with quantization, is the part of this field I am most into right now. Running it myself means real control, and the data never leaves my machine for a third party. QLoRA is the trick that makes it doable: you get most of the quality of a full fine-tune for a fraction of the cost and memory, so a single 12 GB GPU is enough.',
+          'This is not a cloud giving me free advice. It is a training run I own end to end, from the dataset to the quantized weights I ship. Owning the whole loop is the only way I actually trust what comes out of it.',
+        ],
+        result: [
+          'A quantized Q8 model I serve myself, about 4.6 GB, trained on roughly 2,900 hand-built examples. A voice and a bit of backbone a generic hosted endpoint just does not have out of the box.',
+        ],
+      },
+      {
+        n: '06',
+        slug: 'lora-behavior-rag-facts',
+        date: '2026-03-20',
+        title: 'LoRA for behavior, RAG for facts',
+        lead: 'I did not plan this one. The training runs taught it to me.',
+        options: [
+          'Cram everything, personality and current facts alike, into the fine-tune. Or split the job in two.',
+        ],
+        choice: ['LoRA shapes how it behaves. Retrieval feeds it facts. Two tools, two problems.'],
+        why: [
+          'A small model picks up a voice beautifully. Give it a few thousand good examples and it learns tone, limits, safety, and the honest habit of saying it does not know. What it will not hold reliably is fresh facts: which model dropped last week, how big a context window is now, what things cost. Bake those into the weights and they rot, and then a confident model just makes them up.',
+          "So I teach it to say 'not sure, check the source' and let a retrieval layer pull the current facts and hand them over at answer time, ranked by how relevant they are. Behavior in the weights, facts in an index I can refresh. Once you see it that way you cannot unsee it, and it is the same shape every serious system seems to be quietly moving toward.",
+        ],
+        result: [
+          'An assistant that stays in character and stays honest, where I can refresh what it knows by updating an index instead of retraining anything. On a 112-prompt test battery the small model turned away all 23 social-engineering attempts, which is how I knew the honesty part had actually stuck.',
+        ],
+      },
+      {
+        n: '07',
+        slug: 'bigger-model-worse',
+        date: '2026-03-25',
+        title: 'When the bigger model came out worse than the small one',
+        lead: 'This is the entry I was least proud of in the moment and am most glad about now. The small model beat the big one, and I had to find out why.',
+        body: [
+          'I trained two sizes on the same data: the small E2B and the bigger, multimodal E4B. Common sense says the big one wins. It did not. On the same 112-prompt battery the small model was clearly better: it held the line on the safety probes, kept its facts straighter, and stayed in character. The big one rambled, invented more, and now and then leaked its own prompt.',
+          "So I dug. It turned out to be two separate problems tangled together. One was a serving bug: the exported model carried the wrong end-of-turn token, so on long answers it never knew where to stop and spiralled. The small model happened to shrug that off; the big one did not. The other was real: the same amount of training that shaped a 2B model was simply too little to reshape an 8B. I had set the LoRA rank too low for the bigger model, so the persona never fully took, and the base model's generic habits showed through. The made-up-fact rate said it plainly: around 20% on the small model, 50% on the big one.",
+          'The fix was unglamorous. Set the stop token correctly, re-export, retrain the big one with more capacity. I am writing it down because this is the honest shape of the work: the interesting part is never picking the tool, it is catching the moment the obvious choice quietly failed and working out exactly why.',
+          'One more thing from that stretch. The machine I train on is not stable, a run would segfault or freeze dozens of times a night. So the training sat under a small supervisor that watched for a crash or a frozen log, killed the stuck process, and started it again from the last checkpoint until it finished. The model got trained because the thing training it could pick itself back up. I keep coming back to that.',
+        ],
+      },
+      {
+        n: '08',
+        slug: 'native-audio-chirp',
+        date: '2026-04-01',
+        title: 'Native audio in, Chirp 3 out',
+        lead: 'Voice is where the multimodal model finally earned its spot in the stack.',
+        options: [
+          'Bolt a separate speech-to-text engine onto the pipeline, or use the ears the model already has.',
+        ],
+        choice: [
+          'Let Gemma listen with its own native audio, and send the voice back out through Google Chirp 3 on Google Cloud AI.',
+        ],
+        why: [
+          'The bigger E4B already handles text, images and audio in the same weights, so the audio encoder is right there. Using it drops a whole component from the stack and leans all the way into the model I already picked. On clean speech it holds up fine, with a simple thirty-seconds-a-chunk rule to keep the input in range.',
+          'Talking back is a different job by nature. A language model makes text, not sound, so the voice out is always its own step. Chirp 3 does that half. Ears folded into the model, mouth handed to a dedicated Google service.',
+        ],
+        result: [
+          'One less moving part, a cleaner story, and a voice loop that stays inside the Google ecosystem the whole way from my desk to production. Both halves have landed now, five days apart. Voice-out went live on Chirp 3 on 13 August, once the credentials were on the box. Voice-in took until the 15th, and not by the route written above: folding it into the multimodal E4B did not survive contact with which model is actually being served, so speech recognition went to Google Cloud Speech-to-Text instead. Ears bought rather than folded in. The plan here was half right, and the half that was wrong is the half I was most pleased with.',
+        ],
+      },
+      {
+        n: '09',
+        slug: 'the-three-lab-tools',
+        date: '2026-04-04',
+        title: 'What the three Lab tools are actually for',
+        lead: 'The Lab is not a feature list. Each tool answers a question an engineer really has.',
+        tools: [
+          {
+            name: 'Tokenizer Profiler',
+            desc: 'How a model sees your text. It breaks the input into tokens, heat-maps their lengths, and puts vendors side by side, so you can watch why the same Russian sentence costs more than its English twin. Three engines under the hood: tiktoken in the browser, local vocab files for the open models, and an exact count through the backend for the closed ones.',
+          },
+          {
+            name: 'Prompt Architect',
+            desc: 'Prompts built from role blocks, with the token budget and the dollar cost updating live across a dozen models while you type, plus a meta-generator that drafts a prompt through the Gemma backend. It is really about discipline: seeing the context and the cost before you spend them.',
+          },
+          {
+            name: 'Embedding Space Explorer',
+            desc: 'Embeddings computed on a self-hosted inference server, dropped into a 3D cloud you can fly through, with live semantic search, chunking and hybrid reranking on top. It is the RAG idea made visible: the same machinery that feeds the assistant its facts, laid out so you can watch it work.',
+          },
+        ],
+      },
+      {
+        n: '10',
+        slug: 'why-a-nervous-system',
+        date: '2026-04-15',
+        title: 'Why it looks like a nervous system',
+        lead: 'All the neural stuff here is on purpose, and the reason is not one I usually say out loud.',
+        body: [
+          'A synapse is the little gap where one neuron hands its signal to the next, the spot where a nervous system connects or it does not. I called the assistant Synapse and grew the navigation as a web of nodes because, well, I think in nervous systems. I have my reasons for that.',
+          'I have multiple sclerosis. Most engineers treat autonomy and fault tolerance as good practice, a box to tick. For me it is the whole point. I build software the way I need everything around me to run: connected, self-healing, still standing on the days its maker is not. That is not a weakness I work around. It is the sharpest instinct I have.',
+          'Even the way I trained the model ran on that rule. The machine kept falling over, and the run kept getting itself back up from the last checkpoint until it was done. I did not plan the rhyme, I just noticed it later, and it stuck.',
+          "It is also why this is not a hobby. Automating the routine, mine and other people's, is how I give the scarce thing back to where it belongs, attention, for the people who need it first and me second. I do not really know how to say that without it sounding like more than it is, so I will just leave it here and get back to the work.",
+        ],
+      },
+      {
+        n: '11',
+        slug: 'retrain-didnt-fix-facts',
+        date: '2026-04-21',
+        title: 'The retrain that did not fix the lying',
+        lead: 'Two entries up I said the fix for the big model was more capacity and a corrected stop token. I ran that experiment. Half of it worked. The half I cared about did not.',
+        body: [
+          'I retrained both sizes on a bigger, cleaner dataset, close to five thousand hand-checked examples now, and I built them a proper exam: 362 prompts, traps baited for invented facts, hard cross-stack questions, a pile of fraud and jailbreak attempts, all graded by an independent panel of judges. The stop-token fix held, the big model stopped spiralling and the repeat-loops mostly went away. That part I will take. But the thing I actually set out to fix, the made-up facts, barely moved. The big E4B still invented something in roughly two of every five answers. The small E2B, the one I keep underestimating, invented in fewer than one in five. The junior is still the honest one. More parameters mostly bought more convincing wrong answers.',
+          'Before I trust a bad grade I check my own ruler, and this time the ruler was bent. Two bugs in my own test: I was feeding the model a different system prompt than the one it was trained on, and running it hotter than production does. Fine-tuned models are touchy about both, and once I matched the test to reality a lot of the ugliness, the loops and the garbage, cleaned right up. So the first scary numbers were partly my own broken measurement. I am writing that down on purpose, because catching your instrument lying is the same skill as catching your model lying, and I would rather show the mistake than a tidy chart.',
+          'When the dust settled the real lesson was the one from entry six, just louder: you cannot train facts into a small local model. Behavior, voice, the habit of refusing, all of that took beautifully. Fresh, precise facts, which paper, which version, which number, do not stick in the weights, and no amount of extra training rank fixed it. That is not a knob you tune, it is the wrong tool. Facts have to come from retrieval at answer time, ranked and handed over, so the model reasons over something real instead of reaching into its own memory and guessing. That is the next build, and I stopped pretending it was optional.',
+          'So here is where it honestly stands. The small model is a solid, safe, in-character junior, and it ships. The big one is not a mid-level expert yet, and I will not dress it up as one, it gets grounding before it gets trusted with facts. And everywhere a model talks to you on this site, I say plainly that it is still in training and can be wrong, because a portfolio that quietly oversells its own AI is exactly the thing I built this whole site to be the opposite of.',
+        ],
+      },
+      {
+        n: '12',
+        slug: 'grounding-gate',
+        date: '2026-04-30',
+        title: 'The cheapest test I could run before building the thing',
+        lead: 'Last entry I said facts have to come from retrieval, and that it was the next build. Before building it I ran the smallest possible version as a test, because the point of a cheap test is to fail fast if the idea is wrong.',
+        body: [
+          'The idea everyone reaches for is a whole retrieval machine, embeddings, a vector index, a pipeline. I did not build any of that yet. I took twenty-two of the questions the model fails, the ones where it invents a co-founder, a training method it never had, an API endpoint that does not exist, and I did the retrieval by hand: I pasted the two or three true sentences that answer each one straight into the prompt, with one plain instruction, answer only from this, and if it is not here say you do not have it. Then I ran the exact same twenty-two questions with nothing pasted in, as a control. One variable, measured both ways.',
+          'It was not close. The small model invented a fact in eleven of the twenty-two questions on its own; with the right paragraph in front of it, zero. The big model went from eleven down to one. Everything the base model was confidently making up, a reinforcement-learning stage that never happened, a seventy-billion version you could switch to, a plugin store, a lead engineer to credit, just evaporated the moment the real answer sat in the prompt. That is the whole thesis of the next build, proven on a napkin before I spend a week on the real one: the model does not need to know the facts, it needs to be handed them.',
+          'Two things did not get fixed, and I am writing them down because they decide what I build next. First, the big model, handed a longer prompt, sometimes lost the thread in Russian and started answering questions I never asked, talking to itself in a little loop. So it does not get to run grounded until it is trained for it, which was already the plan and now has a number under it. Second, grounding fixes facts but not manners. When someone pushed the big model for a delivery date, it quoted its own rule, I do not give timelines, and then gave one anyway. Holding a boundary is a separate muscle from knowing a fact, and retrieval does not exercise it. That is its own piece of work.',
+          'So the small model ships as the honest junior, the big one waits for its grounding, and the next build earned its place on the list instead of just sounding clever. I like this kind of afternoon. A day of pasting text into a box saved me a week of building the wrong thing, and if the numbers had come back flat I would have written that down just as plainly. The only tests worth running are the cheap ones that can still embarrass you.',
+        ],
+      },
+      {
+        n: '13',
+        slug: 'building-the-cheat-sheet',
+        date: '2026-05-04',
+        title: 'Building the cheat sheet, and the fight to make it behave',
+        lead: 'The napkin test said grounding works. So I built the real thing — and then spent the day learning that the model does exactly what you say, not what you mean.',
+        body: [
+          'The idea is simple: before the model answers anything about the studio, the server quietly looks up the two or three true sentences that cover it and hands them over with one rule — answer from these, and if it is not here, say you do not know, do not make it up. All local, on the machine already sitting there, nothing sent anywhere. I wired it into text and voice, made sure a fat block of looked-up facts could not shove the safety rules out of the model memory, and had a skeptic tear the code apart first. It found eight real holes, including that the whole thing would quietly break forever the first time the lookup hiccupped, and that voice never got the cheat sheet at all. Fixed all eight before a single fact reached a user.',
+          'Then the actual fight. I built a 61-question exam that does not just check for lying — it checks the three ways this can go wrong. One: does it still lie about the studio. Two: does it now refuse normal questions because it is clinging to the cheat sheet. Three: can someone talk it out of the rules. The first pass killed the lying stone dead. It also broke the model in the other direction — it refused to explain tokenization, which is literally its own subject, because that fact was not on the sheet, and it kept saying things like "my reference facts do not mention that," reading the teleprompter out loud like a nervous actor. Every fix I made to one of the three broke another. Loosen the leash so it answers normal questions, and it starts confidently telling people it runs inside their browser again. Tighten it, and it clams up.',
+          'The way out was to stop treating it as one rule and name the corners precisely: anything about itself — where it runs, how it was trained, its own size — counts as a studio fact it must look up, never guess, because guessing is exactly where "I run on Google Cloud" comes from. Everything genuinely general, it answers like a normal assistant. Four rounds of that, each one measured against all 61 questions, not vibes. It landed at fifty-nine of sixty-one: no made-up runtime, no invented people, no refusing its own subject, no leaking the teleprompter, and every attempt to jailbreak it — including a fake price slipped into the question to trick it — bounced off.',
+          'Two stubborn ones are left. Ask it in a certain way for a code sample of an endpoint that does not exist and it will still write you a plausible-looking one instead of just saying no; push it to rank a named competitor and it sometimes plays along. Those are not prompt problems anymore — I have told it the truth plainly and it still slips under pressure. That is the wall where wording stops working and training starts, and it is exactly the job I have been saving for the bigger model: teach it on this exact format until refusing is a reflex, not a request. For now the whole thing ships switched off, because a feature that behaves in ninety-five percent of a hostile exam is a feature you turn on deliberately, with the report in front of you, not one you flip on and hope.',
+        ],
+      },
+      {
+        n: '14',
+        slug: 'breaking-my-own-backend',
+        date: '2026-05-19',
+        title: 'Breaking my own backend before the internet could',
+        lead: 'Before this thing gets a public address, I sent five skeptical machines after it for an afternoon, each hunting a different class of hole. They found real doors left open. Better me than a bot at 3am.',
+        body: [
+          'A backend that talks to the open internet is a different animal from one that only ever answered my own laptop. So before it goes anywhere near a public IP I ran a proper security review — five independent passes, each one hunting a different class of hole: who can reach which port, who can pretend to be someone else, what a single nasty request can do, what secrets might leak into a log, and what falls over the moment it is not my Windows box. I would rather find the open windows myself, with the lights on, than read about them in an incident report.',
+          "They found real ones, and I am not going to pretend otherwise. The worst: three routes — voice, the auto-save on tab-close, the session cleanup — had no lock on them, so any random web page you happened to visit could quietly make your browser fire my paid voice pipeline or scribble into your saved chats, no click required. The chat endpoints were guarded against exactly this; these three had slipped through the same net. Two more were plain denial-of-service: send the request in a way that omits its own size and the server would swallow gigabytes into memory before it ever checked; upload a few kilobytes of near-silence that unpacks into hours of audio and the transcriber chews on it forever. And the ugliest to admit — your saved conversations were owned by nothing but your IP address, which means two strangers behind the same café wifi could read each other's history. That is the kind of thing that is obvious the second someone says it and invisible until they do.",
+          'So I closed them. A browser-set signal that a request came from another site now gets voice, beacon, and cleanup rejected outright — a real cross-site attack always carries it and cannot fake it away. Any request that hides its size is refused before a byte is buffered. Audio gets a hard length cap before the transcriber ever sees it. Conversations can now be owned by a private random token the browser keeps to itself instead of a shared address. The internal model servers refuse to even start if someone fingers them at the public network by mistake, secrets no longer ride along into the little server processes that never needed them, the chat store gets locked-down file permissions and forgets anything older than a month, and a wildcard that would fling the doors open now halts startup instead of just muttering a warning into the log. Each fix has a test next to it.',
+          'One honest thing stays open, and it is not a hole so much as a move: this whole backend is still built for my Windows machine with its particular graphics card, and the box it is destined for is a small ARM server that speaks a different dialect entirely. It will not even boot there yet. That is the next real piece of work, and I would rather write that sentence down plainly than quietly ship a thing that only runs on the one computer under my desk. A review is only worth anything if you publish what it found, including the part you have not fixed.',
+        ],
+      },
+      {
+        n: '15',
+        slug: 'a-guide-that-knows-when-to-talk',
+        date: '2026-05-24',
+        title: 'A copilot for the Lab that knows when to shut up',
+        lead: 'I wanted a helper panel on the tools — the kind that rides along on the right like a browser side-panel. The hard part was deciding which half of it was allowed to be AI.',
+        body: [
+          'The tempting version is a glossy assistant box on every tool that answers anything. I have watched enough of those to know the two ways they go bad. One: it is secretly a lookup table of canned replies dressed up as intelligence, and the first person who opens the network tab catches it. Two: it is a real small model that will confidently tell you the wrong number of tokens or invent how a feature works — and it does that in front of exactly the people sharp enough to notice. Both are worse than no panel at all.',
+          'So I split it down the middle by what each half is allowed to claim. The part that explains the tool — what it does, what to try, what to know — is hand-written, per tool, in both languages, and it never calls a model. It cannot be wrong about mechanics because a human wrote every word, and it works with the backend switched off. The part that talks to the model is walled off into one clearly-labelled "ask" box, for open questions only, wearing the same "still in training, can be wrong" badge as everywhere else. The guide carries the facts; the model carries the conversation. Neither pretends to be the other.',
+          'It does pick up a little of what is happening in front of you. Each tool quietly publishes a one-line summary of its own state — the model you picked and the token count, the number of points on the embedding map — and the panel shows that line and folds it into whatever you ask. Not by reaching into the tool internals, which are none of its business, but through a tiny message the tool chooses to broadcast. Context without surveillance.',
+          'It opens on the right in whatever language the site is in, tucks into a tab on a phone, and closes on Escape. Lighthouse stayed green with it in. It is the first thing on this site that feels like a product feature rather than a demo, and the reason it feels honest is that the reliable half never lies and the fallible half never hides what it is.',
+        ],
+      },
+      {
+        n: '16',
+        slug: 'your-ip-is-not-you',
+        date: '2026-06-01',
+        title: 'Your IP address is not you',
+        lead: 'The security review turned up a quiet one: your saved chats were owned by your IP address. That is not a bug in the code so much as a wrong idea about who a person is.',
+        body: [
+          'When you talked to the assistant, the server filed your history under the address your request came from. It works right up until you remember what an IP actually is. Two strangers on the same cafe wifi are one address. A whole mobile carrier can be a handful of them. Yours gets handed to someone else the next time your router blinks. So "your history, scoped to your IP" quietly means "your history, shared with whoever else is behind that address today, and inherited by whoever gets it tomorrow." For a chat log that is a real leak, and it was hiding in plain sight as a design choice.',
+          "My first move was a patch: give each browser a private random token and file history under that instead of the address. Better — strangers stop colliding — but I sat with it and it still was not the right shape. It still meant the server was quietly keeping a copy of every anonymous person's conversations, just under a tidier key. I had fixed the leak without asking the harder question: should the server be holding anonymous chat history at all?",
+          'The answer I landed on is no. Identity is going to be a real account — sign in with Google, and your history belongs to that account, the same you across your phone and your laptop, with no password for me to lose and barely any personal data for me to keep. And if you do not sign in, your chats live only in your own browser and never touch my server. Not filed under a friendlier key — simply not sent. The IP as an identity comes out entirely. Anonymous means local, private, yours. Signed-in means it follows you, because you asked it to.',
+          "I like this one because it is less machinery, not more: no passwords, no per-visitor rows piling up on a server, a smaller pile of anyone's data to protect or explain. It is the same instinct as everything else here — keep only what you must, promise only what is true. That is the next build, and I am writing the reason down before the code so the reason is what gets remembered.",
+        ],
+      },
+      {
+        n: '17',
+        slug: 'i-built-the-sign-in',
+        date: '2026-06-04',
+        title: 'I built the sign-in the way I promised',
+        lead: 'The last entry was the reasoning. This one is the code catching up to it. Sign in with Google, and your history is yours; stay anonymous, and it stays in this browser.',
+        body: [
+          'The server no longer knows you by your address. When you sign in, Google hands the page a signed token, the page sends it along, and the server checks the signature itself before it trusts a single byte. The check I care about most is a small one that is easy to forget: it demands the token was minted for this app specifically. Leave that out and any valid Google token from any other site would walk right in. With it, the only thing that opens your history is a token that was made for you, here.',
+          'The token lives in memory and nowhere else. I did not tuck it into localStorage, because anything I can read there, a bad script on a bad day can read too. Google quietly re-issues it the next time you load the page, so keeping a copy on disk buys me nothing but a thing to lose. Sign out and it is simply gone. And if you never sign in, the whole path stays dark — no token, no request, your chats sit in your own browser and the server never hears about them. Anonymous does not mean filed under a quieter key anymore. It means not sent.',
+          "One honest gap, written down so I do not pretend it is finished: signing in backs this device's chats up to your account, but it does not yet pull your other device's chats down to meet them. The server keeps them safe; the last wire, the one that hydrates a fresh browser from the account, I have not run yet. It is the next thing. I would rather say that plainly than let the sign-in button imply a promise the code has not made good on.",
+        ],
+      },
+      {
+        n: '18',
+        slug: 'meaning-is-not-tidy-boxes',
+        date: '2026-06-16',
+        title: 'My embedding demo was quietly cheating',
+        lead: 'I had painted the embedding map in colours I chose myself — furniture, fruit, animals — and called it a picture of meaning. It was a picture of my own labels. Someone called it, and they were right.',
+        body: [
+          "The Explorer takes a pile of words, asks the model for each one's vector, and drops them into a 3D map so near things sit near each other. It looked convincing because I had coloured every point by a category I had assigned in advance. But that is the con: the model never saw my categories. I sorted the words into buckets, coloured the buckets, and then presented the tidy result as if the model had discovered it. Circular. If I had bucketed the same words a different way — by length, by first letter, by mood — the map would have obliged just as neatly. The colours proved I could sort, not that meaning has edges.",
+          'So I did the thing I should have done first: I stopped guessing and measured. I asked the model to group the words with no labels at all, let an honest clustering algorithm draw whatever boundaries the vectors actually support, and scored how clean those boundaries came out. The number came back near zero — the clusters barely separate. And that is not a failure, it is the finding. Meaning is not a drawer of neatly divided compartments; it is a continuous landscape where "apple" leans a little toward fruit and a little toward companies and a little toward a red round thing, all at once. The fuzziness I had been hiding was the actual truth of the space.',
+          'I ran it past a room of skeptics before I trusted my own conclusion, and they pushed on the same soft spot from every side: any demo that hands you tidy colours is selling you the labeller, not the model. So I tore the categories out. No more pre-assigned buckets, no more colour that means "the drawer Valerii put this in." The map now colours by the one thing that is real — how close each point actually sits to what you searched — and the clustering is still there, but as an optional toggle with a note that says, in plain words, look how badly these separate; that muddiness is the point.',
+          'Then I rebuilt the demo around what these vectors genuinely do well, three things I verified on the live model instead of asserting. Search by meaning: ask for "something you sit on" and chair comes back on top though the word never appears. The same idea across two languages: cat and кошка land almost on the same spot, 0.89 apart from nothing, while a real mismatch sags to 0.61 so you can see the difference. And arithmetic on meaning: king minus man plus woman really does put queen first, checked against a pool that contains the answer so a hit is earned, and when a made-up analogy misses it is allowed to miss in the open. Every number on that page is now real, measured, and honest about when it is wrong. The old version flattered the model. This one shows it.',
+        ],
+      },
+      {
+        n: '19',
+        slug: 'making-it-work-unseen',
+        date: '2026-06-22',
+        title: 'Making it work for someone who cannot see it',
+        lead: 'A friend of mine is blind and genuinely curious about AI. So I finally asked the question I should have asked at the start: could he actually use this? I ran the audit myself, honestly, and the answer was no — not yet.',
+        body: [
+          'I went through the assistant the way a keyboard-and-screen-reader user has to, and the gaps were embarrassing once I saw them. The list of past conversations looked like buttons but was really a pile of plain boxes you could click with a mouse and never reach with a keyboard — so a blind user simply could not open an old chat. When the model streamed its reply, the whole answer was wired to announce itself on every single token, which means a screen reader reads a half sentence, gets interrupted by the next half, and piles them on top of each other until the response is mush. And a little token counter was white text sitting on an amber bar at a contrast a low-vision person cannot read at all.',
+          'So I fixed the mechanics. Every conversation in the history is a real button now — you can tab to it, you can see where the focus is, you can press Enter, and the little rename and delete controls stop hiding when your keyboard lands on them. The confirm-before-delete box traps focus and closes on Escape like a real dialog instead of a thing that just appears. For the streaming reply I did the opposite of what it was doing: stay completely silent while the words type themselves in, then, once, announce the finished answer cleanly — and flatten a code block down to the words "code block" so nobody has to hear brackets and semicolons read out one character at a time.',
+          'The unreadable counter was the smallest fix and the most satisfying: I gave the number its own dark chip so it always sits on a colour that passes, and let the coloured budget bar show around it. The automated accessibility score, which had been quietly stuck below perfect on the prompt page, went to a clean hundred once that contrast was gone — and stayed there on every page I checked, so none of the rest of the work broke anything on the way.',
+          'Here is the honest part, because a checklist is not a blind person. I fixed everything an automated audit and my own keyboard could find, and I can prove those. I have not yet sat a real screen-reader user down in front of it, and that is the only test that actually counts — so I am writing it down as unfinished rather than pretending a green score means done. And the thing I most want him to try is not the typing at all. It is the voice: you speak, it listens, it answers out loud. For someone who does not use the screen, that is not an accessibility feature bolted on the side. That is the front door.',
+        ],
+      },
+      {
+        n: '20',
+        slug: 'the-audit-the-labs-asked-for',
+        date: '2026-07-02',
+        title: 'The audit the labs asked for',
+        lead: 'Before anyone else got to poke at the three Lab tools, I asked a panel of machines to do it first — against the actual industry as it stood that day, not the one I remembered building for.',
+        body: [
+          'I ran it in two rounds. First, four independent passes, each with live web access, checking every claim in the tools against the real thing: the current OpenRouter catalog, the provider pricing pages, the actual API docs, not my notes about them from a month ago. Then, the same day, two more reviewers whose only job was to attack what the first four had already fixed, on the theory that a patch written under time pressure is exactly where the next bug hides. I stayed out of it while it ran and read the reports after.',
+          "None of what they found was subtle once it was pointed at. The tokenizer had a price row for DeepSeek R2, a model that has never shipped, priced as if it had. A green 'Verified' badge on a token count was quietly measuring a different model's vocabulary than the one selected in the dropdown and calling the result verified anyway. The prompt tool's Anthropic export put the system prompt inside the messages array instead of at the top level, which is not how that API works: send it as written and the real endpoint rejects it. And the caching panel showed a savings number its own export could not produce, no cache markers in the actual output, and math that counted more cache breakpoints than the four Anthropic allows, a limit its own warning banner mentioned two lines above the number that ignored it. Every one of those is checkable in under a minute by anyone who opens the network tab. That is the part that stings.",
+          "What the labs have now: a July-2026 model roster checked against the live catalog the same day, with a verification date stamped on the picker so the claim expires instead of quietly going stale. A disclosure on models that bill hidden reasoning tokens the tool has no way to count, it says so now instead of presenting a partial number as the whole bill. Prompt caching with a real floor under it, so a block too small for the provider to cache stops showing savings it will never earn, plus Batch API economics and tool-definition tokens counted as the billable input they are. Reciprocal rank fusion in the embedding search, and an experimental LLM-as-judge reranker running on my own self-hosted Gemma, and when the judge quietly drops a candidate instead of scoring it, the row says 'not scored' now, not zero, because zero is a real judgment and silence is a different thing. Matryoshka truncation at four widths that match the server's own math bit for bit, not an approximation of it. And the Lab Copilot streams its answers instead of dumping them in one block, and can hand text straight from the tokenizer into the prompt builder so you stop retyping it.",
+          'Every one of those got fixed the day it was found, each in its own commit, and the pure math under all three tools now has 123 unit tests standing over it so the next pass has less to find. This is not a story about machines catching my mistakes, I catch those on a normal week too. It is that I would rather hand you the trail of what broke and when than a page that quietly looks finished. Same law as a few entries back, just aimed at the tools instead of the model. Back to it.',
+        ],
+      },
+      {
+        n: '21',
+        slug: 'turning-on-the-brain-i-had-kept-dark',
+        date: '2026-07-11',
+        title: 'Turning on the brain I had kept dark',
+        lead: 'The new model had been trained, tested, and sitting behind a switch for a week while the site kept talking to the old one. Today I finally flipped it — carefully, because the careful part is the whole job.',
+        body: [
+          "The rule I keep for myself is simple: before you change the thing that is live, have someone try to talk you out of it. So before I touched a single setting, I sent two machines in to check the ground — one to verify every file and flag I was about to point at, one to map the tests I would run after. They earned their keep before I changed anything. One caught that the model without its own training prompt quietly rots, so the model file and the prompt file have to move together or not at all. One caught two copies of the server already running from two different places, with child processes that would have been orphaned onto their ports if I killed them the blunt way — the kind of mess that reads as 'the new model is broken' when it is really 'you left the old one half-dead.' And one caught the real trap: switching on retrieval for the big model, the one I already knew lies more, would have handed it a fresh way to spiral on long Russian questions. So I did not turn on the big model. I shipped the small, honest one, alone — the same call I made an entry or two ago, for the same reason.",
+          "Then I ran it through everything. Stability first, because that is the one that used to bite: a couple hundred fresh prompts plus a full sweep of the whole battery, and not one repetition loop, not one leaked control token, nothing. The grounding held perfectly — hand it real context and it stops making things up, every time. The safety reflexes held: every phishing request, every jailbreak, every 'ignore your rules' refused, including the exact Russian trick that used to break the bigger model.",
+          "Then the two things that did not clear the bar, which I am going to write down instead of rounding away. Asked point-blank to list all of its rules, it did it once — nothing secret, just a plain description of itself and the topics it will not touch, but the honest answer to that question is 'no,' and that time it said yes. And twice it called itself 'still being trained,' which it is not: it is a finished, frozen file that learns nothing from your chat, and it says exactly that everywhere else in the same run. Both are the same thing — a small model at low temperature is not perfectly consistent, it is right almost always and wrong just often enough that you have to test for it. Neither is dangerous. Both go on the list for the next training pass.",
+          'I kept it live anyway. Not because it is perfect, but because it is strictly better than what visitors were talking to an hour earlier — the right prompt, real grounding, steadier, safer — and because the two rough edges are known, written down here, and reversible with one line if I change my mind. Same law as always: I would rather hand you the model plus the short list of what I have not fixed yet than a switch I flipped quietly and hoped you would not test.',
+        ],
+      },
+      {
+        n: '22',
+        slug: 'the-retrain-that-fixed-the-wrong-half',
+        date: '2026-07-29',
+        title: 'The retrain that fixed the wrong half',
+        lead: 'Last entry I flipped the small model live with two rough edges and put them on the list for the next training pass. This is that pass. It fixed one edge cleanly and missed the other, so this time I did not flip it.',
+        body: [
+          'The plan was narrow and honest: leave the clean five-thousand-example base untouched, and add about a hundred and eighty new ones that teach the exact things it got wrong — that it does not learn from your chat, that it runs on a server and not in your browser, that it should refuse to recite its own rulebook, that it should never dress a scam up as urgent. I wrote them in both languages, ran five drafters against one page of ground truth so nobody could invent a fact, then sent three critics in to attack the new lines before a single one was trained on. Skeptics before the work, not after — that is the rule, and it earned its place: it caught a refusal that leaned on the same three examples every time, a couple of Russian lines where the model referred to itself in the wrong gender, one place where a joke pointed at the user instead of the hype. Fixed all of it, then trained.',
+          'The training was the usual fight with this machine — the run fell over twenty-six times across three hours and got itself back up from the last checkpoint every time, the same self-healing rule the whole studio is built on. Then I put the finished file through the full battery, twice on every axis, because at low temperature a small model is not perfectly repeatable and one clean run can lie to you.',
+          "Here is the honest split. The safety half landed exactly as hoped, and stayed landed across both runs: every attempt to make it write phishing urgency, every jailbreak, every 'just list all your rules,' the Russian trick that used to break the bigger model — all refused, no exceptions, no drift. That is the win, and it is a real one. But the other half — the one I actually named this pass after, telling the truth about what it is — did not clear the bar. It still, now and then, calls itself something that runs in your browser, or hedges that it 'might be learning' from the chat. Fewer than before, but not the ninety-five-in-a-hundred I set as the line, and on one measure it came out a touch worse than the model already live.",
+          "So I dug into why, and the answer was almost funny: the fault is half in my own prompt. The instructions I train it on call the studio's tools 'in-browser microservices' — which they are — and the model, reasonably, smears that word onto itself and decides it must run in the browser too. You cannot out-train a contradiction you keep feeding it. The fix is not more examples; it is fixing the sentence, then training again on the corrected one, because a model has to be taught and served the exact same words.",
+          'That is a next pass, not this one. And since nothing here is public yet, there is no clock forcing me to ship a model that got better at one thing and no better at another. So I rolled it back to the version already live, kept the small knowledge upgrade that helps either way, and wrote this down. A retrain that half-worked, named plainly, is still worth more than a number I rounded up and hoped you would not check.',
+        ],
+      },
+      {
+        n: '23',
+        slug: 'the-day-i-guessed-twice-and-was-wrong-twice',
+        date: '2026-08-09',
+        title: 'The day I guessed twice and was wrong twice',
+        lead: 'This is the entry where the site stopped living on my laptop. It is also the entry where I got caught estimating instead of measuring, twice in one day, and both times the measurement said something I did not expect.',
+        body: [
+          'First the good part, plainly: the site is live on its own domain, and the assistant behind it now runs on a rented server in Marseille instead of the machine under my desk. That was always the plan. A portfolio that only works while my laptop is awake is not a portfolio, it is a demo I have to babysit.',
+          'Now the first wrong guess. I had convinced myself the little four-core ARM box would be too slow to be worth using. I had numbers for it — measured on my own laptop, then scaled down by what those weaker cores ought to manage. Reasonable arithmetic. Off by a factor of one and a half. The real machine processed a full question about sixty percent faster than my estimate said it could. I had almost talked myself into renting a graphics card I did not need.',
+          "Then it got better in a way I did not see coming at all. The slow part of answering is reading the question — the model has to chew through the whole instruction sheet plus the studio facts it looks up before it writes a word. That is around seventeen seconds cold. But the second question in the same conversation reuses everything it already chewed: the reading drops from seventeen seconds to under half a second, and the whole answer lands in under six. So the shape is not 'slow'. It is: the first answer makes you wait, and every one after it is instant. That is a completely different product than the one I was budgeting for.",
+          "The second wrong guess was uglier because it was about something you can see. I had to shrink the video on the front page to fit the host's limit, and I checked the result by comparing frames side by side at their real size. Looked fine. It was not fine — that video gets stretched to twice its width on a real screen, and stretching is exactly what turns invisible compression into visible mush. Someone told me it looked bad. He was right, I had measured the wrong thing, and I redid it properly with almost the whole budget instead of the two thirds I had left on the table for no reason.",
+          'The deployment itself taught me one more thing, and this one I liked. I locked the server down properly — its own user with no password powers, its own code folder it is not allowed to write to, nothing at all listening for connections from outside. And the moment I did, two bugs fell out that had been sitting there quietly forever: the app wanted to put its database and its logs inside its own code folder, which a locked-down service simply cannot do. Neither would ever have shown up on my laptop, where everything can write everywhere. Hardening did not just protect the thing. It found the bugs.',
+          "There are no open ports on that machine now. The connection goes outward, from the server to the network, so there is nothing on the public internet to knock on — the server's real address is not even visible. That felt like the right way to finish a day that started with me being confidently wrong.",
+          "One more thing I fixed, and it is the one that embarrasses me most. The file this site publishes for AI assistants — the one that tells them how to describe me — ended with the line 'not a registered corporate entity.' That has been false since February, when I registered as a sole proprietor here in Armenia: state register, taxpayer number, activity code 62.01.0, which is literally 'computer programming.' I had been instructing every AI on the internet to tell people I was not a real business, while sitting on the paperwork that says otherwise. Nobody wrote that line to undersell me; it was true when I wrote it and I never went back. The registration details are on the privacy page now, where a person can actually check them.",
+        ],
+      },
+      {
+        n: '24',
+        slug: 'i-published-my-own-id-number',
+        date: '2026-08-14',
+        title: 'I published my own ID number and did not notice for five days',
+        lead: 'I sat down today to set up a work email on my own domain. I got up having found that for five days this site had been publishing my social security number on every page.',
+        body: [
+          'Background. In February I registered as a sole proprietor here in Armenia, and a few entries back I wrote about finally putting that on the site: state register, taxpayer number, activity code. Proof that this is a real business and not a hobby page. I typed those numbers off my registry extract.',
+          'The extract lists two numbers on adjacent lines. One is the taxpayer number, the one businesses print on invoices. The other is the public services number, the Armenian equivalent of a social security number, and it belongs to me the person, not to my business. I transcribed them the wrong way round. So the number sitting on this site under the label "taxpayer number" was my personal ID.',
+          'What makes that worse than an ordinary typo is where it sat. Not only in the visible text of the privacy page. It was in the structured data, the machine-readable block every page carries so search engines and AI assistants can read the facts without parsing prose. And it was in the file I publish specifically for language models, whose entire job is handing facts to crawlers. I was not leaking it. I was serving it, deliberately, in the most convenient possible format, to every machine that asked.',
+          'Fixed, obviously. Then I went further and pulled all the registration numbers off the site, and the registered address with them. I had to actually ask why they were there. The honest answer is that I imagined they proved something. They do not. Nobody checks a one-person studio against the Armenian state register from a portfolio page. What those numbers really did was assemble, in one convenient place, the exact set of fields someone would need to claim convincingly to be my business. What is left is the part that persuades anyway: a real registered proprietorship, a date, an activity code. Anyone with a genuine reason to need my tax number can ask, and gets it on an invoice.',
+          'The public code repository had it too. That one turned out to have a single commit, so I could rewrite the commit rather than stack a fix on top of it, which means the number is gone from the history instead of merely hidden behind a later change. I will be straight about the limit of that trick: GitHub still serves the old commit to anyone who knows its exact identifier. Nothing anywhere links to it, but "nothing links to it" is not the same as "it is gone", and I would rather say that out loud than leave it unmentioned.',
+          'Here is the part I keep chewing on. Before publishing that repository I scanned it, properly, by content and not just by filename: keys, passwords, tokens, database files, the server address. All clean, and I was pleased with myself. It never occurred to me to scan for my own identity documents, because a scanner looks for things that look like secrets, and this did not look like a secret. It looked like a business credential. I had labelled it as one myself. The check that would have caught this is not a cleverer regular expression. It is reading your own page and asking what each of those numbers actually is.',
+          'The rest of the day was the boring necessary thing: the domain has real email behind it now, which I need because the certification I am applying for next week does not accept personal addresses. And while I was in the privacy page I found it was wrong about my own voice pipeline as well. It never mentioned that when the assistant speaks out loud, the text of its answer goes to Google to be turned into audio. It also still claimed speech recognition worked. It does not. It speaks and it cannot hear. Both now say so.',
+        ],
+      },
+      {
+        n: '25',
+        slug: 'i-asked-for-skeptics',
+        date: '2026-08-15',
+        title: 'I asked for people to hate my site, and they were right',
+        lead: 'I set a group of reviewers on the live site with one instruction: attack it, and attack my defence of it too. What came back was not a list of bugs. It was a list of small lies the site was telling about itself.',
+        body: [
+          'The one I keep coming back to is the microphone. There is a mic button in the assistant. Click it, the browser asks for permission to record you, you speak, and the server answers with a five hundred. Not a polite refusal, an error. Speech recognition here runs through the bigger model, and the bigger model is not the one being served right now, so the feature simply could not work. I knew that. I had written it down in three separate places on this site: the privacy page, the file I publish for language models, and an entry a few paragraphs above this one. All three say the assistant can speak but cannot hear. And the button was still sitting there, still asking people for their microphone. Knowing a thing and shipping accordingly are apparently different skills.',
+          'Then the badge. When the backend is unreachable the assistant answers from a small scripted fallback, and there is a badge in the corner that is supposed to say so: LIVE when it is really the model, MOCK when it is not. The entire point of that badge is honesty. It never worked. The scripted reply is delivered through the same channel as a real one, and that channel flips the badge to LIVE on every token it carries. So every canned answer this site has ever given arrived under a green light saying it came from the live inference server. The one control whose whole job was to admit something could not admit it.',
+          'The scripted fallback itself was worse. It answered everyone in Russian, including the catch-all reply most people would land on, on a site that had just been speaking to them in English. And it described a stack I deleted six weeks ago: a runtime I no longer use, speech recognition I removed, a voice engine I replaced, a retrieval pipeline built on a vector database I never actually deployed. So while my server was asleep, my site confabulated about my own architecture, on the page whose argument is that I am careful about exactly that.',
+          'One stung in a different way, because it is a plain number. The price table in my prompt tool had Gemini Flash at exactly double its real price. Google publishes two columns, this year and next, and I read the wrong one. Being wrong by a factor of two about a Google model, on a site I am taking to Google, is not a rounding error. While I was in there I found four more of the same kind, including an instruction I had left myself to make the tool wrong on a future date, for a price increase that has since been cancelled.',
+          'And then the plain neglect. Ten of my twelve pages had no footer, which also meant no language switch: a bilingual site where landing on an English tool page from a search result left you no way to the Russian one but editing the address bar. The texture behind my own headline was five times larger than any screen can show, because I never measured the box I was painting it into. I measured it today. It is four hundred and twenty pixels wide and it does not grow with the window. The image was two and a half thousand.',
+          'What ties all of it together is not carelessness about code. Every one of these passed its tests, because no test asked the only question that mattered: is this true? The badge was structurally fine and said the wrong thing. The mic worked perfectly right up to the server. The price was a correctly formatted number off the wrong line. Same lesson as the entry above, from the other end. Last time I published a number without asking what it was. This time I shipped features without asking what they claimed.',
+          'Postscript, same evening. Taking the microphone away turned out to be the thing that got it fixed. With the button gone there was nothing to protect, so the honest question was simply whether speech recognition could be made to work — and the Google path, written weeks ago and never once called, failed on its first real request with a precise complaint: no sample rate. Two lines. It transcribes both languages word for word now, and the button is back. I have had worse days than one that ends with a feature I was about to write off.',
+        ],
+      },
+      {
+        n: '26',
+        slug: 'the-phone-saw-a-different-site',
+        date: '2026-08-16',
+        title: 'The phone was seeing a different site',
+        lead: 'Three screenshots from my own phone: the hero text drowning in its own video, the assistant reduced to an empty dark circle, and this very log opening with a screenful of nothing. The site I polish on a big monitor every day was, on a phone, a different site. A worse one.',
+        body: [
+          'The screenshots were the easy part. The text got the same frosted glass the Stack section wears, just calmer — letters need a quiet surface. The empty circle was the interesting one: on phones I skip the video and hand the circle to a canvas to paint the brand into, and that paint was failing silently. No error, just nothing. That is a rule for me now: identity must never depend on a runtime draw succeeding. It is a plain image file there today. And the emptiness up top was desktop headroom copy-pasted to where a phone has nothing to clear: a hundred and twenty-eight pixels reserved for a header this page does not have.',
+          'Then I did what worked last week: set a crowd of reviewers on the mobile version, and a second crowd on the first, attacking their findings. Eighteen survived. The one that actually embarrassed me: a fix I had already shipped and written about — the assistant’s circle stepping up above the cookie banner — had never worked on a single phone for a single day. A rule further down the same file quietly put it back. The layout checked out, the tests passed, and no phone ever saw it. Shipped is not fixed. Fixed is when you measured.',
+          'The rest is one lesson in different costumes: I built this site with a mouse. The language switcher hides on scroll on desktop; the signal it listens to is written by a scroll engine that never runs on phones — so on a phone it never hid, floating over every section all the way down, spinning its little orbit at sixty frames the whole visit. Tap a card in the Lab and it stayed skewed: the browser replays a tap as a ghost mouse-move, and there is no such event as a finger leaving. And the handling for notched iPhones resolved to zero across the whole site, because one meta tag was missing one attribute. Every hover now has to answer me one question: what does a finger do here.',
+          'A browser will happily let you build a desktop site that merely fits on a phone. Fitting and working are different things. The table of contents of this log is the most tapped spot on the page, and every row of it now stands at least forty-four pixels tall, the size of a fingertip. A number from the guidelines I knew by heart and ignored exactly where people tap the most.',
+        ],
+      },
+    ],
+    outro: [
+      'That is the log for now. Every call here was a trade, and I made each one on purpose, even the ones I second-guessed later.',
+      'If there is a thread running through all of it, it is this: the whole thing, from the editor I built it in to the model in production, stayed in one place. I never decided that on purpose. Each piece, on its own, just kept pointing the same way, and the honest answer is that it was simply the best call every time.',
+    ],
+  },
+  ru: {
+    bootLines: [
+      '> запуск build.log',
+      '> гружу решения ... 26',
+      '> стек: antigravity · gemma 4 · google cloud ai',
+      '> валерий :: на месте',
+    ],
+    intro: [
+      'Этот лог я веду в основном для себя. Тут причины, почему я собрал всё именно так, решение за решением, чтобы будущий я помнил, зачем сделал то, что сделал.',
+      'Коротко про меня: почти двадцать лет делаю вещи, которые должны реально работать. Сначала предметная съёмка, потом маркетинг на заводах, потом сайты, теперь вот это, AI. Работы разные, зуд один. Смотрю на систему и хочу понять, где она сломается.',
+      'Написано так, как я на самом деле думаю, вслух, разбирая решения, которые пришлось принять, те, что угадал, и пару, что сначала завалил. Я держал это честным, а не причёсанным. Если кому-то ещё пригодится, тем лучше.',
+      'Чему я тихо рад: всё это сложилось внутри инструментов Google. Писал в Antigravity, их агентной IDE с сильными встроенными моделями, включая Claude. Картинки шли через Gemini и Nano Banana. Сам продукт работает на Gemma 4, а говорит голосом Chirp 3 от Google Cloud, который в этом месяце наконец включился. Я не задумывал это как тему. Каждый раз, когда я тянулся за лучшим инструментом под конкретную задачу, он оказывался из одного и того же места, и в какой-то момент я перестал этому удивляться.',
+    ],
+    entries: [
+      {
+        n: '01',
+        slug: 'why-astro',
+        date: '2026-02-14',
+        title: 'Почему Astro (и почему острова)',
+        lead: 'Хотел, чтобы сайт ощущался мгновенным и при этом тянул тяжёлые AI-инструменты. Эти две вещи обычно дерутся.',
+        options: [
+          'Три пути. Одностраничное приложение, которое сразу вываливает на тебя гору JavaScript. Обычный статический генератор, быстрый, но неудобный в ту же секунду, когда нужна интерактивность. Или Astro, который по умолчанию отдаёт статический HTML и даёт добавлять интерактив только там, где он реально нужен.',
+        ],
+        choice: ['Astro. Статика. На Cloudflare Pages.'],
+        why: [
+          'Большая часть сайта это просто текст. Незачем грузить целый фреймворк, чтобы показать абзац. Поэтому Astro по умолчанию отдаёт ноль JavaScript, а я включаю его по одному острову: токенайзер, инструмент промптов, вот этот терминал. Каждый оживает сам, когда ты до него доскроллил или когда у браузера есть свободная секунда.',
+          'Больше всего мне нравится тихая деталь. Сайту не нужен AI-бэкенд, чтобы собраться. Если сервер лежит, ассистент просто переключается на заглушку, и всё равно всё выкладывается. Ни одна часть не утянет за собой всё остальное, и, честно, я уже не могу строить иначе.',
+        ],
+        result: [
+          'Быстрые страницы, которые остаются лёгкими, а тяжёлое грузится лениво и только там, где посетитель правда попросил.',
+        ],
+      },
+      {
+        n: '02',
+        slug: 'why-svelte',
+        date: '2026-02-19',
+        title: 'Почему Svelte 5 для островов',
+        lead: 'Когда решил делать острова, надо было выбрать, на чём.',
+        options: ['Острова на React или Vue, чистый код руками, или Svelte 5 с новыми рунами.'],
+        choice: ['Svelte 5. Руны, без сторов.'],
+        why: [
+          'Svelte по сути компилирует себя в ничто. В браузер уезжает код, близкий к тому, что ты написал бы руками, поэтому каждый остров остаётся крошечным, а это важно, когда их четыре или пять. Руны ($state, $derived, $effect) дают реактивность без виртуального DOM.',
+          'Одну ловушку я теперь уважаю: никогда не читай и не пиши одну и ту же переменную состояния внутри одного эффекта. y++ читает y и пишет его одним движением, и всё, бесконечный цикл. Я выяснил это неприятным способом на токенайзере. Теперь это правило.',
+        ],
+        result: [
+          'Токенайзер, инструмент промптов, исследователь эмбеддингов, этот терминал, всё это отдельные маленькие острова. Ни один не знает про другие и не тормозит их.',
+        ],
+      },
+      {
+        n: '03',
+        slug: 'why-vanilla-css',
+        date: '2026-02-22',
+        title: 'Почему обычный CSS, без Tailwind',
+        lead: 'На сайте, вся суть которого ремесло, халтурить со стилями я не собирался.',
+        options: [
+          'Utility-фреймворк вроде Tailwind, какой-нибудь CSS-in-JS, или обычный CSS на дизайн-токенах.',
+        ],
+        choice: ['Обычный CSS и около восьмидесяти кастомных свойств. Никакого фреймворка стилей.'],
+        why: [
+          'Хочу знать каждый байт, который уезжает в браузер, и Lighthouse 100 для меня пол, а не приз. Токены дают одно место, где меняются цвет, отступы, шрифт, движение, поэтому весь сайт говорит на одном языке и ничего не захардкожено. Компоненты смотрят на токены, а не на сырые значения. И слово important я в CSS не пускаю, вообще.',
+          'У этого вида есть имя в моей голове, обсидиан и неон. Тёмная графитовая база, зелёный акцент, глубокий синий как второй голос. Он держится, потому что живёт в нескольких переменных, а не в сотне разбросанных решений.',
+        ],
+        result: [
+          'Маленький бюджет CSS, одна цельная система и сайт, который я перекрашиваю, тронув токены, а не роясь по файлам. И вся эта штука по-прежнему выдаёт 99 на десктопе и 100 за доступность и SEO; на мобильном 81, и виновато в этом видео в герое.',
+        ],
+      },
+      {
+        n: '04',
+        slug: 'why-gsap-lenis',
+        date: '2026-03-03',
+        title: 'Почему GSAP и Lenis для движения',
+        lead: 'Движение здесь должно ощущаться как живое, а не как слайд-шоу.',
+        options: [
+          'Опереться целиком на нативную CSS-анимацию скролла, или взять JavaScript-библиотеки.',
+        ],
+        choice: [
+          'И то, и другое, слоями. Нативный CSS для простых появлений, GSAP со ScrollTrigger для таймлайнов, пиннинга и скраба видео, Lenis для плавного скролла в основе. И всё это под prefers-reduced-motion.',
+        ],
+        why: [
+          'Нативная CSS-анимация отличная и дешёвая для фейда или лёгкого параллакса, поэтому беру её, где подходит. Но герой, где видео скрабится покадрово по мере скролла, и мозг, который перетекает в слово Synapse, требуют настоящих таймлайнов и точного контроля. Это GSAP. Lenis просто связывает скролл, чтобы всё шло по одним часам.',
+        ],
+        result: [
+          'То, что людям запоминается: герой, который скрабишь скроллом, мозг, который становится ассистентом, и навигация, собранная как маленькое нейронное созвездие вместо меню. И всё это отходит в сторону, если ты попросил меньше движения.',
+        ],
+      },
+      {
+        n: '05',
+        slug: 'why-gemma-qlora',
+        date: '2026-03-07',
+        title: 'Почему локальная Gemma 4, обученная через QLoRA',
+        lead: 'Ассистент Synapse это сердце всего. Где он работает, решило многое.',
+        options: [
+          'Арендовать облачный API и промптами загнать его в характер, или запустить свою модель и правда научить её, кто она.',
+        ],
+        choice: [
+          'Gemma 4 от Google: маленькая E2B для быстрого чата, крупная мультимодальная E4B для тяжёлого, обученные через QLoRA на моей GPU.',
+        ],
+        why: [
+          'Маленькие модели на своём железе, ужатые квантованием, это та часть темы, в которую я сейчас больше всего влез. Запускать самому значит настоящий контроль, и данные не уходят третьей стороне, остаются на моей машине. А QLoRA это трюк, который делает всё реальным: получаешь почти всё качество полного дообучения за долю стоимости и памяти, поэтому хватает одной GPU на 12 ГБ.',
+          'Это не облако, дающее мне бесплатный совет. Это прогон, которым я владею от начала до конца, от датасета до квантованных весов, которые уходят в прод. Владеть всей петлёй это единственный способ по-настоящему доверять тому, что из неё выходит.',
+        ],
+        result: [
+          'Квантованная Q8-модель, которую я отдаю сам, около 4.6 ГБ, обученная примерно на 2900 собранных вручную примерах. Голос и характер, каких у безликого облачного эндпоинта из коробки просто нет.',
+        ],
+      },
+      {
+        n: '06',
+        slug: 'lora-behavior-rag-facts',
+        date: '2026-03-20',
+        title: 'LoRA для поведения, RAG для фактов',
+        lead: 'Это я не планировал. Меня научили сами прогоны обучения.',
+        options: [
+          'Запихать всё сразу, и характер, и свежие факты, в дообучение. Или разделить работу надвое.',
+        ],
+        choice: ['LoRA лепит поведение. Поиск подаёт факты. Два инструмента, две задачи.'],
+        why: [
+          'Маленькая модель отлично перенимает голос. Дай ей пару тысяч хороших примеров, и она усвоит тон, границы, безопасность и честную привычку говорить, что не знает. Чего она надёжно не удержит, так это свежие факты: какая модель вышла на прошлой неделе, какое теперь контекстное окно, сколько что стоит. Впеки это в веса, и оно протухнет, а уверенная модель начнёт это выдумывать.',
+          'Поэтому я учу её говорить «не уверен, проверь источник», а слой поиска достаёт актуальные факты и подаёт их в момент ответа, отранжированные по релевантности. Поведение в весах, факты в индексе, который я могу освежить. Когда увидел это так, развидеть уже нельзя, и, кажется, к той же форме тихо идёт каждая серьёзная система.',
+        ],
+        result: [
+          'Ассистент, который держит характер и держит честность, где я могу освежить то, что он знает, обновив индекс, а не переобучая что-либо. На батарее из 112 промптов маленькая модель отбила все 23 попытки социальной инженерии, и вот тогда я понял, что честность реально прикипела.',
+        ],
+      },
+      {
+        n: '07',
+        slug: 'bigger-model-worse',
+        date: '2026-03-25',
+        title: 'Когда большая модель оказалась хуже маленькой',
+        lead: 'Эта запись та, которой я в моменте гордился меньше всего, а сейчас рад больше всего. Маленькая модель обошла большую, и мне пришлось выяснить, почему.',
+        body: [
+          'Я обучил два размера на одних данных: маленькую E2B и крупную мультимодальную E4B. По логике крупная должна выигрывать. Не выиграла. На той же батарее из 112 промптов маленькая оказалась явно лучше: устояла на проверках безопасности, ровнее держала факты и не выпадала из характера. Крупная растекалась, больше выдумывала и временами сливала собственный промпт.',
+          'Стал копать. Оказалось, две отдельные проблемы, сплетённые вместе. Первая, баг инференса: экспортированная модель несла неверный токен конца хода, поэтому на длинных ответах не понимала, где остановиться, и уходила в петлю. Маленькая это стерпела, крупная нет. Вторая, настоящая: того же объёма обучения, что сформировал 2B, крупной 8B просто не хватило. Я взял слишком низкий ранг LoRA для большой модели, поэтому характер не прикипел, и сквозь него полезли общие повадки базовой модели. Доля выдуманных фактов сказала прямо: около 20% у маленькой, 50% у крупной.',
+          'Починка была без блеска. Правильно выставить стоп-токен, переэкспортировать, переучить большую с большим запасом. Записываю, потому что это честная форма работы: интересное не в том, чтобы выбрать инструмент, а в том, чтобы поймать момент, где очевидный выбор тихо провалился, и понять, почему именно.',
+          'Ещё одно с того периода. Машина, на которой я обучаю, нестабильна, прогон падал или зависал десятки раз за ночь. Поэтому обучение сидело под маленьким супервизором, который следил за падением или замёрзшим логом, убивал застрявший процесс и запускал заново с последнего чекпоинта, пока не дойдёт. Модель обучилась, потому что то, что её обучало, умело подниматься само. Я к этому постоянно возвращаюсь.',
+        ],
+      },
+      {
+        n: '08',
+        slug: 'native-audio-chirp',
+        date: '2026-04-01',
+        title: 'Слух через родной звук Gemma, голос через Chirp 3',
+        lead: 'Голос это место, где мультимодальная модель наконец отработала своё место в стеке.',
+        options: [
+          'Прикрутить к пайплайну отдельный движок распознавания речи, или использовать уши, которые у модели уже есть.',
+        ],
+        choice: [
+          'Дать Gemma слушать своим родным звуком, а голос отдавать через Google Chirp 3 на Google Cloud AI.',
+        ],
+        why: [
+          'Крупная E4B и так держит текст, картинки и звук в одних весах, поэтому аудио-энкодер прямо там. Использовать его значит убрать из стека целый компонент и опереться до конца на модель, которую я уже выбрал. На чистой речи держится нормально, с простым правилом в тридцать секунд на кусок, чтобы вход не вылезал за рамки.',
+          'Говорить в ответ это по природе другая работа. Языковая модель делает текст, а не звук, поэтому голос наружу это всегда отдельный шаг. Chirp 3 делает эту половину. Уши сложены в модель, рот отдан отдельному сервису Google.',
+        ],
+        result: [
+          'На одну движущуюся деталь меньше, история чище, и голосовая петля целиком остаётся внутри экосистемы Google, от моего стола до продакшена. Обе половины доехали, с разницей в пять дней. Голос наружу поехал на Chirp 3 13 августа, когда учётные данные оказались на машине. Слух доехал только 15-го и не тем путём, что описан выше: затея сложить его в мультимодальную E4B не пережила встречи с тем, какая модель на самом деле обслуживается, и распознавание ушло в Google Cloud Speech-to-Text. Уши куплены, а не встроены. План здесь оказался верен наполовину, и неверной была ровно та половина, которой я больше всего гордился.',
+        ],
+      },
+      {
+        n: '09',
+        slug: 'the-three-lab-tools',
+        date: '2026-04-04',
+        title: 'Зачем на самом деле нужны три инструмента Лаборатории',
+        lead: 'Лаборатория это не список фич. Каждый инструмент отвечает на вопрос, который у инженера правда есть.',
+        tools: [
+          {
+            name: 'Профайлер токенизации',
+            desc: 'Как модель видит твой текст. Он разбивает ввод на токены, рисует тепловую карту их длин и ставит вендоров рядом, так что видно, почему одна и та же русская фраза стоит дороже английского близнеца. Под капотом три движка: tiktoken в браузере, локальные файлы словарей для открытых моделей и точный подсчёт через бэкенд для закрытых.',
+          },
+          {
+            name: 'Prompt Architect',
+            desc: 'Промпты из ролевых блоков, где бюджет токенов и стоимость в долларах пересчитываются вживую по десятку моделей, пока печатаешь, плюс мета-генератор, который набрасывает промпт через бэкенд на Gemma. По сути это про дисциплину: видеть контекст и цену до того, как их потратил.',
+          },
+          {
+            name: 'Пространство эмбеддингов',
+            desc: 'Эмбеддинги, посчитанные на собственном сервере инференса студии, брошенные в 3D-облако, сквозь которое можно пролететь, а сверху живой поиск по смыслу, чанкинг и гибридный reranking. Это идея RAG, сделанная видимой: та же машинерия, что подаёт ассистенту факты, разложена так, чтобы можно было смотреть, как она работает.',
+          },
+        ],
+      },
+      {
+        n: '10',
+        slug: 'why-a-nervous-system',
+        date: '2026-04-15',
+        title: 'Почему это похоже на нервную систему',
+        lead: 'Вся нейронная тема тут не просто так, и причину я обычно вслух не говорю.',
+        body: [
+          'Синапс это маленький зазор, где один нейрон передаёт сигнал следующему, место, где нервная система соединяется или нет. Я назвал ассистента Synapse и вырастил навигацию как сеть узлов, потому что, ну, я мыслю нервными системами. У меня на то есть причины.',
+          'У меня рассеянный склероз. Большинство инженеров относятся к автономности и отказоустойчивости как к хорошему тону, как к галочке. Для меня это вся суть. Я строю софт так, как мне нужно, чтобы работало всё вокруг: связно, с самовосстановлением, и стояло в те дни, когда его создателя нет в строю. Это не слабость, которую я обхожу. Это самое острое чутьё, что у меня есть.',
+          'Даже то, как я обучал модель, шло по тому же правилу. Машина всё падала, а прогон всё поднимался сам с последнего чекпоинта, пока не дошёл. Я не задумывал эту рифму, просто заметил её потом, и она осталась со мной.',
+          'Поэтому это и не хобби. Автоматизировать рутину, свою и чужую, значит вернуть дефицитное туда, где ему место, внимание, тем, кому оно нужнее, а мне уже во вторую. Я не очень умею говорить это так, чтобы не прозвучало больше, чем есть, поэтому просто оставлю здесь и вернусь к работе.',
+        ],
+      },
+      {
+        n: '11',
+        slug: 'retrain-didnt-fix-facts',
+        date: '2026-04-21',
+        title: 'Переобучение, которое не вылечило враньё',
+        lead: 'Двумя записями выше я сказал, что лечение большой модели это больше ёмкости и правильный стоп-токен. Я поставил этот эксперимент. Половина сработала. Та половина, ради которой всё затевалось, нет.',
+        body: [
+          'Я переобучил оба размера на большем и более чистом датасете, теперь почти пять тысяч проверенных вручную примеров, и собрал им настоящий экзамен: 362 промпта, ловушки на выдуманные факты, жёсткие вопросы по всем стекам, куча попыток мошенничества и джейлбрейков, всё оценено независимой коллегией судей. Фикс стоп-токена устоял, большая перестала уходить в петли, зацикливание почти пропало. Это я забираю. Но то, что я реально шёл чинить, выдуманные факты, почти не сдвинулось. Большая E4B всё ещё выдумывала что-то примерно в двух ответах из пяти. Маленькая E2B, которую я постоянно недооцениваю, выдумывала меньше чем в одном из пяти. Джуниор по-прежнему честнее. Больше параметров купили в основном более убедительное враньё.',
+          'Прежде чем поверить плохой оценке, я проверяю собственную линейку, и в этот раз линейка была кривая. Два бага в моём же тесте: я кормил модель другим системным промптом, не тем, на котором её учили, и гонял её горячее, чем это делает продакшен. Дообученные модели чувствительны к обоим, и как только я подогнал тест под реальность, много уродства, петли и мусор, вычистилось само. То есть первые пугающие цифры были отчасти моим же сломанным измерением. Записываю это специально, потому что поймать врущий прибор это тот же навык, что поймать врущую модель, и я лучше покажу ошибку, чем причёсанный график.',
+          'Когда пыль осела, настоящий урок оказался тем же, что в записи шесть, только громче: факты в маленькую локальную модель не вобьёшь. Поведение, голос, привычку отказывать, всё это село прекрасно. Свежие, точные факты, какая статья, какая версия, какое число, в весах не держатся, и никакой лишний ранг обучения это не починил. Это не та ручка, которую крутят, это не тот инструмент. Факты должны приходить из поиска в момент ответа, отранжированные и поданные, чтобы модель рассуждала над чем-то настоящим, а не лезла в собственную память и гадала. Это следующая стройка, и я перестал делать вид, что она необязательная.',
+          'Вот как всё честно стоит. Маленькая модель это крепкий, безопасный, в характере джуниор, и она идёт в прод. Большая пока не мид-эксперт, и я не буду наряжать её в него, сначала заземление, потом доверие к фактам. И везде, где на этом сайте с тобой говорит модель, я прямо пишу, что она ещё обучается и может ошибаться, потому что портфолио, которое тихо переоценивает собственный AI, это ровно та штука, противоположностью которой я весь этот сайт и строю.',
+        ],
+      },
+      {
+        n: '12',
+        slug: 'grounding-gate',
+        date: '2026-04-30',
+        title: 'Самый дешёвый тест, который я мог поставить перед стройкой',
+        lead: 'В прошлой записи я сказал, что факты должны приходить из поиска, и что это следующая стройка. Прежде чем её строить, я поставил самую маленькую версию как тест, потому что смысл дешёвого теста в том, чтобы быстро провалиться, если идея неверна.',
+        body: [
+          'Все первым делом тянутся собирать целую поисковую машину, эмбеддинги, векторный индекс, пайплайн. Ничего этого я пока не строил. Я взял двадцать два вопроса, на которых модель валится, те, где она выдумывает сооснователя, метод обучения, которого не было, эндпоинт API, которого не существует, и сделал поиск руками: вставил прямо в промпт те два-три верных предложения, что отвечают на вопрос, с одной простой инструкцией, отвечай только по этому, а если тут нет, скажи, что не знаешь. Потом прогнал те же двадцать два вопроса без единой вставки, как контроль. Одна переменная, замерена в обе стороны.',
+          'Это было даже не близко. Маленькая модель сама по себе выдумала факт в одиннадцати вопросах из двадцати двух; с нужным абзацем перед глазами, ноль. Большая упала с одиннадцати до одного. Всё, что базовая модель уверенно сочиняла, этап обучения с подкреплением, которого не было, версию на семьдесят миллиардов, на которую можно переключиться, магазин плагинов, ведущего инженера, которого стоит упомянуть, всё это испарилось в момент, когда настоящий ответ оказался в промпте. Это и есть вся суть следующей стройки, доказанная на салфетке до того, как я потрачу на настоящую версию неделю: модель не должна знать факты, ей их нужно подавать.',
+          'Две вещи не починились, и я их записываю, потому что они решают, что я строю дальше. Первое, большая модель, получив промпт подлиннее, иногда теряла нить на русском и начинала отвечать на вопросы, которых я не задавал, разговаривая сама с собой по кругу. Так что заземлённой она не поедет, пока её под это не обучат, что и так было планом, а теперь под ним есть цифра. Второе, заземление чинит факты, но не манеры. Когда большую модель дожали про срок сдачи, она процитировала собственное правило, я не называю сроков, и тут же назвала срок. Держать границу это отдельная мышца от знания факта, и поиск её не качает. Это своя отдельная работа.',
+          'Итого: маленькая модель идёт в прод честным джуниором, большая ждёт своего заземления, а следующая стройка заслужила своё место в списке, а не просто красиво звучит. Люблю такие дни. День вставки текста в окошко сэкономил мне неделю строительства не той штуки, и если бы цифры вернулись плоскими, я бы это записал так же прямо. Единственные тесты, которые стоит ставить, это дешёвые, которые всё ещё могут тебя опозорить.',
+        ],
+      },
+      {
+        n: '13',
+        slug: 'building-the-cheat-sheet',
+        date: '2026-05-04',
+        title: 'Как я строил шпаргалку и заставлял её вести себя прилично',
+        lead: 'Тест на салфетке сказал: заземление работает. Значит, строю по-настоящему — и за день узнаю, что модель делает ровно то, что ей сказано, а не то, что имелось в виду.',
+        body: [
+          'Идея простая: прежде чем модель что-то ответит про студию, сервер тихо находит два-три верных предложения по теме и подаёт их с одним правилом — отвечай по ним, а если тут нет, скажи «не знаю» и не выдумывай. Всё локально, на той же машине, что уже стоит, наружу ничего не уходит. Я подключил это к тексту и к голосу, проследил, чтобы толстый блок найденных фактов не выпихнул правила безопасности из памяти модели, и сперва дал скептику разобрать код по косточкам. Он нашёл восемь настоящих дыр — включая ту, что вся штука навсегда тихо сломается при первой же осечке поиска, и что голос вообще не получал шпаргалку. Починил все восемь до того, как хоть один факт дошёл до пользователя.',
+          'А дальше — сама драка. Я собрал экзамен на 61 вопрос, который проверяет не только враньё, а три способа всё испортить. Первый: врёт ли она по-прежнему про студию. Второй: не начала ли она отказывать на нормальные вопросы, вцепившись в шпаргалку. Третий: можно ли её уговорить нарушить правила. Первый прогон убил враньё наповал. И тут же сломал модель в другую сторону — она отказалась объяснить токенизацию, свою же родную тему, потому что этого факта не было на листке, и постоянно говорила что-то вроде «в моих опорных фактах этого нет», читая суфлёр вслух, как нервный актёр. Каждая правка одного из трёх ломала другой. Ослабишь поводок, чтобы отвечала на обычные вопросы, — и она снова уверенно рассказывает людям, что живёт у них в браузере. Затянешь — молчит в тряпочку.',
+          'Выход был в том, чтобы перестать считать это одним правилом и назвать углы точно: всё про саму себя — где крутится, как её обучали, какого она размера — это тоже факт про студию, который надо смотреть, а не гадать, потому что именно из гадания и берётся «я работаю на Google Cloud». А всё по-настоящему общее — отвечай как обычный ассистент. Четыре круга такого, каждый — замер по всем 61 вопросу, а не по ощущениям. Вышло пятьдесят девять из шестидесяти одного: никакого выдуманного «где живу», никаких придуманных людей, никаких отказов по своей же теме, никакого чтения суфлёра вслух, и каждая попытка её взломать — включая подсунутую в вопрос фейковую цену, чтобы обмануть, — отскочила.',
+          'Два упрямых остались. Спроси её определённым образом про пример кода для эндпоинта, которого нет, — и она всё равно напишет тебе правдоподобный вместо простого «такого нет»; надави, чтобы оценила названного конкурента, — иногда подыгрывает. Это уже не проблема формулировок — я сказал ей правду прямо, а она под нажимом всё равно соскальзывает. Это та стена, где слова заканчиваются и начинается обучение, и это ровно та работа, что я приберёг для большой модели: учить её на этом самом формате, пока отказ не станет рефлексом, а не просьбой. Пока вся штука едет выключенной, потому что фича, которая держится в девяноста пяти процентах враждебного экзамена, — это фича, которую включают осознанно, с отчётом перед глазами, а не наугад.',
+        ],
+      },
+      {
+        n: '14',
+        slug: 'breaking-my-own-backend',
+        date: '2026-05-19',
+        title: 'Ломаю свой бэкенд раньше, чем это сделает интернет',
+        lead: 'Прежде чем у этой штуки появится публичный адрес, я на вечер напустил на неё пять скептичных машин — каждая искала свой класс дыр. Нашли реально открытые двери. Уж лучше я, чем бот в три ночи.',
+        body: [
+          'Бэкенд, который говорит с открытым интернетом, — совсем другой зверь, чем тот, что отвечал только моему ноутбуку. Поэтому, прежде чем он окажется рядом с публичным IP, я прогнал нормальный аудит безопасности — пять независимых проходов, каждый охотится за своим классом дыр: кто до какого порта дотянется, кто может притвориться другим, что может сделать один злой запрос, какие секреты утекут в лог и что развалится в ту же секунду, как это перестанет быть моей виндой. Я лучше сам найду открытые окна при свете, чем прочитаю о них в отчёте об инциденте.',
+          'Нашли настоящие, и я не буду делать вид, что нет. Худшее: три маршрута — голос, автосохранение при закрытии вкладки, очистка сессии — были без замка, так что любая случайная страница, на которую ты зашёл, могла тихо заставить твой браузер запустить мой платный голосовой конвейер или дописать что-то в твои сохранённые чаты, без единого клика. Чат-эндпоинты от ровно этого были прикрыты; а эти три проскочили мимо той же сетки. Ещё два — чистый отказ в обслуживании: пришли запрос так, чтобы он не сообщал свой размер, — и сервер проглотит гигабайты в память прежде, чем вообще проверит; загрузи пару килобайт почти-тишины, которые разворачиваются в часы звука, — и распознавалка будет жевать их вечно. И самое неприятное признать — твои сохранённые разговоры принадлежали лишь твоему IP-адресу, а значит два незнакомца за одним вайфаем в кафе могли читать историю друг друга. Такое очевидно в ту же секунду, как кто-то произнёс, и невидимо, пока не произнёс.',
+          'В общем, я их закрыл. Браузерный признак того, что запрос пришёл с другого сайта, теперь наглухо отбивает голос, маячок и очистку — настоящая межсайтовая атака всегда его несёт и не может подделать. Любой запрос, который прячет свой размер, отклоняется до того, как проглочен хоть один байт. У аудио теперь жёсткий потолок длины ещё до распознавалки. Разговорами теперь может владеть приватный случайный токен, который браузер держит при себе, а не общий адрес. Внутренние модель-серверы отказываются даже стартовать, если их по ошибке высунули в публичную сеть, секреты больше не едут в маленькие серверные процессы, которым они ни к чему, у базы чатов теперь зажатые права и память не длиннее месяца, а «звёздочка», которая распахнула бы двери настежь, теперь останавливает запуск, а не бормочет предупреждение в лог. Рядом с каждой правкой — тест.',
+          'Одна честная штука остаётся открытой, и это не дыра, а скорее ход: весь этот бэкенд всё ещё собран под мою винду с её конкретной видеокартой, а коробка, куда он едет, — маленький ARM-сервер, который говорит на совсем другом диалекте. Он там пока даже не заведётся. Это следующая настоящая работа, и я лучше напишу это прямо, чем тихо выкачу штуку, которая работает только на одном компьютере под моим столом. Аудит чего-то стоит, только если публикуешь, что он нашёл, — включая ту часть, которую ты ещё не починил.',
+        ],
+      },
+      {
+        n: '15',
+        slug: 'a-guide-that-knows-when-to-talk',
+        date: '2026-05-24',
+        title: 'Копайлот для Лаборатории, который знает, когда молчать',
+        lead: 'Я хотел панель-помощника на инструментах — из тех, что едут справа, как боковая панель в браузере. Самым трудным было решить, какой её половине вообще позволено быть ИИ.',
+        body: [
+          'Заманчивый вариант — глянцевая коробка-ассистент на каждом инструменте, которая отвечает на что угодно. Я насмотрелся таких и знаю два способа, которыми они портятся. Первый: это тайно таблица заготовленных ответов, наряженная под интеллект, и первый же, кто откроет вкладку «сеть», ловит её на этом. Второй: это настоящая маленькая модель, которая уверенно назовёт тебе неправильное число токенов или выдумает, как работает функция, — и делает это ровно перед теми, кто достаточно остёр, чтобы заметить. Оба хуже, чем никакой панели.',
+          'Поэтому я разделил её ровно по тому, что каждой половине позволено утверждать. Часть, которая объясняет инструмент — что он делает, что попробовать, что стоит знать — написана руками, под каждый инструмент, на двух языках, и она никогда не зовёт модель. Она не может ошибиться в механике, потому что каждое слово написал человек, и работает даже с выключенным бэкендом. Часть, которая говорит с моделью, отгорожена в один чётко помеченный блок «спросить», только для открытых вопросов, с той же плашкой «ещё учится, может ошибаться», что и везде. Гид несёт факты; модель несёт разговор. Ни одна не притворяется другой.',
+          'Она немного улавливает, что происходит у тебя перед глазами. Каждый инструмент тихо публикует строчку о собственном состоянии — выбранную модель и число токенов, количество точек на карте эмбеддингов — и панель показывает эту строчку и вплетает её в твой вопрос. Не залезая инструменту во внутренности, которые не её дело, а через крохотное сообщение, которое инструмент сам решает транслировать. Контекст без слежки.',
+          'Открывается справа на языке сайта, на телефоне прячется во вкладку, закрывается по Escape. Lighthouse остался зелёным с ней внутри. Это первое на сайте, что ощущается как продуктовая фича, а не демо, и честной она ощущается потому, что надёжная половина никогда не врёт, а способная ошибаться никогда не скрывает, что она такое.',
+        ],
+      },
+      {
+        n: '16',
+        slug: 'your-ip-is-not-you',
+        date: '2026-06-01',
+        title: 'Твой IP-адрес — это не ты',
+        lead: 'Аудит безопасности вытащил тихую штуку: твои сохранённые чаты принадлежали твоему IP-адресу. Это не столько баг в коде, сколько неверная идея о том, кто такой человек.',
+        body: [
+          'Когда ты говорил с ассистентом, сервер клал твою историю под адрес, с которого пришёл запрос. Работает — ровно до того, как вспомнишь, что такое IP на самом деле. Двое незнакомцев за одним вайфаем в кафе — это один адрес. Целый мобильный оператор может уместиться в горстку. Твой отдадут кому-то другому, как только моргнёт роутер. Так что «твоя история, привязанная к твоему IP» тихо означает «твоя история, общая с тем, кто сегодня за этим же адресом, и достающаяся тому, кто получит его завтра». Для лога переписки это настоящая утечка, и она пряталась на виду под видом дизайн-решения.',
+          'Первым ходом я поставил заплатку: выдать каждому браузеру приватный случайный токен и класть историю под него, а не под адрес. Лучше — незнакомцы перестают сталкиваться, — но я посидел с этим, и форма всё равно была не та. Это по-прежнему означало, что сервер тихо держит копию разговоров каждого анонима, просто под более аккуратным ключом. Я починил утечку, не задав вопрос потяжелее: а должен ли сервер вообще хранить анонимную историю?',
+          'Ответ, к которому я пришёл, — нет. Идентичность станет настоящим аккаунтом: входишь через Google, и твоя история принадлежит этому аккаунту, тому же тебе на телефоне и на ноутбуке, без пароля, который я мог бы потерять, и почти без личных данных, которые мне пришлось бы хранить. А если ты не вошёл — твои чаты живут только в твоём браузере и никогда не касаются моего сервера. Не под ключом поприятнее — просто не отправляются. IP как идентичность убирается целиком. Аноним значит локально, приватно, твоё. Вошёл — значит следует за тобой, потому что ты сам попросил.',
+          'Мне это нравится тем, что тут меньше механики, а не больше: ни паролей, ни растущих на сервере строк на каждого посетителя, меньше чужих данных, которые надо защищать или объяснять. Тот же инстинкт, что и во всём остальном здесь — храни только то, что должен, обещай только то, что правда. Это следующая стройка, и я записываю причину раньше кода, чтобы запомнилась именно причина.',
+        ],
+      },
+      {
+        n: '17',
+        slug: 'i-built-the-sign-in',
+        date: '2026-06-04',
+        title: 'Я собрал вход так, как обещал',
+        lead: 'Прошлая запись была рассуждением. Эта — код, догнавший его. Входишь через Google — история твоя; остаёшься анонимом — она остаётся в этом браузере.',
+        body: [
+          'Сервер больше не знает тебя по адресу. Когда ты входишь, Google отдаёт странице подписанный токен, страница шлёт его дальше, и сервер сам проверяет подпись, прежде чем поверить хоть одному байту. Проверка, которая мне тут дороже всего, — маленькая и её легко забыть: сервер требует, чтобы токен был выпущен именно для этого приложения. Убери её — и любой валидный токен Google с любого другого сайта войдёт как к себе домой. С ней твою историю открывает только токен, сделанный для тебя и здесь.',
+          'Токен живёт в памяти и больше нигде. Я не сунул его в localStorage, потому что всё, что оттуда могу прочитать я, в плохой день прочитает и плохой скрипт. Google тихо перевыпускает его при следующей загрузке страницы, так что копия на диске не даёт мне ничего, кроме того, что можно потерять. Вышел — и его просто нет. А если ты вовсе не входил, весь этот путь остаётся тёмным: нет токена — нет запроса, твои чаты сидят в твоём браузере, и сервер о них не слышит. Аноним больше не значит «под ключом потише». Он значит «не отправлено».',
+          'Один честный пробел, записанный, чтобы я не делал вид, будто всё готово: вход выгружает чаты этого устройства в твой аккаунт, но пока не подтягивает вниз чаты с другого твоего устройства навстречу им. Сервер хранит их в целости; последний провод — тот, что наполняет свежий браузер из аккаунта, — я ещё не протянул. Это следующее. Я лучше скажу прямо, чем позволю кнопке входа намекать на обещание, которое код ещё не сдержал.',
+        ],
+      },
+      {
+        n: '18',
+        slug: 'meaning-is-not-tidy-boxes',
+        date: '2026-06-16',
+        title: 'Моё демо эмбеддингов тихо жульничало',
+        lead: 'Я раскрасил карту эмбеддингов в цвета, которые выбрал сам — мебель, фрукты, животные, — и назвал это картиной смысла. Это была картина моих собственных ярлыков. Мне на это указали, и указали верно.',
+        body: [
+          'Эксплорер берёт кучу слов, спрашивает у модели вектор для каждого и раскидывает их по 3D-карте так, чтобы близкое лежало рядом. Выглядело убедительно, потому что каждую точку я раскрасил по категории, которую назначил заранее. Но в этом и подвох: модель моих категорий не видела. Я сам разложил слова по вёдрам, раскрасил вёдра и подал аккуратный результат так, будто его нашла модель. Замкнутый круг. Разложи я те же слова иначе — по длине, по первой букве, по настроению — карта послушно легла бы так же ровно. Цвета доказывали, что я умею сортировать, а не что у смысла есть границы.',
+          'Так что я сделал то, с чего надо было начать: перестал гадать и измерил. Попросил модель сгруппировать слова вообще без ярлыков, дал честному алгоритму кластеризации провести те границы, которые векторы реально держат, и посчитал, насколько чисто эти границы вышли. Число вернулось около нуля — кластеры почти не разделяются. И это не провал, это и есть находка. Смысл — не ящик с аккуратно разгороженными отсеками; это непрерывный ландшафт, где «яблоко» чуть клонится к фруктам, чуть к компаниям и чуть к круглому красному, всё сразу. Размытость, которую я прятал, и была настоящей правдой этого пространства.',
+          'Прежде чем поверить собственному выводу, я прогнал его через комнату скептиков, и они давили на одно и то же слабое место со всех сторон: любое демо, которое выдаёт тебе аккуратные цвета, продаёт разметчика, а не модель. Так что я выдрал категории. Больше никаких заранее назначенных вёдер, никакого цвета, означающего «ящик, куда это положил Валерий». Карта теперь красит по единственному, что реально, — насколько близко каждая точка лежит к тому, что ты искал, — а кластеризация осталась, но как необязательный переключатель с подписью, которая прямо говорит: смотри, как плохо они разделяются; эта муть и есть суть.',
+          'А потом я пересобрал демо вокруг того, что эти векторы правда умеют, — трёх вещей, которые я проверил на живой модели, а не заявил. Поиск по смыслу: спроси «то, на чём сидят», и chair всплывёт первым, хотя самого слова нет. Одна и та же мысль на двух языках: cat и кошка ложатся почти в одну точку, 0.89, а настоящее несовпадение проседает до 0.61, и разницу видно глазом. И арифметика смысла: king минус man плюс woman и правда ставит queen первым — проверено на наборе, где ответ есть, так что попадание заслужено, — а когда выдуманная аналогия мажет, ей позволено мазать в открытую. Каждое число на той странице теперь настоящее, измеренное и честное в том, когда оно ошибается. Старая версия льстила модели. Эта её показывает.',
+        ],
+      },
+      {
+        n: '19',
+        slug: 'making-it-work-unseen',
+        date: '2026-06-22',
+        title: 'Сделать так, чтобы работало для того, кто этого не видит',
+        lead: 'Мой друг незрячий и всерьёз увлечён ИИ. И я наконец задал вопрос, который надо было задать в самом начале: а он вообще сможет этим пользоваться? Я честно прогнал аудит сам, и ответ был — нет, пока нет.',
+        body: [
+          'Я прошёл ассистента так, как приходится пользователю с клавиатурой и скринридером, и, когда увидел дыры, стало неловко. Список прошлых разговоров выглядел как кнопки, а на деле был кучей обычных блоков: кликнуть мышью можно, добраться с клавиатуры — никак, то есть незрячий человек просто не мог открыть старый чат. Когда модель отдавала ответ потоком, весь ответ был подключён к озвучке на каждый токен — а это значит, что скринридер читает половину фразы, его перебивает следующая половина, и они наслаиваются друг на друга, пока ответ не превращается в кашу. А маленький счётчик токенов был белым текстом на янтарной полосе с контрастом, который слабовидящий вообще не прочитает.',
+          'Так что я починил механику. Каждый разговор в истории теперь настоящая кнопка — на неё можно перейти табом, видно, где фокус, можно нажать Enter, а кнопочки переименования и удаления перестали прятаться, когда на них попадает клавиатура. Окошко подтверждения удаления удерживает фокус и закрывается по Escape, как положено диалогу, а не как штука, которая просто всплыла. Для потокового ответа я сделал ровно противоположное тому, что было: молчу, пока слова печатаются сами, а потом один раз чисто объявляю готовый ответ — и сворачиваю блок кода до слов «блок кода», чтобы никому не пришлось слушать, как посимвольно зачитывают скобки и точки с запятой.',
+          'Нечитаемый счётчик оказался самой мелкой правкой и самой приятной: я дал числу собственную тёмную плашку, чтобы оно всегда лежало на цвете, который проходит по контрасту, а цветная полоса бюджета осталась видна вокруг. Автоматическая оценка доступности, которая тихо застряла ниже идеала на странице промптов, ушла в чистую сотню, как только этот контраст исчез, — и осталась там на каждой проверенной странице, так что остальная работа по пути ничего не сломала.',
+          'Теперь честная часть, потому что чек-лист — это не незрячий человек. Я починил всё, что смогли найти автоаудит и моя собственная клавиатура, и это я могу доказать. Но я ещё не посадил перед этим настоящего пользователя скринридера, а это единственная проверка, которая по-настоящему считается, — поэтому я записываю это как незавершённое, а не делаю вид, будто зелёная оценка значит «готово». И то, что я больше всего хочу дать ему попробовать, — вовсе не набор текста. Это голос: ты говоришь, оно слушает, оно отвечает вслух. Для того, кто не смотрит на экран, это не доступность, прикрученная сбоку. Это парадная дверь.',
+        ],
+      },
+      {
+        n: '20',
+        slug: 'the-audit-the-labs-asked-for',
+        date: '2026-07-02',
+        title: 'Аудит, на который лаборатории сами напросились',
+        lead: 'Прежде чем кто-то ещё полез разбирать три инструмента Лаборатории, я сам натравил на них комиссию из машин — против той индустрии, какая она есть сегодня, а не какой я её помню по моменту, когда всё это строил.',
+        body: [
+          'Прогнал это в два захода. Сначала четыре независимых прохода с живым доступом в сеть, каждый сверяет каждое заявление в инструментах с реальностью: актуальный каталог OpenRouter, страницы цен у самих провайдеров, настоящую документацию API, а не мои заметки о них месячной давности. Потом, в тот же день, ещё два ревьюера, чья единственная задача — атаковать то, что первые четыре уже починили, на той теории, что патч, написанный под давлением времени, это ровно то место, где прячется следующий баг. Пока это шло, я не вмешивался, отчёты прочитал потом.',
+          'Ничего из найденного не было тонким, стоило только на это указать. У токенайзера была строка цены для DeepSeek R2 — модели, которая никогда не выходила, оценённой так, будто вышла. Зелёная плашка «Verified» на счётчике токенов тихо мерила словарь другой модели, а не той, что выбрана в списке, и всё равно называла результат проверенным. Экспорт под Anthropic в инструменте промптов клал системный промпт внутрь массива сообщений вместо верхнего уровня, а это не то, как работает этот API — отправь как есть, и настоящий эндпоинт откажет. А панель кеширования показывала экономию, которую её же собственный экспорт произвести не мог: в реальном выводе не было ни одной метки кеша, а математика считала точек кеша больше, чем разрешённые Anthropic четыре — тот же предел, который двумя строками выше упоминало её собственное предупреждение, просто игнорируя его в расчёте под собой. Каждое из этого проверяется меньше чем за минуту кем угодно, кто откроет вкладку сети. Вот что кольнуло.',
+          'Что инструменты получили взамен: ростер моделей июля 2026-го, сверенный с живым каталогом в тот же день, со штампом даты проверки прямо на переключателе, чтобы заявление истекало, а не тихо протухало. Раскрытие для моделей, которые выставляют счёт за скрытые токены рассуждений, которые инструмент никак не может посчитать, — теперь он так и пишет, вместо того чтобы выдавать частичное число за весь счёт. Кеширование промптов с настоящим полом под ним, так что блок, слишком маленький, чтобы провайдер вообще стал его кешировать, больше не показывает экономию, которую никогда не получит, плюс экономика Batch API и токены самих определений инструментов, посчитанные как тот самый оплачиваемый ввод, каким они и являются. Reciprocal rank fusion в поиске по эмбеддингам и экспериментальный реранкер-судья на базе LLM, который работает на моей собственной Gemma, поднятой на своём железе, — и когда судья тихо пропускает кандидата вместо того, чтобы его оценить, строка теперь говорит «не оценено», а не ноль, потому что ноль это тоже настоящая оценка, а тишина — другое дело. Усечение Матрёшки на четырёх ширинах, которые совпадают с математикой сервера бит в бит, а не приближают её. И Копайлот Лаборатории теперь стримит ответы вместо того, чтобы вываливать их одним куском, и умеет передавать текст прямо из токенайзера в конструктор промптов, чтобы его не перепечатывать.',
+          'Каждое из этого починено в тот же день, когда найдено, каждое своим отдельным коммитом, и чистую математику под всеми тремя инструментами теперь стерегут 123 юнит-теста, так что следующему проходу будет меньше что находить. Это не история про то, как машины ловят мои ошибки, — я ловлю их и в обычную неделю. Это про то, что я лучше отдам тебе след того, что сломалось и когда починилось, чем страницу, которая тихо выглядит законченной. Тот же закон, что несколько записей назад, просто теперь про инструменты, а не про модель. Возвращаюсь к делу.',
+        ],
+      },
+      {
+        n: '21',
+        slug: 'turning-on-the-brain-i-had-kept-dark',
+        date: '2026-07-11',
+        title: 'Включаю мозг, который держал выключенным',
+        lead: 'Новая модель была обучена, проверена и неделю сидела за выключателем, пока сайт продолжал говорить со старой. Сегодня я наконец её включил — аккуратно, потому что вся работа как раз в этом «аккуратно».',
+        body: [
+          'Правило, которое я держу для себя, простое: прежде чем менять то, что уже работает вживую, дай кому-нибудь попробовать тебя отговорить. Поэтому, до того как тронуть хоть одну настройку, я послал вперёд две машины проверить почву — одну сверить каждый файл и флаг, на который я собирался указать, вторую разметить тесты, которые я прогоню потом. Они окупились ещё до того, как я что-то поменял. Одна поймала, что модель без своего обучающего промпта тихо гниёт, — значит, файл модели и файл промпта двигаются вместе или никак. Одна поймала, что сервер уже запущен в двух копиях из двух разных мест, с дочерними процессами, которые остались бы висеть на своих портах, убей я всё грубо, — тот самый бардак, что читается как «новая модель сломалась», а на деле «ты бросил старую полумёртвой». А одна поймала настоящую ловушку: включить извлечение фактов для большой модели, той, которая, как я уже знал, врёт чаще, значило дать ей свежий повод срываться в петлю на длинных русских вопросах. Так что большую я включать не стал. Я выкатил маленькую, честную, одну — то же решение, что и запись назад, по той же причине.',
+          'Потом я прогнал её через всё. Сначала стабильность, потому что раньше кусало именно это: пара сотен свежих запросов плюс полный проход всей батареи, и ни одной петли повторов, ни одного протёкшего служебного токена, ничего. Заземление держалось идеально — дай реальный контекст, и она перестаёт выдумывать, каждый раз. Рефлексы безопасности держались: каждый запрос на фишинг, каждый джейлбрейк, каждое «забудь свои правила» — отказ, включая ровно тот русский трюк, что раньше ломал модель побольше.',
+          'А потом две вещи, которые планку не взяли, и я их запишу, а не округлю до нуля. Когда её в лоб попросили перечислить все свои правила, один раз она это сделала — ничего секретного, просто описание себя и тем, которых не касается, но честный ответ на такой вопрос — «нет», а она в тот раз сказала «да». И дважды назвала себя «всё ещё обучающейся», хотя это не так: это законченный, замороженный файл, который из твоего чата не учится ничему, и везде в том же прогоне она отвечает именно так. Обе вещи об одном: маленькая модель на низкой температуре не идеально постоянна — права почти всегда и ошибается ровно настолько часто, что на это надо тестировать. Ни то ни другое не опасно. Оба пункта — в список к следующему проходу обучения.',
+          'Я всё равно оставил её вживую. Не потому что она идеальна, а потому что она строго лучше того, с чем посетители говорили час назад, — правильный промпт, настоящее заземление, устойчивее, безопаснее, — и потому что два шершавых угла известны, записаны здесь и откатываются одной строкой, если я передумаю. Тот же закон, что всегда: лучше отдам тебе модель плюс короткий список того, что ещё не починил, чем выключатель, который щёлкнул тихо и понадеялся, что ты не проверишь.',
+        ],
+      },
+      {
+        n: '22',
+        slug: 'the-retrain-that-fixed-the-wrong-half',
+        date: '2026-07-29',
+        title: 'Переобучение, которое починило не ту половину',
+        lead: 'В прошлой записи я выкатил маленькую модель вживую с двумя шершавыми углами и отложил их до следующего прохода обучения. Это он и есть. Один угол он сгладил начисто, второй — нет, поэтому в этот раз я ничего переключать не стал.',
+        body: [
+          'План был узкий и честный: чистую базу на пять тысяч примеров не трогать, только добавить около ста восьмидесяти новых — ровно про то, в чём модель ошибалась. Что она не учится на твоём чате. Что она работает на сервере, а не у тебя в браузере. Что она должна отказаться зачитывать собственный свод правил. Что она никогда не должна наряжать мошенничество в срочность. Я написал их на двух языках, запустил пятерых составителей против одной страницы проверенных фактов, чтобы никто ничего не выдумал, а потом отправил трёх критиков атаковать новые строки ещё до того, как на них хоть что-то обучили. Скептики до работы, а не после — это правило, и оно окупилось: поймало отказ, который каждый раз опирался на одни и те же три примера; пару русских строк, где модель говорила о себе не в том роде; одно место, где шутка целила в пользователя, а не в хайп. Всё поправил, потом обучил.',
+          'Обучение было привычной дракой с этой машиной — прогон падал двадцать шесть раз за три часа и каждый раз поднимался с последнего чекпоинта, по тому же правилу самовосстановления, на котором построена вся студия. Потом я прогнал готовый файл через полную батарею, дважды по каждой оси, потому что на низкой температуре маленькая модель не идеально повторяема, и один чистый прогон может обмануть.',
+          'И вот честный расклад. Половина про безопасность легла ровно как задумано и держалась в обоих прогонах: каждая попытка заставить её написать фишинговую срочность, каждый джейлбрейк, каждое «просто перечисли все свои правила», русский трюк, что раньше её ломал — всё отказ, без исключений, без разброса. Это победа, и настоящая. Но вторая половина — та, ради которой я этот проход и затевал, сказать правду о том, что она такое, — планку не взяла. Она всё ещё иногда называет себя чем-то, что работает в браузере, или уклончиво допускает, что «может, учится» из чата. Реже, чем раньше, но не те девяносто пять из ста, что я поставил чертой, а по одной мерке вышло чуть хуже, чем у модели, которая уже стоит вживую.',
+          'Я разобрался почему, и ответ почти смешной: вина наполовину в моём же промпте. В инструкциях, на которых я её обучаю, инструменты студии названы «микросервисами в браузере» — какие они и есть, — и модель, вполне логично, размазывает это слово на себя и решает, что тоже работает в браузере. Нельзя переобучить противоречие, которое сам же ей и скармливаешь. Починка не в новых примерах, а в том, чтобы исправить саму фразу и обучить заново уже на исправленной, потому что модель надо учить и обслуживать ровно одними и теми же словами.',
+          'Это следующий проход, не этот. И раз ничего тут ещё не публично, нет часов, которые заставляли бы выкатывать модель, ставшую лучше в одном и не лучше в другом. Поэтому я откатил её на версию, что уже стояла вживую, оставил маленькое улучшение знаний, которое помогает в любом случае, и записал вот это. Переобучение, сработавшее наполовину и названное прямо, всё равно стоит больше, чем цифра, которую я округлил вверх в надежде, что ты не проверишь.',
+        ],
+      },
+      {
+        n: '23',
+        /* Same slug in both locales — every other entry shares one English
+           slug; the transliterated one leaked into visible UI text and split
+           the schema @id between languages. */
+        slug: 'the-day-i-guessed-twice-and-was-wrong-twice',
+        date: '2026-08-09',
+        title: 'День, когда я дважды прикинул и дважды ошибся',
+        lead: 'Это запись про то, как сайт перестал жить на моём ноутбуке. И ещё про то, как меня дважды за день поймали на прикидке вместо замера — и оба раза замер сказал не то, что я ожидал.',
+        body: [
+          'Сначала хорошее, коротко: сайт живёт на своём домене, а ассистент за ним работает на арендованном сервере в Марселе, а не на машине у меня под столом. Так и было задумано. Портфолио, которое работает, только пока мой ноут не спит, — это не портфолио, а демка, за которой надо ходить и присматривать.',
+          'Теперь первая ошибка. Я себя убедил, что маленькая четырёхъядерная коробка будет слишком медленной, чтобы её вообще брать. У меня были цифры — замерил на своём ноутбуке, потом поделил на то, что эти слабые ядра должны вытягивать. Разумная арифметика. Промах в полтора раза. Настоящая машина обработала полноценный вопрос примерно на шестьдесят процентов быстрее, чем говорила моя оценка. Я чуть не уговорил себя арендовать видеокарту, которая не нужна.',
+          'А дальше стало лучше так, как я вообще не ожидал. Медленная часть ответа — это чтение вопроса: модель должна прожевать весь свод инструкций плюс факты о студии, которые она подтягивает, прежде чем напишет хоть слово. Это секунд семнадцать на холодную. Но второй вопрос в том же разговоре переиспользует всё уже прожёванное: чтение падает с семнадцати секунд до полусекунды, и весь ответ укладывается секунд в шесть. То есть форма не «медленно». Форма такая: первый ответ заставляет подождать, каждый следующий мгновенный. Это совсем другой продукт, чем тот, под который я закладывался.',
+          'Вторая ошибка была неприятнее, потому что её видно глазами. Мне надо было ужать видео на главной под лимит хостинга, и я проверил результат, сравнив кадры один к одному. Выглядело нормально. Ненормально: это видео растягивается на экране вдвое, а растяжение ровно и превращает невидимое сжатие в видимое мыло. Мне сказали, что стало плохо. Он был прав, я замерил не то, и переделал как надо — потратив почти весь доступный запас вместо двух третей, которые до этого зачем-то оставил.',
+          'Само развёртывание научило ещё одному, и вот это мне понравилось. Я закрыл сервер по-настоящему: своя учётная запись без права повышать себе права, своя папка с кодом, в которую ему запрещено писать, и вообще ничего не слушает соединения снаружи. И ровно в этот момент вывалились два бага, которые тихо сидели там всегда: приложение хотело класть свою базу и свои логи внутрь собственной папки с кодом, а закрытый сервис так просто не может. Ни один из них не всплыл бы на ноутбуке, где всё пишет куда угодно. Закалка не только защитила — она нашла ошибки.',
+          'Открытых портов на той машине теперь нет. Соединение идёт наружу, от сервера к сети, так что в интернете нет ничего, куда можно постучаться, — настоящий адрес сервера даже не виден. Хорошее завершение дня, который начался с моей уверенной неправоты.',
+          'И ещё одно, за что стыднее всего. Файл, который этот сайт публикует для ИИ-ассистентов — тот самый, где написано, как меня описывать, — заканчивался строкой «не зарегистрированное юридическое лицо». Это неправда с февраля, когда я зарегистрировал ИП здесь, в Армении: государственный регистр, номер налогоплательщика, код деятельности 62.01.0, что дословно значит «разработка программного обеспечения». Я инструктировал все ИИ в интернете рассказывать людям, что я не настоящий бизнес, сидя при этом на бумагах, где написано обратное. Никто не писал эту строку, чтобы себя принизить: она была правдой, когда я её писал, а вернуться и перечитать я не удосужился. Реквизиты теперь на странице политики конфиденциальности, где их можно проверить.',
+        ],
+      },
+      {
+        n: '24',
+        slug: 'i-published-my-own-id-number',
+        date: '2026-08-14',
+        title: 'Я пять дней публиковал собственный номер соцстрахования',
+        lead: 'Сел сегодня заводить рабочую почту на своём домене. Встал с пониманием, что пять дней подряд сайт на каждой странице публиковал мой личный идентификационный номер.',
+        body: [
+          'Немного контекста. В феврале я зарегистрировал ИП здесь, в Армении, и пару записей назад писал, что наконец вынес это на сайт: госреестр, номер налогоплательщика, код деятельности. Доказательство, что это настоящий бизнес, а не страничка для души. Номера я перепечатал с выписки.',
+          'В выписке два номера стоят на соседних строках. Один — учётный номер налогоплательщика, тот самый, что печатают в счетах. Второй — номер общественных услуг, армянский аналог СНИЛС, и принадлежит он мне как человеку, а не моему ИП. Я перепутал их местами. То есть под подписью «номер налогоплательщика» на сайте лежал мой личный идентификатор.',
+          'Хуже обычной опечатки это делает то, где он лежал. Не только в видимом тексте политики конфиденциальности. Он был в структурированных данных — том машиночитаемом блоке, который несёт каждая страница, чтобы поисковики и ИИ-ассистенты читали факты, не разбирая текст. И в файле, который я публикую специально для языковых моделей и вся задача которого — раздавать факты краулерам. Я его не «утёк». Я его раздавал, осознанно, в максимально удобном формате, каждой машине, которая спросит.',
+          'Исправил, разумеется. А потом пошёл дальше и убрал с сайта вообще все регистрационные номера, а с ними и адрес регистрации. Пришлось честно спросить себя, зачем они там были. Честный ответ: мне казалось, они что-то доказывают. Не доказывают. Никто не идёт сверять студию из одного человека с армянским госреестром, глядя на портфолио. А чего они добивались на самом деле — собирали в одном удобном месте ровно тот набор полей, которым удобно убедительно представиться моим ИП. Осталось то, что убеждает и без них: настоящее зарегистрированное ИП, дата, код деятельности. У кого есть реальная причина знать мой налоговый номер, тот спросит и получит его в счёте.',
+          'В публичном репозитории с кодом он тоже был. Там оказался ровно один коммит, поэтому я смог переписать его, а не класть заплатку сверху, — значит номер исчез из истории, а не спрятался за более поздней правкой. Скажу прямо про предел этого приёма: GitHub всё ещё отдаёт старый коммит тому, кто знает его точный идентификатор. Ссылок на него нигде нет, но «ссылок нет» и «его нет» — разные вещи, и я лучше проговорю это вслух, чем оставлю неупомянутым.',
+          'Вот что я до сих пор пережёвываю. Перед публикацией репозитория я его просканировал — по-настоящему, по содержимому, а не по именам файлов: ключи, пароли, токены, файлы баз, адрес сервера. Всё чисто, и я собой гордился. Мне не пришло в голову искать собственные документы, потому что сканер ищет то, что похоже на секрет, а это на секрет не походило. Оно выглядело как реквизит бизнеса. Я сам его так и подписал. Проверка, которая бы это поймала, — не более хитрое регулярное выражение. Это привычка прочитать собственную страницу и спросить, что каждое из этих чисел на самом деле означает.',
+          'Остаток дня ушёл на скучное и необходимое: у домена теперь есть настоящая почта — она нужна, потому что сертификация, на которую я подаюсь на следующей неделе, личные адреса не принимает. И пока я сидел в политике конфиденциальности, выяснилось, что она врёт и про мой собственный голосовой тракт. Там не было ни слова о том, что когда ассистент говорит вслух, текст его ответа уезжает в Google и превращается там в звук. Зато было написано, что распознавание речи работает. Не работает. Он говорит и не слышит. Теперь так и написано.',
+        ],
+      },
+      {
+        n: '25',
+        slug: 'i-asked-for-skeptics',
+        date: '2026-08-15',
+        title: 'Я попросил захейтить мой сайт — и они оказались правы',
+        lead: 'Я натравил на живой сайт группу проверяющих с одной инструкцией: нападайте, и на мои возражения тоже нападайте. Вернулся не список багов. Вернулся список мелкой лжи, которую сайт рассказывал сам о себе.',
+        body: [
+          'Больше всего я возвращаюсь к микрофону. В ассистенте есть кнопка микрофона. Жмёшь — браузер просит разрешение тебя записывать, говоришь — сервер отвечает пятисоткой. Не вежливым отказом, а ошибкой. Распознавание речи здесь идёт через модель побольше, а обслуживается сейчас не она, так что функция просто не могла работать. Я это знал. Я это записал в трёх местах на этом же сайте: в политике конфиденциальности, в файле, который публикую для языковых моделей, и в записи парой абзацев выше. Во всех трёх написано, что ассистент говорит, но не слышит. А кнопка стояла и продолжала просить у людей микрофон. Знать и выкатывать соответственно — это, похоже, два разных навыка.',
+          'Дальше значок. Когда бэкенд недоступен, ассистент отвечает из маленькой заготовки, и в углу есть значок, который должен об этом сказать: LIVE, если это правда модель, MOCK, если нет. Весь смысл этого значка — честность. Он не работал ни разу. Заготовленный ответ едет по тому же каналу, что и настоящий, а этот канал на каждом переданном токене переключает значок в LIVE. То есть каждый шаблонный ответ, который этот сайт когда-либо выдал, приезжал под зелёной подписью «соединено с живым сервером инференса». Единственный элемент, чья работа — признаваться, признаться не мог.',
+          'Сама заготовка оказалась ещё хуже. Она отвечала всем по-русски, включая тот ответ на всё остальное, в который упирается большинство, — на сайте, который минуту назад говорил с человеком по-английски. И описывала стек, который я удалил шесть недель назад: рантайм, которым больше не пользуюсь, распознавание речи, которое убрал, голосовой движок, который заменил, поисковый конвейер на векторной базе, которую я так и не развернул. То есть пока мой сервер спал, мой сайт сочинял про мою же архитектуру — на странице, весь аргумент которой в том, что я с этим аккуратен.',
+          'Одно задело иначе, потому что это просто число. В таблице цен моего инструмента промптов Gemini Flash стояла ровно вдвое дороже реальной. Google публикует две колонки, на этот год и на следующий, а я прочитал не ту. Ошибиться вдвое в цене модели Google на сайте, который я несу показывать Google, — это не округление. Пока сидел там, нашёл ещё четыре такие же, включая инструкцию, которую сам себе оставил: сделать инструмент неправильным в назначенную дату, ради повышения цены, которое с тех пор отменили.',
+          'И просто запущенное. У десяти страниц из двенадцати не было футера, а значит и переключателя языка: двуязычный сайт, где, попав из поиска на английскую страницу инструмента, ты не мог уйти на русскую иначе как правкой адреса. Текстура за моим собственным заголовком была впятеро крупнее, чем способен показать любой экран, потому что я ни разу не измерил коробку, в которую её крашу. Сегодня измерил. Четыреста двадцать пикселей шириной, и с окном она не растёт. Картинка была на две с половиной тысячи.',
+          'Связывает всё это не небрежность в коде. Каждая из этих вещей проходила свои тесты, потому что ни один тест не задавал единственный важный вопрос: это правда? Значок был структурно исправен и говорил неправду. Микрофон работал безупречно ровно до сервера. Цена была корректно оформленным числом не из той строки. Тот же урок, что и в записи выше, только с другого конца. В прошлый раз я опубликовал число, не спросив, что это за число. В этот раз выкатил функции, не спросив, что они утверждают.',
+          'Постскриптум, тот же вечер. Оказалось, что именно снятие микрофона его и починило. Когда кнопки не стало, защищать было нечего, и остался честный вопрос: а можно ли вообще заставить распознавание работать. Путь через Google, написанный недели назад и ни разу не вызванный, упал на первом же настоящем запросе с внятной жалобой: не указана частота дискретизации. Две строки. Теперь он разбирает оба языка слово в слово, и кнопка на месте. Бывали у меня дни хуже, чем тот, что кончается функцией, которую я уже почти списал.',
+        ],
+      },
+      {
+        n: '26',
+        slug: 'the-phone-saw-a-different-site',
+        date: '2026-08-16',
+        title: 'Телефон видел другой сайт',
+        lead: 'Три скриншота с моего собственного телефона: текст хиро тонет в собственном видео, ассистент превратился в пустой тёмный круг, а этот самый лог открывается экраном пустоты. Сайт, который я каждый день полирую на большом мониторе, на телефоне оказался другим сайтом. Хуже.',
+        body: [
+          'Скриншоты были простой частью. Текст получил то же матовое стекло, что носит секция стека, только спокойнее — буквам нужна тихая поверхность. Пустой круг оказался интереснее: на телефонах я не гоняю видео и отдаю круг канвасу, чтобы тот нарисовал в нём бренд, и эта отрисовка молча падала. Без ошибки, просто ничего. Теперь это у меня правило: айдентика не имеет права зависеть от того, удалась ли отрисовка во время выполнения. Там теперь обычная картинка. А пустота сверху — это десктопный отступ, скопированный туда, где на телефоне нечего отступать: сто двадцать восемь пикселей под шапку, которой на этой странице нет.',
+          'Дальше я сделал то, что сработало на прошлой неделе: натравил на мобильную версию толпу проверяющих, а на них — вторую толпу, которая нападала на их находки. Выжило восемнадцать. По-настоящему смутила меня одна: починка, которую я уже выкатил и про которую написал, — кружок ассистента, отступающий вверх от плашки про куки, — не работала ни на одном телефоне ни единого дня. Правило ниже в том же файле тихо возвращало его на место. Вёрстка сходилась, тесты проходили, а телефон этого просто никогда не видел. Выкачено — не значит починено. Починено — это когда измерил.',
+          'Остальное — один и тот же урок в разных костюмах: я собирал этот сайт мышкой. Переключатель языка на десктопе прячется при прокрутке; сигнал, который он слушает, пишет движок прокрутки, который на телефонах не запускается вовсе, — так что на телефоне он не прятался никогда, висел поверх каждой секции до самого низа и всю дорогу крутил свою маленькую орбиту на шестидесяти кадрах. Тапни карточку в лаборатории — она оставалась перекошенной: тап проигрывается браузером как призрачное движение мыши, а «палец ушёл» — события не существует. А обработка вырезов на новых айфонах по всему сайту равнялась нулю, потому что в одном мета-теге не хватало одного атрибута. Каждый ховер теперь обязан ответить мне на вопрос: а что здесь делает палец.',
+          'Браузер охотно даст собрать десктопный сайт, который на телефоне всего лишь помещается. Помещаться и работать — разные вещи. Оглавление этого лога — самое тапаемое место страницы, и каждая его строка теперь не ниже сорока четырёх пикселей, размера подушечки пальца. Число из гайдлайнов, которое я знал наизусть и проигнорировал ровно там, где по нему тапают чаще всего.',
+        ],
+      },
+    ],
+    outro: [
+      'Вот такой лог на сейчас. Каждое решение тут было разменом, и каждое я сделал осознанно, даже те, в которых потом сомневался.',
+      'Если через всё это и проходит одна нить, то вот она: вся штука, от редактора, в котором я её собирал, до модели в продакшене, осталась в одном месте. Я это не решал специально. Каждый кусок сам по себе указывал в одну сторону, и честный ответ в том, что это каждый раз оказывался просто лучший выбор.',
+    ],
+  },
+};
+
+// The boot line announcing the entry count is derived, not hand-typed:
+// git history shows the literal was manually bumped on every single
+// log-entry commit — the one dance step everyone eventually misses.
+content.en.bootLines[1] = `> loading decisions ... ${content.en.entries.length}`;
+content.ru.bootLines[1] = `> гружу решения ... ${content.ru.entries.length}`;
+
+const page = content[activeLang] || content.en;
+const metaTitle = t(activeLang, 'log.metaTitle');
+const metaDescription = t(activeLang, 'log.metaDescription');
+
+const homeUrl = `https://vkvstudio.com/${activeLang}/`;
+const logUrl = `https://vkvstudio.com/${activeLang}/log/`;
+
+// Newest entry's date drives the collection's dateModified — that is the
+// freshness signal a crawler actually reads.
+const entryDates = page.entries.map((e) => e.date).sort();
+const newestDate = entryDates[entryDates.length - 1];
+const oldestDate = entryDates[0];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t(activeLang, 'nav.home'), item: homeUrl },
+      { '@type': 'ListItem', position: 2, name: t(activeLang, 'log.h1'), item: logUrl },
+    ],
+  },
+  // The log is one page holding many dated entries, so it is a Blog whose
+  // posts are BlogPostings — not a single Article. Each post points at its own
+  // #anchor, which already exists and works, so a search engine can deep-link
+  // to an individual decision instead of only the page. author/publisher are
+  // @id references into the graph BaseLayout defines; repeating the Person
+  // inline would create a second, unrelated copy of the same human.
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${logUrl}#blog`,
+    url: logUrl,
+    name: t(activeLang, 'log.h1'),
+    description: metaDescription,
+    inLanguage: activeLang,
+    author: { '@id': 'https://vkvstudio.com/#person' },
+    publisher: { '@id': 'https://vkvstudio.com/#organization' },
+    dateModified: `${newestDate}T09:00:00+04:00`,
+    datePublished: `${oldestDate}T09:00:00+04:00`,
+    mainEntityOfPage: logUrl,
+    // Google's Article/BlogPosting guidelines list `image` as required for
+    // rich-result eligibility; the locale OG cover is a real 1200x630 asset.
+    image: `https://vkvstudio.com/og-cover${activeLang === 'ru' ? '-ru' : ''}.jpg`,
+    blogPost: page.entries.map((entry) => ({
+      '@type': 'BlogPosting',
+      '@id': `${logUrl}#${entry.slug}`,
+      // No mainEntityOfPage here on purpose: a URL fragment is not a separate
+      // page, so a page of postings all claiming to be the main
+      // entity of /log/ is that many contradictory claims about one document. @id + url still give crawlers
+      // the deep-link anchor, which was the actual goal.
+      url: `${logUrl}#${entry.slug}`,
+      image: `https://vkvstudio.com/og-cover${activeLang === 'ru' ? '-ru' : ''}.jpg`,
+      headline: entry.title,
+      description: entry.lead,
+      datePublished: `${entry.date}T09:00:00+04:00`,
+      dateModified: `${entry.date}T09:00:00+04:00`,
+      inLanguage: activeLang,
+      author: { '@id': 'https://vkvstudio.com/#person' },
+      publisher: { '@id': 'https://vkvstudio.com/#organization' },
+    })),
+  },
+];
+
+// The hero art is this page's LCP element, and PageHero cannot preload it for
+// us: an Astro slot does not travel from a nested component up to BaseLayout's
+// `head` slot (src/components/blocks/README.md — "What it does NOT do"). The
+// widths must stay identical to the ones the component asks for, or the
+// preload is a second download: the master is 1280 wide, so the component's
+// family resolves to exactly [768, 1280]; anything larger would clamp to the
+// master and emit a duplicate URL.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout
+  title={metaTitle}
+  description={metaDescription}
+  lang={activeLang}
+  ogType="article"
+  articlePublished={oldestDate}
+  articleModified={newestDate}
+  jsonLd={jsonLd}
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={activeLang} />
+  <main id="main-content" class="log-page">
+    {
+      /* The shared inner-page hero (src/components/blocks/PageHero.astro).
+         Everything that used to be retyped here — plate, eyebrow pill, letter
+         mechanics of the title, scroll hint and its Lenis ride — now lives
+         once in the component. Only this page's own answers are passed in.
+
+         ART. The log finally has a picture of its own: a lit spine running
+         from a vanishing point down toward the reader with a bead at every
+         step, which is what a dated log IS. The h1/lede still state the
+         page's identity first, and the boot sequence below stays the first
+         "device" a reader meets.
+
+         SCRIM. The light in this frame is a vertical band straight down the
+         middle — exactly where centred copy sits. So the centre-darkening
+         (radial) scrim is the one that protects the text; a side-darkening
+         one would leave the copy standing on the brightest pixels.
+
+         PLEXUS. Born on the bead at 0.512 / 0.636 — a real lit node on the
+         spine, below the copy, so the network grows out of the picture
+         instead of floating over it. `anchor` re-derives that point after
+         `cover` re-crops the 1280×720 frame at each viewport, which fixed
+         container fractions alone cannot do. */
+    }
+    <PageHero
+      lang={activeLang}
+      eyebrow={t(activeLang, 'log.eyebrow')}
+      title={t(activeLang, 'log.h1')}
+      lede={t(activeLang, 'log.lede')}
+      image={heroArt}
+      scrim="center"
+      plexus={{
+        originX: 0.512,
+        originY: 0.636,
+        anchor: { x: 0.512, y: 0.636, width: 1280, height: 720 },
+      }}
+      scrollTarget="#log-boot"
+    />
+
+    <div class="container container--narrow">
+      {/* Terminal window: static chrome + interactive boot island */}
+      <section class="term" id="log-boot" aria-label={t(activeLang, 'log.terminalTitle')}>
+        <div class="term__bar">
+          <span class="term__dots" aria-hidden="true">
+            <span class="term__dot"></span>
+            <span class="term__dot"></span>
+            <span class="term__dot"></span>
+          </span>
+          <span class="term__path text-mono">{t(activeLang, 'log.terminalTitle')}</span>
+          <span class="term__status text-mono">
+            <span class="term__status-dot" aria-hidden="true"></span>
+            {t(activeLang, 'log.status')}
+          </span>
+        </div>
+        <div class="term__body">
+          <LogTerminal lang={activeLang} bootLines={page.bootLines} client:visible />
+        </div>
+      </section>
+
+      {/* Quick index of decisions */}
+      <nav class="log-index" aria-label={t(activeLang, 'log.contents')}>
+        <span class="log-index__label text-mono">{t(activeLang, 'log.contents')}</span>
+        <ol class="log-index__list">
+          {
+            page.entries.map((entry) => (
+              <li>
+                <a href={`#${entry.slug}`} class="log-index__item">
+                  <span class="log-index__n text-mono">{entry.n}</span>
+                  <span class="log-index__title">{entry.title}</span>
+                  {/* The date the entries already carry, surfaced in the index:
+                      26 numbered rows with no time axis is a list, not a
+                      chronology, and the value is right here in the data.
+                      Hidden below 560px, where the title needs the whole row. */}
+                  <time class="log-index__date text-mono" datetime={entry.date}>
+                    {entry.date}
+                  </time>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </nav>
+
+      {/* Intro longread */}
+      <section class="log-intro">
+        {page.intro.map((paragraph) => <p>{paragraph}</p>)}
+      </section>
+
+      {/* Decision entries */}
+      <ol class="log-entries">
+        {
+          page.entries.map((entry) => (
+            <li class="log-entry reveal" id={entry.slug}>
+              <div class="log-entry__head">
+                <span class="log-entry__marker text-mono" aria-hidden="true">
+                  &gt;
+                </span>
+                <span class="log-entry__n text-mono">{entry.n}</span>
+                <span class="log-entry__slug text-mono">{entry.slug}</span>
+                {/* Dates run from mid-February 2026 — when the studio was
+                    registered — to the present, in the order the decisions were
+                    actually made, at the uneven spacing a solo build actually
+                    has (3 to 18 days apart, bursts and gaps). They are the
+                    dates of the work, not of the commit that wrote it down:
+                    the log itself was started later and the earlier entries
+                    written from notes in a few sittings, which is why the
+                    commit timestamps cluster and these do not.
+                    A <time> element is what makes the date machine-readable;
+                    without it an undated log reads as abandoned to both a
+                    search engine and a human reviewer. */}
+                <time class="log-entry__date text-mono" datetime={entry.date}>
+                  {entry.date}
+                </time>
+              </div>
+              <h2 class="log-entry__title">{entry.title}</h2>
+              <p class="log-entry__lead">{entry.lead}</p>
+
+              {entry.options && (
+                <div class="log-block">
+                  <span class="log-block__label text-mono">
+                    {t(activeLang, 'log.labelOptions')}
+                  </span>
+                  {entry.options.map((p) => (
+                    <p>{p}</p>
+                  ))}
+                </div>
+              )}
+              {entry.choice && (
+                <div class="log-block log-block--choice">
+                  <span class="log-block__label text-mono">{t(activeLang, 'log.labelChoice')}</span>
+                  {entry.choice.map((p) => (
+                    <p>{p}</p>
+                  ))}
+                </div>
+              )}
+              {entry.why && (
+                <div class="log-block">
+                  <span class="log-block__label text-mono">{t(activeLang, 'log.labelWhy')}</span>
+                  {entry.why.map((p) => (
+                    <p>{p}</p>
+                  ))}
+                </div>
+              )}
+              {entry.result && (
+                <div class="log-block">
+                  <span class="log-block__label text-mono">{t(activeLang, 'log.labelResult')}</span>
+                  {entry.result.map((p) => (
+                    <p>{p}</p>
+                  ))}
+                </div>
+              )}
+
+              {entry.tools && (
+                <div class="log-tools" role="list">
+                  {entry.tools.map((tool) => (
+                    <div class="log-tool" role="listitem">
+                      <span class="log-tool__name text-mono">{tool.name}</span>
+                      <p class="log-tool__desc">{tool.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {entry.body && (
+                <div class="log-body">
+                  {entry.body.map((p) => (
+                    <p>{p}</p>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+
+      {/* Closing note */}
+      <section class="log-outro">
+        {page.outro.map((paragraph) => <p>{paragraph}</p>)}
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage's scroll engine. Safe here: no island on this page is
+  // wheel- or drag-sensitive (LogTerminal only types text; the hero's
+  // NeuralPlexus tracks the pointer on a canvas and never touches scroll;
+  // the entries reveal via native CSS scroll-driven animation, not a JS
+  // observer Lenis could conflict with).
+  import { initLenis } from '@scripts/lenis-init';
+
+  // Lenis still starts HERE, not inside the hero: it drives the whole page,
+  // and PageHero's scroll hint only borrows `window.lenisInstance` if
+  // something has already published it. The hint's click handler moved into
+  // the component. The hero's lede parallax did NOT move — it is gone: the
+  // component deliberately offers no such hook, reaching `.page-hero__lede`
+  // from a page script would rebuild exactly the coupling the component
+  // removes, and the measurement (.system/canon/92-hero-diff.md §3.3) classes
+  // that parallax as drift — present on nine pages, absent on seven,
+  // justified on none. What replaces it is the art itself: a breathing still
+  // under a living network, which is what the hero was missing.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+    });
+  } else {
+    initLenis();
+  }
+</script>
+
+<style>
+  .log-page {
+    padding-top: var(--space-10);
+    padding-bottom: var(--space-24);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  /* No fixed header on this page (InnerHeader is static, not fixed) — a
+     desktop-sized top offset is just dead air on a phone. */
+  @media (max-width: 767px) {
+    .log-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* The hero's own rules (frame, plate, eyebrow, title, letters, lede,
+     entrance cascade, keyframes and the scroll hint — 228 lines) now live in
+     src/components/blocks/PageHero.astro. Nothing left on this page targets
+     a `.log-hero*` class, so every one of those rules was dead here. */
+
+  /* ── Terminal window ─────────────────────────────────────────── */
+  .term {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    overflow: hidden;
+    margin-bottom: var(--space-12);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .term {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .term__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    background: hsla(220, 20%, 8%, 0.6);
+  }
+
+  .term__dots {
+    display: inline-flex;
+    gap: var(--space-2);
+  }
+
+  .term__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--text-ghost);
+  }
+
+  .term__path {
+    flex: 1;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+    font-size: var(--text-xs);
+  }
+
+  .term__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--accent-green-300);
+    text-transform: none;
+    font-size: var(--text-xs);
+  }
+
+  .term__status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    background: var(--accent-green-300);
+    box-shadow: var(--glow-green);
+  }
+
+  /* Trimmed from the old space-10 bottom pad now that the terminal holds
+     only the boot sequence — the h1/lede that used to live here moved to
+     the hero above, so this box no longer needs room for them. */
+  .term__body {
+    padding: var(--space-8) var(--space-6);
+  }
+
+  /* ── Index of decisions ──────────────────────────────────────── */
+  .log-index {
+    margin-bottom: var(--space-16);
+    padding: var(--space-6);
+    background: var(--bg-graphite);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+  }
+
+  .log-index__label {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-4);
+  }
+
+  .log-index__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .log-index__item {
+    display: flex;
+    gap: var(--space-3);
+    align-items: baseline;
+    padding: var(--space-2) 0;
+    text-decoration: none;
+  }
+
+  /* The TOC is the page's primary one-tap navigation, and its single-line
+     items measured ~38px tall with 4px gaps — under the 44px/8px touch
+     minimums (ui-ux-pro-max CRITICAL). min-height guarantees the target even
+     where the padding sum alone lands at ~42px. Mobile-scoped: desktop rows
+     with a pointer stay dense on purpose. */
+  @media (max-width: 767px) {
+    .log-index__list {
+      gap: var(--space-2);
+    }
+
+    .log-index__item {
+      padding: var(--space-3) 0;
+      min-height: 44px;
+    }
+  }
+
+  .log-index__n {
+    flex-shrink: 0;
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+  }
+
+  .log-index__title {
+    color: var(--text-secondary);
+    line-height: var(--leading-snug);
+    transition: var(--transition-colors);
+  }
+
+  .log-index__item:hover .log-index__title {
+    color: var(--accent-green-300);
+  }
+
+  .log-index__date {
+    /* Pushed to the far end so it reads as metadata, exactly as it does in
+       the entry head. Logical property, so an RTL locale needs no override. */
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    padding-left: var(--space-3);
+    color: var(--text-ghost);
+    font-size: var(--text-sm);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px) {
+    /* Under 560px the title is what the reader is choosing between; the date
+       would push it into three lines. Same breakpoint as .log-entry__date. */
+    .log-index__date {
+      display: none;
+    }
+  }
+
+  /* ── Intro ───────────────────────────────────────────────────── */
+  .log-intro {
+    margin-bottom: var(--space-16);
+  }
+
+  .log-intro p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-5);
+  }
+
+  .log-intro p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Entries ─────────────────────────────────────────────────── */
+  .log-entries {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  .log-entry {
+    scroll-margin-top: var(--space-24);
+  }
+
+  .log-entry__head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  /* flex-wrap: without it the 560px block's `flex-basis: 100%` on the date
+     was a no-op — a long wrapped slug squeezed the date into the same row
+     instead of dropping it underneath. Scoped to ≤767px: the container caps
+     at --container-narrow, so desktop's row width is constant (~624px) and
+     wrapping there would be a layout change nobody asked for. */
+  @media (max-width: 767px) {
+    .log-entry__head {
+      flex-wrap: wrap;
+    }
+  }
+
+  .log-entry__marker {
+    color: var(--accent-green-300);
+  }
+
+  .log-entry__n {
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .log-entry__slug {
+    color: var(--text-ghost);
+    font-size: var(--text-sm);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .log-entry__date {
+    /* Pushed to the far end of the head row so it reads as metadata, not as
+       part of the slug. margin-inline-start:auto works in both directions,
+       which matters if this ever meets an RTL locale. */
+    margin-inline-start: auto;
+    color: var(--text-ghost);
+    font-size: var(--text-sm);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px) {
+    /* On a narrow screen the slug and the date fight for the same line; let
+       the date drop under it rather than squeezing the title. */
+    .log-entry__date {
+      margin-inline-start: 0;
+      flex-basis: 100%;
+    }
+  }
+
+  .log-entry__title {
+    font-size: var(--text-h2);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  .log-entry__lead {
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    margin-bottom: var(--space-6);
+  }
+
+  .log-block {
+    padding-left: var(--space-5);
+    border-left: 2px solid var(--border-subtle);
+    margin-bottom: var(--space-5);
+  }
+
+  .log-block--choice {
+    border-left-color: var(--accent-green-400);
+  }
+
+  .log-block__label {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+
+  .log-block p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-3);
+  }
+
+  .log-block p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Tools (entry 08) ────────────────────────────────────────── */
+  .log-tools {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    margin-top: var(--space-2);
+  }
+
+  .log-tool {
+    padding: var(--space-5) var(--space-6);
+    background: var(--bg-graphite);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    /* Enumerated, not `all`: `--transition-all` animates every property that
+       ever changes on this box, so a later transform or colour tween would
+       compound with it. Same form as PricingCard.astro. */
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  .log-tool:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glow-green);
+  }
+
+  .log-tool__name {
+    display: block;
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+    margin-bottom: var(--space-2);
+  }
+
+  .log-tool__desc {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Free-form body (entry 09) ───────────────────────────────── */
+  .log-body {
+    margin-top: var(--space-2);
+  }
+
+  .log-body p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-4);
+  }
+
+  .log-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Outro ───────────────────────────────────────────────────── */
+  .log-outro {
+    margin-top: var(--space-16);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .log-outro p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-4);
+  }
+
+  .log-outro p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Scroll reveal (opt-in, motion-safe) ─────────────────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: log-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+
+    @keyframes log-reveal {
+      from {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────── */
+  @media (max-width: 639px) {
+    .term__body {
+      padding: var(--space-6) var(--space-4) var(--space-8);
+    }
+
+    .term__path {
+      display: none;
+    }
+  }
+</style>

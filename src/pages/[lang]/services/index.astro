@@ -1,0 +1,1377 @@
+---
+/**
+ * /services/ — the ladder page, resonance pass (manifesto arc: skepticism →
+ * relief; ONE idea: "you don't need to trust us — the ladder is built so
+ * trust is never required"). The h1 promises an order, so the layout IS an
+ * order: rungs climb vertically along a trust line that fills as you scroll
+ * (the Career Arc mechanic carrying PricingCards instead of era cards).
+ *
+ * The rungs themselves come from services.ts; this page adds the dramaturgy,
+ * never a second source of truth.
+ */
+import { Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import PricingCard from '@components/services/PricingCard.astro';
+import ServiceCta from '@components/services/ServiceCta.astro';
+import heroArt from '@/assets/services/services-hero.png';
+import rungAudit from '@/assets/services/rung-audit.png';
+import rungRag from '@/assets/services/rung-rag.png';
+import rungOnprem from '@/assets/services/rung-onprem.png';
+import rungWeb from '@/assets/services/rung-web.png';
+import type { ImageMetadata } from 'astro';
+import { PROOF_STRIP, SERVICES, SITE_ORIGIN, serviceUrl } from '@/data/services';
+import { serviceNode, breadcrumbNode } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const copy = {
+  en: {
+    title: 'AI & Web Engineering — Fixed Prices in EUR | VKVstudio',
+    description:
+      'Fixed EUR prices: €900 AI-visibility audit, RAG pilot €4,500, self-hosted AI from €7,500, Astro sites €3,500–5,500. Itemized scope, milestone payments.',
+    h1: 'Services, in the order you should buy them',
+    narrativePre:
+      "You should not wire €7,500 to a stranger on the internet — and I'm not asking you to. The ladder starts at €900 with ",
+    narrativeLinkText: 'a fixed-scope audit',
+    narrativeMid:
+      " you can buy without a call. Every step is priced, itemized, and designed to prove the next one is worth it. The ladder is built to land on the monthly work (€600–3,000/month); that's the business model, and it's on the table from day one.",
+    proofHeading: 'Verifiable proof',
+    ladderEyebrow: '// the ladder',
+    ladderHeading: 'Start small. Climb on proof.',
+    moreHeading: 'Also on this site',
+    more: [
+      // Proof first: the ladder's own case studies had no inbound link from
+      // this page at all (funnel audit D4 — /cases/synapse/ reachable only
+      // from rag-pilot and on-prem-ai, /cases/vkvstudio-site/ only from
+      // websites). A stranger who lands on the cheapest rung had nowhere to
+      // verify anything without opening a deeper service page first.
+      {
+        href: `/${lang}/cases/synapse/`,
+        label: 'Case study: Synapse',
+        note: 'My own fine-tuned model with live retrieval, self-hosted on a 4-core ARM box — the assistant answering on this site.',
+      },
+      {
+        href: `/${lang}/cases/vkvstudio-site/`,
+        label: 'Case study: this website',
+        note: 'How this exact site was built — the full write-up, numbers included.',
+      },
+      {
+        href: `/${lang}/services/for-agencies/`,
+        label: 'For agencies — white-label engineering',
+        note: 'GEO audits, Astro builds and RAG assistants delivered under your brand.',
+      },
+      {
+        href: `/${lang}/services/geo-methodology/`,
+        label: 'GEO measurement methodology',
+        note: 'What can and cannot be measured in AI visibility — read it before buying from anyone, including me.',
+      },
+      {
+        href: `/${lang}/trust/`,
+        label: 'Trust & Process',
+        // "GDPR architecture" was a legal conclusion stated in the studio's
+        // own voice; the term appears in neither the Regulation nor the EDPB
+        // guidelines (.system/legal/g11-decision.md §6.1, g6 §7.4). Replaced
+        // with a description of what the page covers, not a verdict on it.
+        note: 'Contracts, milestones, data handling, handover — the procurement answers, pre-written.',
+      },
+    ],
+  },
+  ru: {
+    title: 'Услуги AI- и веб-инженерии — цены в EUR | VKVstudio',
+    description:
+      'Цены в EUR: аудит ИИ-видимости €900, RAG-пилот €4 500, self-hosted AI от €7 500, сайты на Astro €3 500–5 500. Скоуп по пунктам, оплата по этапам.',
+    h1: 'Услуги — в том порядке, в котором их стоит покупать',
+    narrativePre:
+      'Переводить €7 500 незнакомцу из интернета не стоит — я этого и не прошу. Лестница начинается с €900 за ',
+    narrativeLinkText: 'аудит с фиксированным скоупом',
+    narrativeMid:
+      ', который можно купить без созвона. У каждой ступени есть цена и состав по пунктам, и каждая построена так, чтобы доказать ценность следующей. А сама лестница выстроена так, чтобы приводить к ежемесячному сопровождению (€600–3 000/месяц); это и есть бизнес-модель, и я говорю о ней открыто с первого дня.',
+    proofHeading: 'Проверяемые доказательства',
+    ladderEyebrow: '// лестница',
+    ladderHeading: 'Начните с малого. Поднимайтесь по доказательствам.',
+    moreHeading: 'Ещё по теме',
+    more: [
+      // Близнец EN-правки: кейсы не имели ни одной входящей ссылки с этой
+      // страницы (аудит воронки, D4).
+      {
+        href: `/${lang}/cases/synapse/`,
+        label: 'Кейс: Synapse',
+        note: 'Моя дообученная модель с живым поиском, self-hosted на 4-ядерной ARM-машине — ассистент, который отвечает на этом сайте.',
+      },
+      {
+        href: `/${lang}/cases/vkvstudio-site/`,
+        label: 'Кейс: этот сайт',
+        note: 'Как построен этот самый сайт — полный разбор, вместе с цифрами.',
+      },
+      {
+        href: `/${lang}/services/for-agencies/`,
+        label: 'Для агентств — white-label-разработка',
+        note: 'GEO-аудиты, сборки на Astro и RAG-ассистенты под вашим брендом.',
+      },
+      {
+        href: `/${lang}/services/geo-methodology/`,
+        label: 'Методология GEO-измерений',
+        note: 'Что в ИИ-видимости можно измерить, а что нельзя, — прочтите, прежде чем покупать у кого бы то ни было, включая меня.',
+      },
+      {
+        href: `/${lang}/trust/`,
+        label: 'Доверие и процесс',
+        // Близнец EN-правки: снят правовой вывод «GDPR-архитектура».
+        note: 'Договоры, этапы оплаты, обращение с данными, handover — готовые ответы для вашего отдела закупок.',
+      },
+    ],
+  },
+}[lang];
+
+// In-house emblems (ComfyUI scene line, the retainer-tile family) — one per
+// rung: the lens over the network, documents becoming a node, the vaulted
+// network, the speed arc.
+const RUNG_ART: Record<string, ImageMetadata> = {
+  'geo-audit': rungAudit,
+  'rag-pilot': rungRag,
+  'on-prem-ai': rungOnprem,
+  websites: rungWeb,
+};
+
+// The hero art is this page's mobile LCP element (trace-confirmed): a head
+// preload with the real srcset shaves its discovery off the critical path.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+const pageUrl = `${SITE_ORIGIN}/${lang}/services/`;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'OfferCatalog',
+    name: lang === 'ru' ? 'Услуги VKVstudio' : 'VKVstudio Services',
+    url: pageUrl,
+    // ListItem → Service directly: the wrapper Offers carried no price of their
+    // own, so a parser reading the catalog saw four priceless offers next to
+    // four priced services.
+    itemListElement: SERVICES.map((rung, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: serviceNode(lang, rung, { embedded: true }),
+    })),
+  },
+  breadcrumbNode(lang, [
+    { name: t(lang, 'nav.home'), item: `${SITE_ORIGIN}/${lang}/` },
+    { name: t(lang, 'nav.services'), item: pageUrl },
+  ]),
+];
+---
+
+<BaseLayout
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  jsonLd={jsonLd}
+  ogImage="/og-services.jpg"
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="services-page">
+    {
+      /* Hero in the etalon family: glass-pill eyebrow, neural-texture h1,
+         entrance cascade, the living plexus reaching for the cursor. The
+         ComfyUI art layer (ascending-nodes still → morph loop) lands here
+         after the owner approves a sketch. */
+    }
+    <header class="services-hero">
+      {
+        /* Generated in-house (ComfyUI, FLUX Krea): a wide staircase of dark
+           glass, each step edge traced in teal, luminous mist flowing down
+           it: the climb is solid, only the fog moves. Decorative. */
+      }
+      <div class="services-hero__art" aria-hidden="true" id="services-hero-art">
+        <Picture
+          src={heroArt}
+          formats={['avif', 'webp']}
+          widths={[768, 1280]}
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+        {
+          /* The living climb: a 15s palindrome loop (WAN 5B, 250KB webm) —
+             the mist pours down the rigid steps. No src in markup: the init
+             script assigns it only on desktop, motion allowed, no
+             data-saver; everyone else keeps the breathing still. */
+        }
+        <video
+          id="services-hero-video"
+          class="services-hero__video"
+          muted
+          loop
+          playsinline
+          preload="none"
+          data-webm="/services-hero-loop.webm"
+          data-mp4="/services-hero-loop.mp4"></video>
+      </div>
+      {
+        /* Born at the crest of the climb (measured in the loop's own frame) and
+           descending in left/down runs — the network walks the steps. */
+      }
+      <NeuralPlexus
+        client:idle
+        originX={0.83}
+        originY={0.13}
+        anchor={{
+          selector: '#services-hero-video',
+          width: 1024,
+          height: 576,
+          x: 0.83,
+          y: 0.13,
+        }}
+        pace={1.8}
+        growth="stairs"
+      />
+      <div class="container">
+        <p class="services-hero__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{t(lang, 'nav.services').toLowerCase()}
+        </p>
+        <h1 class="services-hero__title" aria-label={copy.h1}>
+          {
+            copy.h1.split(' ').map((word, wordIdx) => [
+              wordIdx > 0 ? ' ' : null,
+              <span class="services-hero__word" aria-hidden="true">
+                {Array.from(word).map((char) => (
+                  <span class="services-hero__letter">{char}</span>
+                ))}
+              </span>,
+            ])
+          }
+        </h1>
+        <p class="services-hero__lede">
+          {copy.narrativePre}<a href={`/${lang}/services/geo-audit/`}>{copy.narrativeLinkText}</a>{
+            copy.narrativeMid
+          }
+        </p>
+      </div>
+
+      {/* Full-viewport hero owes the reader a nudge (etalon pattern). */}
+      <button type="button" class="services-hero__scroll js-svc-scroll-hint">
+        <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14"></path>
+          <path d="m19 12-7 7-7-7"></path>
+        </svg>
+      </button>
+    </header>
+
+    {/* Proof before promises — four verifiable facts on glass. */}
+    <section class="services-proof" id="svc-proof" aria-labelledby="svc-proof-heading">
+      <div class="container">
+        <h2 id="svc-proof-heading" class="services-proof__eyebrow text-mono js-svc-reveal">
+          {copy.proofHeading}
+        </h2>
+        {
+          /* role="list" restated: the global `list-style: none` strips the
+             list semantics in Safari/VoiceOver (global.css:117–120). */
+        }
+        <ul class="services-proof__strip" role="list">
+          {
+            PROOF_STRIP.map((item) => (
+              <li class="js-svc-proof">
+                <span class="services-proof__value text-mono">{item.value[lang]}</span>
+                <span class="services-proof__label">{item.label[lang]}</span>
+                <span class="services-proof__qualifier">{item.qualifier[lang]}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    {
+      /* The climb: rungs in buying order along a trust line that fills as
+         the reader scrolls — the Career Arc mechanic carrying the ladder.
+         Numbers, not icons, on the medallions: order IS the content. */
+    }
+    <section class="services-ladder">
+      <div class="container">
+        <p class="services-ladder__eyebrow text-mono js-svc-reveal">
+          <span aria-hidden="true">// </span>{copy.ladderEyebrow.replace(/^\/\/\s*/, '')}
+        </p>
+        <h2 class="services-ladder__heading js-svc-reveal">{copy.ladderHeading}</h2>
+        <div class="services-climb js-svc-climb">
+          <div class="services-climb__line js-svc-line" aria-hidden="true"></div>
+          <ol class="services-climb__list" role="list">
+            {
+              SERVICES.map((rung, i) => (
+                <li class="services-climb__item js-svc-step">
+                  <span class="services-climb__dot js-svc-dot text-mono" aria-hidden="true">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div class="services-climb__card js-svc-card">
+                    <PricingCard lang={lang} rung={rung} headingTag="h3" art={RUNG_ART[rung.id]} />
+                  </div>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="services-more">
+      <div class="container">
+        <h2 class="services-more__heading js-svc-reveal">{copy.moreHeading}</h2>
+        <ul class="services-more__list" role="list">
+          {
+            copy.more.map((item) => (
+              <li class="js-svc-reveal">
+                <a href={item.href}>
+                  {item.label} <span aria-hidden="true">→</span>
+                </a>
+                <span>{item.note}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    <ServiceCta lang={lang} />
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage scroll engine + the etalon's motion grammar. Motion is an
+  // enhancement, never a gatekeeper: nothing starts hidden in CSS; gsap
+  // fromTo owns hide-and-reveal, tweens end with clearProps.
+  import { initLenis } from '@scripts/lenis-init';
+
+  async function initServicesMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Quiet per-element reveals: eyebrows, headings, side-list rows. Some
+      // of these ("also here" rows) carry links — a keyboard user tabbing
+      // in before the scroll trigger fires must not land on an invisible
+      // target, so focusin fast-forwards this element's own tween.
+      document.querySelectorAll<HTMLElement>('.js-svc-reveal').forEach((el) => {
+        const tw = gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+        el.addEventListener('focusin', () => tw.progress(1), { once: true });
+      });
+
+      // Proof tiles: one stagger, Lab-style.
+      gsap.fromTo(
+        '.js-svc-proof',
+        { opacity: 0, y: 40, scale: 0.94 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: 'expo.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: '.services-proof__strip', start: 'top 82%' },
+        }
+      );
+
+      // The climb: trust line fills dot-center to dot-center (Career Arc
+      // verbatim); each rung springs its number and slides its card in.
+      const climb = document.querySelector<HTMLElement>('.js-svc-climb');
+      if (climb) {
+        const line = climb.querySelector<HTMLElement>('.js-svc-line');
+        const dots = climb.querySelectorAll<HTMLElement>('.js-svc-dot');
+        const firstDot = dots[0];
+        const lastDot = dots[dots.length - 1];
+
+        if (line && firstDot && lastDot && dots.length >= 2) {
+          const wrapRect = climb.getBoundingClientRect();
+          const firstRect = firstDot.getBoundingClientRect();
+          const lastRect = lastDot.getBoundingClientRect();
+          const lineTop = firstRect.top - wrapRect.top + firstRect.height / 2;
+          const lineHeight = lastRect.top - wrapRect.top + lastRect.height / 2 - lineTop;
+          line.style.top = `${lineTop}px`;
+          line.style.height = `${lineHeight}px`;
+          line.style.bottom = 'auto';
+
+          gsap.fromTo(
+            line,
+            { scaleY: 0 },
+            {
+              scaleY: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: climb,
+                start: 'top 75%',
+                end: 'bottom 40%',
+                scrub: 0.8,
+              },
+            }
+          );
+        }
+
+        climb.querySelectorAll<HTMLElement>('.js-svc-step').forEach((item) => {
+          const dot = item.querySelector<HTMLElement>('.js-svc-dot');
+          const card = item.querySelector<HTMLElement>('.js-svc-card');
+
+          const itemTl = gsap.timeline({
+            scrollTrigger: {
+              trigger: item,
+              start: 'top 78%',
+              toggleActions: 'play none none none',
+            },
+          });
+
+          // PricingCard inside .js-svc-card carries real links — a keyboard
+          // user must never tab onto a link still sitting at opacity 0.
+          item.addEventListener('focusin', () => itemTl.progress(1), { once: true });
+
+          if (dot) {
+            itemTl.fromTo(
+              dot,
+              { scale: 0, boxShadow: '0 0 0px transparent' },
+              {
+                scale: 1,
+                boxShadow: '0 0 20px hsla(155, 70%, 50%, 0.4)',
+                duration: 0.6,
+                ease: 'back.out(2.5)',
+                // Only the transform is cleared: the box-shadow is handed
+                // over to the CSS pulse that `is-active` starts, so clearing
+                // it too would blink the medallion dark for a frame (About
+                // does the same).
+                clearProps: 'scale',
+                onComplete: () => {
+                  dot.classList.add('is-active');
+                },
+              },
+              0
+            );
+          }
+
+          if (card) {
+            itemTl.fromTo(
+              card,
+              { opacity: 0, x: -30, filter: 'blur(6px)' },
+              {
+                opacity: 1,
+                x: 0,
+                filter: 'blur(0px)',
+                duration: 0.7,
+                ease: 'expo.out',
+                // Without this the wrapper keeps an inline `filter:
+                // blur(0px)` and transform for good — a permanent stacking
+                // context that would make any future CSS state on the
+                // wrapper dead on arrival.
+                clearProps: 'transform,filter',
+              },
+              0.2
+            );
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[services] motion failed to load:', err);
+    }
+  }
+
+  // The hero's manners: light cursor parallax on the lede.
+  function initServicesManners(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const hero = document.querySelector<HTMLElement>('.services-hero');
+    const lede = document.querySelector<HTMLElement>('.services-hero__lede');
+    if (!hero || !lede) return;
+
+    hero.addEventListener(
+      'mousemove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        lede.style.transform = `translate(${nx * -3}px, ${ny * -2}px)`;
+      },
+      { passive: true }
+    );
+
+    hero.addEventListener('mouseleave', () => {
+      lede.style.transform = '';
+    });
+  }
+
+  // The hero loop is an enhancement tier above the breathing still: only
+  // desktop-class viewports with motion allowed and no data-saver fetch it
+  // (geo-audit's gating, verbatim). Chromium pauses offscreen muted video
+  // for good — own the lifecycle: in view → play, out → pause.
+  function initServicesVideo(): void {
+    const video = document.getElementById('services-hero-video') as HTMLVideoElement | null;
+    const art = document.getElementById('services-hero-art');
+    if (!video || !art) return;
+
+    const wantsMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    const saveData =
+      'connection' in navigator &&
+      (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!wantsMotion || saveData) return;
+
+    // The width gate is evaluated once at call time by default, which never
+    // re-fires for a tablet rotated into landscape or a resized browser
+    // window — arm on first match instead of a hard early return.
+    const desktopMq = window.matchMedia('(min-width: 768px)');
+    let lastVisible = false;
+
+    const arm = (): void => {
+      const webm = video.dataset.webm ?? '';
+      const mp4 = video.dataset.mp4 ?? '';
+      video.src = video.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+
+      // Codec fallback: a webm that fails to decode (rare but real on older
+      // Safari/WebKit builds) retries once as mp4 instead of staying dark.
+      video.addEventListener(
+        'error',
+        () => {
+          if (video.src.endsWith('.webm') && mp4) {
+            video.src = mp4;
+            void video.play().catch(() => {});
+          }
+        },
+        { once: true }
+      );
+
+      video.addEventListener(
+        'playing',
+        () => {
+          art.classList.add('services-hero__art--live');
+        },
+        { once: true }
+      );
+
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            lastVisible = entry.isIntersecting;
+            if (entry.isIntersecting) {
+              void video.play().catch(() => {
+                // Autoplay refused — the breathing still simply remains.
+              });
+            } else {
+              video.pause();
+            }
+          }
+        },
+        { threshold: 0.12 }
+      );
+      io.observe(art);
+
+      // bfcache: browsers pause media on bfcache entry and never
+      // auto-resume it on restore — resume by hand.
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) void video.play().catch(() => {});
+      });
+
+      // Tab-away/back: Chromium keeps paying for a backgrounded video's
+      // decode pipeline unless it is explicitly paused, and IO alone does
+      // not fire on a same-viewport tab switch.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          video.pause();
+        } else if (lastVisible) {
+          void video.play().catch(() => {});
+        }
+      });
+    };
+
+    if (desktopMq.matches) {
+      arm();
+    } else {
+      desktopMq.addEventListener(
+        'change',
+        (e) => {
+          if (e.matches) arm();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  // The scroll hint keeps its promise: Lenis rides down to the proof strip.
+  function initServicesScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-svc-scroll-hint');
+    const target = document.getElementById('svc-proof');
+    if (!hint || !target) return;
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initServicesMotion();
+      initServicesVideo();
+      initServicesManners();
+      initServicesScrollHint();
+    });
+  } else {
+    initLenis();
+    void initServicesMotion();
+    initServicesVideo();
+    initServicesManners();
+    initServicesScrollHint();
+  }
+</script>
+
+<style>
+  .services-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .services-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* ── Hero: the etalon idiom family ─────────────────── */
+  .services-hero {
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    isolation: isolate;
+    overflow: hidden;
+    /* The claim owns the first screen (etalon): everything below waits
+       behind the fold, so scroll reveals never tax LCP. */
+    min-height: calc(100vh - 7.5rem);
+    min-height: calc(100svh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .services-hero__scroll {
+    position: absolute;
+    bottom: var(--space-6);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease-out;
+  }
+
+  .services-hero__scroll:hover,
+  .services-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .services-hero__scroll svg {
+      animation: svc-scroll-nudge 2.2s ease-in-out 2.5s infinite;
+    }
+  }
+
+  @keyframes svc-scroll-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  .services-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .services-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.45;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .services-hero__art :global(img) {
+      animation: svc-breathe 9s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes svc-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(1.045);
+      filter: brightness(1.15);
+    }
+  }
+
+  .services-hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1.2s ease-out;
+  }
+
+  /* Once the loop actually plays it takes over: video fades in, the still
+     dims and stops breathing underneath. */
+  .services-hero__art--live .services-hero__video {
+    opacity: 0.45;
+  }
+
+  /* The still leaves entirely once the loop plays — a differently framed
+     ghost under the video doubles the image (owner caught it on trust). */
+  .services-hero__art--live :global(img) {
+    opacity: 0;
+    animation: none;
+  }
+
+  /* Radial obsidian core: the centered copy always sits on calm darkness,
+     the staircase glows at the edges. */
+  .services-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 70% at 50% 45%, var(--bg-obsidian) 25%, transparent 75%),
+      linear-gradient(to top, var(--bg-obsidian) 4%, transparent 40%);
+  }
+
+  .services-hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The homepage hero badge (HeroOverlay's .hero-overlay__label). */
+  .services-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: hsl(155, 85%, 65%);
+    padding: var(--space-1) var(--space-4);
+    background: hsla(220, 25%, 6%, 0.9);
+    border: 1px solid hsla(155, 50%, 40%, 0.2);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color 0.4s ease-out,
+      border-color 0.4s ease-out,
+      background 0.4s ease-out;
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .services-hero__eyebrow {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .services-hero__eyebrow:hover {
+    color: hsl(220, 70%, 65%);
+    border-color: hsla(220, 50%, 50%, 0.25);
+    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
+  }
+
+  /* The neural-texture title (etalon recipe; see geo-audit for the
+     rendering-surface and minifier caveats documented there). */
+  .services-hero__title {
+    font-size: clamp(2rem, 4.4vw, 3.2rem);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    max-width: 24ch;
+    margin: 0 auto var(--space-5);
+    /* Three lines is the normal case in both locales — balance them. */
+    text-wrap: balance;
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px hsla(180, 80%, 55%, 0.7);
+
+    filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .services-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  @media (max-width: 767px) {
+    .services-hero__title {
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+  }
+
+  .services-hero__word {
+    white-space: nowrap;
+  }
+
+  /* Must stay AFTER the base rule: a media query adds no specificity, so
+     source order is what decides. */
+  @media (max-width: 767px) {
+    .services-hero__word {
+      /* `white-space: nowrap` suppresses wrapping outright, so a bare
+         `overflow-wrap` sitting next to it would be a dead rule — the shared
+         hero measured exactly that (PageHero.astro:846–854). On a phone the
+         measure is too narrow for a long Russian compound, so here the word
+         may wrap. `break-word` rather than `anywhere`: identical rendering
+         here, but it leaves min-content sizing alone. Hyphenation is not
+         the answer for a title — it is one <span> per letter, and a word
+         split across inline boxes offers no hyphenation opportunity (see
+         the long note in PageHero.astro). Desktop keeps nowrap. */
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
+  }
+
+  .services-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow, 0.4s) var(--ease-out, ease-out),
+      text-shadow var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+    cursor: default;
+  }
+
+  .services-hero__letter:hover {
+    -webkit-text-stroke-color: hsla(180, 90%, 70%, 0.95);
+    text-shadow:
+      0 0 10px hsla(180, 85%, 60%, 0.55),
+      0 0 22px hsla(180, 85%, 55%, 0.3);
+  }
+
+  /* Lede measure, size and leading are the family's, not this page's: the
+     shared hero component settled the four competing values that were
+     measured across the site (PageHero.astro:334–338, 618–626 — --text-lg,
+     58ch, 1.7; 1.8 was called the worst reading measure of the set). */
+  .services-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 58ch;
+    margin: 0 auto;
+    line-height: 1.7;
+    text-wrap: pretty;
+  }
+
+  /* The single link in the narrative — the first rung, reachable straight
+     from the hero — must read as a link. The global reset strips colour and
+     underline from every <a> (global.css:112–115), so without this rule it
+     is invisible prose. Recipe: geo-audit's .geo-hero__email a. */
+  .services-hero__lede a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .services-hero__lede a:hover {
+    color: var(--accent-green-300);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .services-hero__eyebrow {
+      animation:
+        svc-fade-up-15 0.6s ease-out 0.15s backwards,
+        svc-eyebrow-breathe 4s ease-in-out 1.5s infinite;
+    }
+
+    .services-hero__title {
+      animation:
+        svc-title-opacity-in 0.7s ease-out 0.15s backwards,
+        svc-title-transform-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+    }
+
+    /* The lede is this hero's LCP element (a four-line paragraph) — its
+       entrance stays a beat behind the title but must not tax LCP. */
+    .services-hero__lede {
+      animation:
+        svc-fade-up-15 0.6s ease-out 0.3s backwards,
+        svc-lede-glow 5s ease-in-out 2s infinite;
+    }
+  }
+
+  @keyframes svc-fade-up-15 {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes svc-title-opacity-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes svc-title-transform-in {
+    from {
+      transform: translateY(20px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes svc-eyebrow-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes svc-lede-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsla(155, 60%, 60%, 0.08));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .services-hero__letter {
+      transition: none;
+    }
+  }
+
+  /* ── Proof strip: verifiable facts on glass ─────────── */
+  .services-proof {
+    /* House rule: a section owns its own spacing via padding-block, no
+       external margin — an outside margin is what compounds with a
+       wrapper's own gap the day this block gets extracted into a shared
+       component (gap-services-hub.md #9). Kept bottom-only (explicit `0`
+       start) so the rendered gap to the next section is unchanged — a
+       symmetric padding-block here would ADD a new top gap that never
+       existed and double the hero→proof spacing. */
+    padding-block: 0 var(--space-16);
+  }
+
+  .services-proof__eyebrow {
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-4);
+  }
+
+  .services-proof__strip {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  @media (max-width: 767px) {
+    .services-proof__strip {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .services-proof__strip li {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-5) var(--space-4);
+    text-align: center;
+    overflow-wrap: break-word;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  /* Standard property restated past the minifier's reach — see the note on
+     .services-hero__eyebrow above. Must stay AFTER the base rule. */
+  @supports (backdrop-filter: blur(1px)) {
+    .services-proof__strip li {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .services-proof__strip li:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .services-proof__value {
+    color: var(--accent-green-300);
+    font-size: var(--text-lg);
+  }
+
+  .services-proof__label {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  .services-proof__qualifier {
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+  }
+
+  /* The labels grew to ~30 characters in both locales, and one RU word alone
+     ("производительность") measures ~122–124px at the 12.8px this tile uses.
+     In the two-column phone grid the text column is 128.75px at 375px and
+     122px at 360px — i.e. the longest word sits exactly on the edge, and the
+     li's `overflow-wrap: break-word` then chops it mid-syllable rather than
+     overflowing. Nothing breaks the strip geometry (minmax(0, 1fr) plus
+     break-word cannot overflow), but the break itself is the defect.
+     Two fixes, neither of which shortens a word: hyphenate properly (the
+     document carries lang="en"/"ru", so the browser uses the right
+     dictionary), and give the narrow tile back 8px of line by trimming its
+     side padding. break-word stays as the last resort behind hyphenation. */
+  .services-proof__label,
+  .services-proof__qualifier {
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+
+  @media (max-width: 480px) {
+    .services-proof__strip li {
+      padding: var(--space-4) var(--space-3);
+    }
+  }
+
+  /* ── The climb ─────────────────────────────────────── */
+  .services-ladder {
+    /* Same house rule as .services-proof above: bottom-only padding-block,
+       not margin — total gap to the next section stays 64px, unchanged. */
+    padding-block: 0 var(--space-16);
+  }
+
+  .services-ladder__eyebrow {
+    margin-bottom: var(--space-4);
+  }
+
+  .services-ladder__heading {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    /* The etalon's section rhythm (geo-audit's .geo-section__heading). */
+    margin-bottom: var(--space-6);
+    /* The RU heading is ~1.8× the EN one and wraps to two lines. */
+    text-wrap: balance;
+  }
+
+  .services-climb {
+    position: relative;
+  }
+
+  /* The trust line: gradient, filled by scroll (scaleY owned by the
+     script). Static full line is the no-JS state — nothing hidden. */
+  .services-climb {
+    /* One source of truth for the rail geometry: the medallion size. The line
+       used to hardcode 23px (half of a 48px dot), so shrinking the dot on
+       phones left the rail running beside them instead of through them. */
+    --svc-dot: 48px;
+  }
+
+  .services-climb__line {
+    position: absolute;
+    left: calc(var(--svc-dot) / 2 - 1px);
+    /* Both ends off the same source of truth as `left`: hardcoded 24px was
+       half of the 48px desktop medallion, so on a phone (36px dot) the
+       static, no-JS line started and ended 6px past the outer dot centres. */
+    top: calc(var(--svc-dot) / 2);
+    bottom: calc(var(--svc-dot) / 2);
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      var(--accent-green-300),
+      var(--accent-green-500) 50%,
+      var(--accent-green-300)
+    );
+    transform-origin: top center;
+    z-index: 0;
+  }
+
+  .services-climb__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .services-climb__item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding-bottom: var(--space-10);
+  }
+
+  @media (min-width: 768px) {
+    .services-climb__item {
+      gap: var(--space-8);
+    }
+  }
+
+  .services-climb__item:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Number medallion — the Career Arc dot carrying the rung's position:
+     order is the content of this page. */
+  .services-climb__dot {
+    flex-shrink: 0;
+    width: var(--svc-dot);
+    height: var(--svc-dot);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-graphite);
+    border: 1.5px solid var(--accent-green-300);
+    border-radius: var(--radius-full);
+    color: var(--accent-green-200);
+    font-size: var(--text-sm);
+    letter-spacing: 0;
+    box-shadow: 0 0 0 transparent;
+    z-index: 2;
+  }
+
+  .services-climb__dot.is-active {
+    animation: svc-dot-pulse 2.5s ease-in-out 0.6s infinite;
+  }
+
+  @keyframes svc-dot-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 12px var(--accent-glow),
+        0 0 0 0 hsla(155, 70%, 50%, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 0 8px hsla(155, 70%, 50%, 0);
+    }
+  }
+
+  /* Belt and braces, the way About wears it (AboutSection.astro:350–354):
+     today `is-active` is only ever added by a script that does not run under
+     reduce, but the class is one refactor away from arriving another way. */
+  @media (prefers-reduced-motion: reduce) {
+    .services-climb__dot.is-active {
+      animation: none;
+    }
+  }
+
+  .services-climb__card {
+    flex: 1;
+    min-width: 0;
+    max-width: 56rem;
+  }
+
+  /* ── Also here: quiet glass rows ───────────────────── */
+  .services-more {
+    /* Same house rule as .services-proof/.services-ladder above: bottom-only
+       padding-block, not margin. This pair (more → ServiceCta) never
+       actually collapsed — ServiceCta's own top spacing is padding, not
+       margin — so the total stays 32px + ServiceCta's own padding-top,
+       unchanged. */
+    padding-block: 0 var(--space-8);
+  }
+
+  .services-more__heading {
+    font-size: var(--text-h2);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-6);
+  }
+
+  .services-more__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: var(--container-narrow);
+  }
+
+  .services-more__list li {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-4) var(--space-5);
+    background: hsla(220, 20%, 12%, 0.4);
+    border: 1px solid hsla(0, 0%, 100%, 0.05);
+    border-radius: var(--radius-md);
+    transition: border-color var(--duration-normal) var(--ease-out);
+  }
+
+  /* `:focus-within` alongside `:hover`: the tile is the affordance, and a
+     keyboard user tabbing onto the link inside it got no container feedback
+     at all. */
+  .services-more__list li:hover,
+  .services-more__list li:focus-within {
+    border-color: var(--accent-green-400);
+  }
+
+  .services-more__list a {
+    /* The row is the target on a phone; 44px is the floor it has to clear. */
+    display: flex;
+    align-items: center;
+    /* `gap`, and it is not optional: flex made the label and the arrow two
+       separate items, and the trailing space in `{label} <span>→</span>`
+       belongs to an anonymous item whose end-of-line whitespace is dropped.
+       Without this it renders «Synapse→». Same pair, same fix, as
+       LabServiceBridge's rung title. */
+    gap: var(--space-2);
+    min-height: 44px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--text-base);
+    transition: var(--transition-colors);
+  }
+
+  .services-more__list a:hover,
+  .services-more__list a:focus-visible {
+    color: var(--accent-green-300);
+  }
+
+  /* `li > span`, not a bare `span`: the arrow inside the link is a span too,
+     and this rule sat AFTER `.services-more__list a` at equal specificity, so
+     it painted the arrow --text-muted and left it grey while the link it
+     belongs to turned green on hover. The note is the only span this rule is
+     about. */
+  .services-more__list li > span {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* Same fix as trust: on short phones the pinned hint lands on the last
+     lines of the lede. Static flow puts it under them instead. Placed at
+     the end of the sheet so source order cannot un-do it. */
+  @media (max-width: 767px) {
+    .services-hero__scroll {
+      position: static;
+      transform: none;
+      margin-top: var(--space-6);
+    }
+  }
+
+  /* On a 375px phone the rail (medallion + gap) was eating 42px and the card
+     its own 24px padding, leaving a 216px text column for prices and lists.
+     Tightening both gives the copy back ~15% of the line. */
+  @media (max-width: 480px) {
+    .services-climb__item {
+      gap: var(--space-4);
+    }
+
+    /* The rail is driven off the medallion, so shrinking one moves the other —
+       sizing them independently left the line running past the dots. */
+    .services-climb {
+      --svc-dot: 36px;
+    }
+
+    .services-climb__dot {
+      width: var(--svc-dot);
+      height: var(--svc-dot);
+    }
+  }
+</style>

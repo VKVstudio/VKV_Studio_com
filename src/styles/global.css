@@ -1,0 +1,521 @@
+/* ═══════════════════════════════════════════════════════════════
+   VKVstudio — Global Design Tokens & Base Styles
+   Source of truth: .system/design_system.md
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── SELF-HOSTED FONTS ───────────────────────────────────────── */
+
+/* Inter — Latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Inter — Cyrillic */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/inter-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* Inter — Latin Extended */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* JetBrains Mono — Latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* JetBrains Mono — Cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* ── RESET (Modern Minimal) ──────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+  line-height: var(--leading-normal);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+  background-color: var(--bg-obsidian);
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* ── DESIGN TOKENS ───────────────────────────────────────────── */
+
+:root {
+  /* ═══ BACKGROUNDS (Obsidian Gradient) ═══ */
+  --bg-void: hsl(220, 20%, 3%);
+  --bg-obsidian: hsl(220, 18%, 6%);
+  --bg-graphite: hsl(220, 16%, 10%);
+  --bg-slate: hsl(220, 14%, 14%);
+  --bg-elevated: hsl(220, 12%, 18%);
+
+  /* ═══ GLASSMORPHISM ═══ */
+  --glass-bg: hsla(220, 20%, 12%, 0.6);
+  --glass-border: hsla(220, 20%, 30%, 0.2);
+  --glass-blur: 20px;
+  --glass-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.4);
+
+  /* ═══ TEXT ═══
+     --text-muted / --text-ghost lightness raised (45→56 / 30→52) to clear
+     WCAG AA (4.5:1) against the actual dark backgrounds they're rendered on
+     (bg-void through bg-slate, and glass-bg panels) — see contrast audit
+     notes at each token's usage sites. Still visually "muted"/"ghost"
+     relative to --text-secondary, just no longer failing AA. A few static
+     pairings against the lighter --bg-elevated (hover/badge states) still
+     fall short and are handled with a local color override at the call
+     site rather than raising these tokens further and losing the tier. */
+  --text-primary: hsl(210, 20%, 95%);
+  --text-secondary: hsl(215, 15%, 65%);
+  --text-muted: hsl(215, 12%, 56%);
+  --text-ghost: hsl(215, 10%, 52%);
+
+  /* ═══ ACCENT: TPU CYBER-GREEN (Primary) ═══ */
+  --accent-green-50: hsl(155, 80%, 90%);
+  --accent-green-100: hsl(155, 75%, 75%);
+  --accent-green-200: hsl(155, 70%, 60%);
+  --accent-green-300: hsl(155, 65%, 50%);
+  --accent-green-400: hsl(155, 60%, 42%);
+  --accent-green-500: hsl(155, 55%, 35%);
+  --accent-glow: hsla(155, 70%, 50%, 0.15);
+  --accent-glow-strong: hsla(155, 70%, 50%, 0.3);
+
+  /* ═══ ACCENT: DEEP BLUE (Secondary) ═══ */
+  --accent-blue-50: hsl(220, 80%, 90%);
+  --accent-blue-100: hsl(220, 75%, 75%);
+  --accent-blue-200: hsl(220, 70%, 60%);
+  --accent-blue-300: hsl(225, 65%, 55%);
+  --accent-blue-400: hsl(225, 60%, 45%);
+  --accent-blue-500: hsl(225, 55%, 38%);
+  --accent-blue-glow: hsla(225, 70%, 55%, 0.15);
+
+  /* ═══ SEMANTIC ═══ */
+  --color-success: hsl(145, 60%, 45%);
+  --color-warning: hsl(40, 90%, 55%);
+  --color-error: hsl(0, 70%, 55%);
+  --color-info: hsl(210, 70%, 55%);
+
+  /* ═══ BORDERS ═══ */
+  --border-subtle: hsla(220, 15%, 30%, 0.3);
+  --border-default: hsla(220, 15%, 35%, 0.5);
+  --border-accent: var(--accent-green-300);
+
+  /* ═══ GRADIENTS ═══ */
+  --gradient-hero: radial-gradient(
+    ellipse 80% 60% at 50% 40%,
+    hsla(155, 60%, 15%, 0.15) 0%,
+    hsla(220, 20%, 3%, 1) 70%
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    var(--accent-green-300) 0%,
+    var(--accent-blue-300) 100%
+  );
+  --gradient-card-hover: linear-gradient(
+    135deg,
+    hsla(155, 50%, 50%, 0.05) 0%,
+    hsla(225, 50%, 50%, 0.05) 100%
+  );
+  --gradient-text: linear-gradient(
+    135deg,
+    var(--text-primary) 0%,
+    var(--accent-green-200) 50%,
+    var(--accent-blue-200) 100%
+  );
+
+  /* ═══ TYPOGRAPHY ═══ */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  --text-display: clamp(2.5rem, 5vw + 1rem, 5rem);
+  --text-h1: clamp(2rem, 3.5vw + 0.5rem, 3.5rem);
+  --text-h2: clamp(1.5rem, 2.5vw + 0.25rem, 2.5rem);
+  /* Added after an audit found --text-xl used but never defined, which
+     silently collapsed the ladder card headings to body size. */
+  --text-xl: clamp(1.15rem, 0.8vw + 0.95rem, 1.35rem);
+  --text-h3: clamp(1.25rem, 1.5vw + 0.25rem, 1.75rem);
+  --text-h4: clamp(1.1rem, 1vw + 0.25rem, 1.35rem);
+  --text-lg: clamp(1.05rem, 0.5vw + 0.9rem, 1.2rem);
+  --text-base: clamp(1rem, 0.3vw + 0.85rem, 1.05rem);
+  --text-sm: clamp(0.8rem, 0.2vw + 0.75rem, 0.875rem);
+  --text-xs: clamp(0.7rem, 0.1vw + 0.65rem, 0.75rem);
+  /* Used 30 times across the three Lab tools as `var(--text-2xs)`
+     and defined nowhere, so all 30 ran on the literal fallback — a tenth,
+     undocumented rung below the published scale. Defined here at that same
+     0.65rem so nothing shifts visually; the point is that the scale now
+     admits the size it was already using. Reserved for dense numeric chrome
+     (token ids, byte rows) — not for prose. */
+  --text-2xs: 0.65rem;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.8;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+  --tracking-wider: 0.1em;
+  --tracking-widest: 0.2em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ═══ SPACING ═══ */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
+  --section-gap: clamp(4rem, 8vw, 8rem);
+  --container-max: 1280px;
+  --container-narrow: 720px;
+  --container-padding: clamp(1rem, 5vw, 3rem);
+
+  /* ═══ BORDER RADIUS ═══ */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ═══ SHADOWS & GLOW ═══ */
+  --shadow-sm: 0 1px 2px hsla(0, 0%, 0%, 0.3);
+  --shadow-md: 0 4px 12px hsla(0, 0%, 0%, 0.4);
+  --shadow-lg: 0 8px 32px hsla(0, 0%, 0%, 0.5);
+  --shadow-xl: 0 16px 64px hsla(0, 0%, 0%, 0.6);
+  --glow-green: 0 0 20px var(--accent-glow), 0 0 60px var(--accent-glow);
+  --glow-blue: 0 0 20px var(--accent-blue-glow), 0 0 60px var(--accent-blue-glow);
+
+  /* ═══ TRANSITIONS & EASING ═══ */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.34, 2, 0.64, 1);
+
+  --transition-colors:
+    color var(--duration-normal) var(--ease-out),
+    background-color var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+  --transition-transform: transform var(--duration-normal) var(--ease-out);
+  --transition-all: all var(--duration-normal) var(--ease-out);
+}
+
+/* ── BASE TYPOGRAPHY ─────────────────────────────────────────── */
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+h1 {
+  font-size: var(--text-h1);
+}
+h2 {
+  font-size: var(--text-h2);
+}
+h3 {
+  font-size: var(--text-h3);
+}
+h4 {
+  font-size: var(--text-h4);
+}
+
+.text-display {
+  font-size: var(--text-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.text-gradient {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent-green-300);
+}
+
+/* ── UTILITIES ───────────────────────────────────────────────── */
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  /* max(padding, safe-area): on a notched phone in landscape the inset on
+     the camera side (~44px) is LARGER than the clamp'd padding at those
+     widths — edge text sat under the notch. Collapses to the plain padding
+     wherever env() is 0. */
+  padding-left: max(var(--container-padding), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--container-padding), env(safe-area-inset-right, 0px));
+}
+
+.container--narrow {
+  max-width: var(--container-narrow);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── ACCESSIBILITY ───────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Global keyboard-focus ring. There was none site-wide, so most Lab links/buttons
+   showed only the UA default (or nothing where a component cleared it). :focus-visible
+   shows the ring for keyboard/AT users only — never on mouse click. */
+:focus-visible {
+  outline: 2px solid var(--accent-green-400);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Glass-panel surface utility. Global on purpose: Astro scopes a component's
+   <style> to that component's own elements, so when this was defined inside one
+   section's scoped block every OTHER component that adds `class="… glass-panel"`
+   (VariablePanel, the Prompt confirm modal) silently got no surface at all. */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Hero plate — the panel under hero copy.
+
+   Owner sequence: too opaque → still heavy → "too dark and blurs the
+   background" → "the rectangle is fine, it just blurs too much". So the shape
+   stays a panel (radius, hairline border, soft shadow) and the BLUR is what
+   comes down: 5px is enough to sit the words on a surface without smearing the
+   art the hero is built around. The wash stays light — the blur is no longer
+   carrying the separation, so the panel must not go dark to compensate. */
+.hero-plate {
+  position: relative;
+  padding: clamp(1.75rem, 3.4vw, 2.75rem) clamp(1.5rem, 4vw, 3.25rem);
+  border-radius: 26px;
+  background: radial-gradient(
+    120% 110% at 50% 44%,
+    hsla(220, 26%, 6%, 0.3) 0%,
+    hsla(220, 26%, 6%, 0.2) 58%,
+    hsla(220, 26%, 6%, 0.1) 100%
+  );
+  backdrop-filter: blur(5px) saturate(112%);
+  -webkit-backdrop-filter: blur(5px) saturate(112%);
+  border: 1px solid hsla(220, 20%, 45%, 0.1);
+  box-shadow: 0 12px 44px hsla(0, 0%, 0%, 0.18);
+}
+
+@media (max-width: 767px) {
+  .hero-plate {
+    padding: var(--space-6) var(--space-5);
+    border-radius: 20px;
+    background: radial-gradient(
+      130% 116% at 50% 46%,
+      hsla(220, 26%, 6%, 0.4) 0%,
+      hsla(220, 26%, 6%, 0.28) 58%,
+      hsla(220, 26%, 6%, 0.14) 100%
+    );
+  }
+}
+
+/* The standard property, restated where a minifier cannot rewrite it away.
+   Verified in dist: without this, .glass-panel and .hero-plate ship only the
+   -webkit- alias and render with no blur at all in Chromium. */
+@supports (backdrop-filter: blur(1px)) {
+  .glass-panel {
+    backdrop-filter: blur(var(--glass-blur));
+  }
+
+  .hero-plate {
+    backdrop-filter: blur(5px) saturate(112%);
+  }
+}
+
+/* Skip-link: first focusable element, lets keyboard/AT users jump past the nav to the
+   page content. Off-screen until focused. */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: var(--space-2);
+  z-index: 1000;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-green-400);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* ── SELECTION ───────────────────────────────────────────────── */
+
+::selection {
+  background: var(--accent-green-400);
+  color: var(--bg-void);
+}
+
+/* ── LAB COPILOT ─────────────────────────────────────────────── */
+/* Desktop reserves space beside the tool so the docked assistant sits next to it
+   rather than over it. On mobile the panel is a full sheet and nothing is
+   reserved — the whole block is inside the min-width query.
+
+   The reservation is the DEFAULT and the closed state is the exception, which is
+   the opposite of how this read before. It used to key on `body.lab-copilot-open`,
+   a class that only exists after the island hydrates — so on every desktop load
+   the page painted at full width and then the entire .lab-container jumped left
+   by 360px once the panel opened. Lighthouse measured CLS 0.216 for it on
+   /en/lab/prompt/, enough to score desktop (90) BELOW mobile (97) on the same
+   page, which is where this was found.
+
+   Inverted, the common path has no shift at all: the space is reserved from
+   first paint and the panel fades into it. Only a visitor who previously closed
+   the panel gets one collapse when their stored preference is applied. */
+@media (min-width: 1024px) {
+  .lab-page {
+    padding-right: min(360px, 92vw);
+  }
+
+  body.lab-copilot-closed .lab-page {
+    padding-right: 0;
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .lab-page {
+    transition: padding-right 0.28s ease;
+  }
+}

@@ -1,0 +1,1203 @@
+---
+/**
+ * /services/geo-methodology/ — the anti-snake-oil page for the GEO market.
+ * Linked from the services index, the geo-audit rung's notIncluded line, and
+ * the geo-audit page's own "why trust this audit" callout — this is where
+ * "nobody can honestly promise rankings" gets spelled out instead of just
+ * asserted. It states plainly what AI-visibility measurement CAN show, what
+ * it CANNOT, and how the €900 audit samples — numbers here must always match
+ * what that page actually delivers (see src/data/services.ts, geo-audit rung).
+ *
+ * Structure: every h2 is a buyer question in disguise, restated as a literal
+ * question so the visible copy and the FAQPage node below can share text
+ * verbatim (Google requires the match; a mismatch is a manual-action risk).
+ * Each answer is stored as an ARRAY of paragraphs (`body: string[]`) and the
+ * FAQPage answer is `body.join(' ')` — the rendered text and the JSON-LD are
+ * therefore the same characters by construction, while the reader gets
+ * paragraphs instead of a 780-character wall. Never render `body[0]` alone,
+ * and never let a heading or an eyebrow into the answer string.
+ * The closing callout is deliberately OUTSIDE the FAQ loop — it carries the
+ * two links (to the audit and to Trust & Process) that back the standing
+ * house rule: read this before buying an audit from anyone, including this
+ * studio.
+ *
+ * MEASUREMENT-HONESTY NOTE (2026-08-24, and the reason section 02 reads the
+ * way it does). This page used to list `llms.txt` and structured data among
+ * "the technical inputs that make citation possible", and the €900 audit is
+ * sold partly on that line. That claim is not supportable:
+ *   - Google's own AI-optimization guide
+ *     (developers.google.com/search/docs/fundamentals/ai-optimization-guide,
+ *     read 2026-08-24) states "You don't need to create new machine readable
+ *     files, AI text files, markup, or Markdown to appear in Google Search"
+ *     and that such files "will neither harm nor help your site's visibility
+ *     or rankings in Google Search, as Google Search ignores them";
+ *   - the same guide states "Structured data isn't required for generative
+ *     AI search, and there's no special schema.org markup you need to add"
+ *     — it stays recommended as ordinary SEO, not as an AI-citation lever;
+ *   - Gary Illyes said at Search Central Live (July 2025) that Google does
+ *     not support llms.txt and is not planning to;
+ *   - server-log studies published through 2026 report AI crawlers almost
+ *     never requesting /llms.txt.
+ * So the file is now described as something the audit RECORDS, not something
+ * it credits. The same overclaim still stands elsewhere and was NOT edited
+ * here (those files are owned by other work in flight on this branch) —
+ * grep `llms.txt` in src/data/services.ts (the geo-audit deliverable, the
+ * retainer's monthly fixes, the rung's SEO description, the web-build rung),
+ * src/data/services-faq.ts (the "does GEO replace SEO" answer),
+ * src/pages/[lang]/services/geo-audit/index.astro and public/llms.txt.
+ * Reported to the owner rather than changed under someone else's hands.
+ *
+ * Standing content laws enforced elsewhere on the site: no fabricated
+ * rankings, no round-the-clock SLA promise, no payment provider we cannot
+ * actually use — see tests/unit/content-laws.test.ts.
+ */
+import { Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import ServiceCta from '@components/services/ServiceCta.astro';
+import heroArt from '@/assets/services/rung2-method.png';
+// Generated in-house (ComfyUI, same "obsidian ground, one glowing object"
+// recipe as the Stack tiles): a dial with one needle (what can be shown), two
+// marks with a lit gap between them (the delta that actually signals), a
+// caliper closed around nothing (what stays out of reach). The visual thesis
+// of the whole page, stated in three frames before a single question is read.
+import emReading from '@/assets/services/me-reading.png';
+import emDelta from '@/assets/services/me-delta.png';
+import emBlind from '@/assets/services/me-blind.png';
+import { SITE_ORIGIN } from '@/data/services';
+import { servicesBreadcrumb, techArticleNode, faqPageNode } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const copy = {
+  en: {
+    title: 'GEO Measurement — What AI Visibility Can Prove | VKVstudio',
+    description:
+      'How AI-search visibility is measured: what one query shows, why a single run proves nothing, and what no vendor — this studio included — can honestly promise.',
+    eyebrow: 'methodology',
+    h1: 'What can AI-visibility measurement actually prove?',
+    lede: 'Three things are genuinely measurable in AI search today: whether a specific engine cites you for a specific prompt, on a specific day, from a specific locale; the change between two such readings taken weeks apart; and whether AI crawlers can reach and render your pages at all. A global "ranking" in ChatGPT is not one of the three, and no vendor, including this one, can honestly sell it to you.',
+    sections: [
+      {
+        eyebrow: '01 · the problem',
+        heading: 'Why does a page like this exist?',
+        anchor: 'No engine publishes positions. Anyone showing you one made it up.',
+        body: [
+          'The GEO market has a credibility problem: per-query answers from ChatGPT, Perplexity and Google AI are non-deterministic, personalized and cached — the same prompt asked by two people, on two different days, can return two different citation sets, and neither one is "wrong."',
+          'There is no search console for ChatGPT or Perplexity — no dashboard a vendor can screenshot to show you a position. Google is the partial exception: Search Console reports aggregate AI-surface impressions for your own property, but nothing for a competitor and no per-prompt citation view — not the thing a vendor would need to show you a "ranking."',
+          'A vendor who promises you positions in AI answers is describing something they cannot actually observe.',
+        ],
+      },
+      {
+        eyebrow: '02 · what is measurable',
+        heading: 'What can AI-visibility measurement actually show you?',
+        anchor: 'Named engine, named prompt, named day — or it is not a reading.',
+        body: [
+          'Three things, all directly observable: whether a specific engine — ChatGPT, Perplexity, Google AI Overviews and AI Mode, Copilot or Gemini — cites you for a specific prompt, on a specific day, from a specific locale; the delta between two such readings taken weeks apart, which is a trend, not a single snapshot; and the technical layer underneath — whether AI crawlers can reach and render your pages at all, and whether your name, description and facts agree with each other across the open web.',
+          "Two more things this market sells as levers are recorded here as facts rather than promises. Structured data is checked because it is ordinary SEO hygiene, not because it buys citations: Google's own AI-optimization guide states that structured data is not required for generative AI search and that there is no special schema.org markup to add for it. An llms.txt file is checked the same way. The same Google guide says machine-readable AI files neither help nor harm visibility in Google Search because Search ignores them, and server-log studies published through 2026 report that AI crawlers almost never request the file at all — so the audit records whether you have one and whether it is valid, and never counts it as a reason you were cited.",
+          'Nothing on this list requires access that an outside party does not have, which is exactly why it can be measured honestly.',
+        ],
+      },
+      {
+        eyebrow: '03 · the €900 audit',
+        heading: 'How does the €900 audit measure it?',
+        anchor: '20 prompts, 5 engines, one dated run — the scope, on paper.',
+        body: [
+          'A fixed set of 20 buyer-intent prompts, run once across five engines — ChatGPT, Perplexity, Google AI Overviews and AI Mode, Copilot, Gemini — with every citation recorded verbatim. Results are compared against two or three named competitors you choose.',
+          'A written report and a written Q&A round land within 5–10 business days, with every question answered within one business day. That single run becomes a dated baseline, not a verdict — the next section explains why the distinction matters.',
+        ],
+      },
+      {
+        eyebrow: '04 · one run against two',
+        heading: 'Why does a single run prove nothing on its own?',
+        anchor: 'One reading is a baseline. Two readings are evidence.',
+        body: [
+          'Because AI answers vary by the hour and by the visitor, one run of one prompt set tells you what happened once, not what happens typically. The audit reports it as exactly that: a dated baseline plus a fix list, never a score to defend.',
+          "The number that actually carries signal is the delta between two runs of the same prompt set, taken at least a month apart, against the same named competitors — that is the entire point of the monthly retainer's tracking: the same fixed method run twice, so a change in the number reflects a change in the world, not a change in the method.",
+        ],
+      },
+      {
+        eyebrow: '05 · the limits',
+        heading: 'What cannot be measured — even by me?',
+        anchor: 'What cannot be observed from outside does not enter the report.',
+        body: [
+          'A global "ranking" in ChatGPT or any other engine does not exist to be measured — the phrase describes something these systems simply do not have.',
+          "Causal attribution of a single change is not provable from one delta either: your content, the engine's underlying model and your competitors' content all move between two readings, so a shift after a fix is evidence that it worked, not proof.",
+          'And anything that requires access these engines do not expose — why a model chose one citation over another, its internal retrieval logic, real click-through on a citation — stays out of the report, because it cannot be honestly observed from outside. If a deliverable cannot be verified by you, independently, it does not go in.',
+        ],
+      },
+      {
+        eyebrow: '06 · GEO and SEO',
+        heading: 'Does GEO replace SEO?',
+        anchor: 'Most of AI visibility is technical SEO done properly.',
+        body: [
+          'A large share of AI visibility is downstream of ordinary technical SEO done well — clean crawlability, correct structured data, a coherent entity, content that actually answers the question being asked.',
+          'Anyone selling GEO as a replacement for SEO is selling a rebrand, not a new discipline. The audit says plainly which of your gaps are classic SEO work and which are genuinely AI-specific, because blurring the two is how an invoice gets padded.',
+        ],
+      },
+      {
+        eyebrow: '07 · your checklist',
+        heading: 'How should you use this page before you buy?',
+        anchor: 'Five questions. Ask them before you sign anything — mine included.',
+        body: [
+          'Take these questions to any vendor before you sign anything: which engines do they sample, how many prompts, how often, against which named competitors, and what exactly do they refuse to promise.',
+          'A vague answer to a measurement question is the tell — hold on to your budget.',
+        ],
+      },
+    ],
+    // The page's thesis in three frames, right after the hero — the h2/p
+    // pairs above stay the FAQPage source of truth verbatim; this strip is a
+    // visual break, not a rewrite. Order matches the three emblem imports.
+    methodEmblems: [
+      {
+        label: 'What can be shown',
+        caption: 'A named engine, a named prompt, a named day — read like an instrument.',
+      },
+      {
+        label: 'What actually signals',
+        caption: 'The gap between two readings, weeks apart — a trend, not a snapshot.',
+      },
+      {
+        label: 'What stays unmeasured',
+        caption: 'A global "ranking," causal proof from one delta, the engine\'s own reasoning.',
+      },
+    ],
+    processTerminal: {
+      path: '~/vkvstudio/audit-scope.txt',
+      lines: [
+        '20 buyer-intent prompts, one run.',
+        '5 engines — ChatGPT, Perplexity, Google AI Overviews & AI Mode, Copilot, Gemini.',
+        '2–3 named competitors, chosen by you.',
+        'Report and written Q&A: 5–10 business days.',
+        'Every question answered within one business day.',
+      ],
+    },
+    // The delta rail (section 04) — the one place on this site where a
+    // scroll-scrubbed line is the argument rather than decoration: the line
+    // between the two readings draws itself as the reader travels the
+    // paragraph that describes it. No numbers, because there are none to
+    // honestly show.
+    deltaMarks: [
+      'reading 1 — a dated baseline',
+      'the delta — the part that carries signal',
+      'reading 2 — same prompts, a month later',
+    ],
+    checklistItems: [
+      'Which engines do they sample?',
+      'How many prompts, and how were they chosen?',
+      'How often do they re-run the same set?',
+      'Against which named competitors?',
+      'What do they refuse to promise?',
+    ],
+    calloutLabel: 'before you buy',
+    calloutBody:
+      'That includes buying from this studio. Read what the audit actually delivers before ordering it, and read how the paperwork around it works — contract, milestones, guarantee — before paying anyone, including me.',
+    calloutAuditCta: 'Read the €900 audit scope',
+    calloutTrustCta: 'Read Trust & Process',
+  },
+  ru: {
+    title: 'Методология GEO — что доказуемо в ИИ-видимости | VKVstudio',
+    description:
+      'Как измеряется видимость в ИИ-поиске: что показывает один запрос, почему единичный прогон ничего не доказывает и чего не обещает честный подрядчик.',
+    eyebrow: 'методология',
+    h1: 'Что реально может доказать измерение ИИ-видимости?',
+    lede: 'Сегодня в ИИ-поиске реально измеримы три вещи: цитирует ли конкретный движок вас по конкретному запросу, в конкретный день, из конкретной локали; изменение между двумя такими замерами, сделанными с разницей в несколько недель; и способны ли ИИ-краулеры вообще дойти до ваших страниц и отрендерить их. Глобального «рейтинга» в ChatGPT среди этих трёх вещей нет, и ни один подрядчик, включая эту студию, не может честно вам его продать.',
+    sections: [
+      {
+        eyebrow: '01 · проблема',
+        heading: 'Зачем нужна эта страница?',
+        anchor: 'Ни один движок не публикует позиций. Кто их показывает — придумал.',
+        body: [
+          'У рынка GEO есть проблема доверия: ответы ИИ по конкретному запросу недетерминированы, персонализированы и кешируются — один и тот же запрос от двух людей в разные дни может вернуть два разных набора цитирований, и ни один из них не «неправильный».',
+          'Для ChatGPT или Perplexity нет search console — нет дашборда, скриншот которого подрядчик может вам показать. Google — частичное исключение: Search Console показывает агрегированные показы для ИИ-поверхностей по вашему собственному домену, но ничего по конкурентам и без разбивки по конкретным запросам — то есть не то, что нужно подрядчику, чтобы показать вам «позицию».',
+          'Подрядчик, который обещает вам позиции в ответах ИИ, описывает то, чего сам не может наблюдать.',
+        ],
+      },
+      {
+        eyebrow: '02 · что измеримо',
+        heading: 'Что реально можно измерить в ИИ-видимости?',
+        anchor: 'Названный движок, названный запрос, названный день — иначе это не замер.',
+        body: [
+          'Три вещи, каждая из которых напрямую наблюдаема: цитирует ли конкретный движок — ChatGPT, Perplexity, Google AI Overviews и AI Mode, Copilot или Gemini — вас по конкретному запросу, в конкретный день, из конкретной локали; дельта между двумя такими замерами, сделанными с разницей в несколько недель, — это тренд, а не единичный снимок; и технический слой под этим — способны ли ИИ-краулеры вообще дойти до ваших страниц и отрендерить их и согласуются ли ваше название, описание и факты друг с другом по всему открытому вебу.',
+          'Ещё две вещи рынок продаёт как рычаги, а здесь они фиксируются как факты, а не как обещания. Структурированные данные проверяются потому, что это обычная SEO-гигиена, а не потому, что они покупают цитирования: собственное руководство Google по оптимизации под генеративный поиск прямо говорит, что разметка для генеративного ИИ-поиска не требуется и никакой особой разметки schema.org добавлять не нужно. Файл llms.txt проверяется так же. В том же руководстве Google пишет, что машиночитаемые ИИ-файлы не помогают и не вредят видимости в Поиске, потому что Поиск их игнорирует, а опубликованные в 2026 году разборы серверных логов показывают, что ИИ-краулеры почти никогда этот файл вообще не запрашивают, — поэтому аудит фиксирует, есть ли он у вас и валиден ли он, но никогда не засчитывает его как причину цитирования.',
+          'Ничто из этого списка не требует доступа, которого нет у стороннего наблюдателя, — именно поэтому это можно честно измерить.',
+        ],
+      },
+      {
+        eyebrow: '03 · аудит за €900',
+        heading: 'Как это измеряет аудит за €900?',
+        anchor: '20 запросов, 5 движков, один датированный прогон — состав на бумаге.',
+        body: [
+          'Фиксированный набор из 20 покупательских запросов прогоняется один раз через пять движков — ChatGPT, Perplexity, Google AI Overviews и AI Mode, Copilot, Gemini, — и каждая цитата фиксируется дословно. Результаты сравниваются с двумя-тремя названными вами конкурентами.',
+          'Письменный отчёт и письменный раунд вопросов и ответов приходят в течение 5–10 рабочих дней, ответ на каждый вопрос — в течение одного рабочего дня. Этот единственный прогон становится датированным базовым замером, а не приговором — почему это различие важно, объясняет следующий раздел.',
+        ],
+      },
+      {
+        eyebrow: '04 · один прогон против двух',
+        heading: 'Почему единичный прогон сам по себе ничего не доказывает?',
+        anchor: 'Один замер — это база. Два замера — это свидетельство.',
+        body: [
+          'Поскольку ответы ИИ меняются от часа к часу и от посетителя к посетителю, один прогон одного набора запросов показывает, что произошло один раз, а не то, что происходит обычно. Аудит подаёт результат именно так: датированный базовый замер плюс список исправлений, а не оценку, которую нужно защищать.',
+          'Сигнал несёт именно дельта между двумя прогонами одного и того же набора запросов, сделанными с разницей минимум в месяц, в сравнении с одними и теми же названными конкурентами, — в этом весь смысл ежемесячного отслеживания в ретейнере: один и тот же фиксированный метод, применённый дважды, чтобы изменение числа отражало изменение в мире, а не изменение метода.',
+        ],
+      },
+      {
+        eyebrow: '05 · границы',
+        heading: 'Что нельзя измерить — даже мне?',
+        anchor: 'То, чего нельзя наблюдать снаружи, в отчёт не попадает.',
+        body: [
+          'Глобального «рейтинга» в ChatGPT или любом другом движке не существует как измеримой величины — эта фраза описывает то, чего у этих систем попросту нет.',
+          'Причинно-следственную связь между конкретным исправлением и сдвигом тоже нельзя доказать по одной дельте: между двумя замерами меняется и ваш контент, и модель движка, и контент конкурентов, поэтому сдвиг после исправления — это свидетельство, что оно сработало, а не доказательство.',
+          'И всё, что требует доступа, которого эти движки не раскрывают, — к тому, почему модель выбрала одну цитату вместо другой, к её внутренней логике поиска, к реальным переходам по цитате, — в отчёт не попадает, потому что это нельзя честно наблюдать со стороны. Если результат нельзя проверить самостоятельно и независимо — его в отчёте не будет.',
+        ],
+      },
+      {
+        eyebrow: '06 · GEO и SEO',
+        heading: 'GEO заменяет SEO?',
+        anchor: 'Большая часть ИИ-видимости — это как следует сделанное техническое SEO.',
+        body: [
+          'Значительная часть ИИ-видимости — прямое следствие хорошо сделанного, скучного технического SEO: чистая доступность для краулеров, корректная разметка, согласованная сущность, контент, который реально отвечает на вопрос.',
+          'Тот, кто продаёт GEO как замену SEO, продаёт ребрендинг, а не новую дисциплину. Аудит прямо говорит, какие из ваших пробелов — классическое SEO, а какие — действительно специфика ИИ, потому что смешение этих двух вещей — способ раздуть счёт.',
+        ],
+      },
+      {
+        eyebrow: '07 · ваш чеклист',
+        heading: 'Как пользоваться этой страницей перед покупкой?',
+        anchor: 'Пять вопросов. Задайте их до подписания — в том числе мне.',
+        body: [
+          'Задайте эти вопросы любому подрядчику до подписания чего-либо: какие движки он выбирает для замера, сколько запросов, как часто, с какими названными конкурентами он сравнивает и что именно он отказывается обещать.',
+          'Расплывчатый ответ на вопрос об измерении — тревожный сигнал; в этом случае придержите бюджет.',
+        ],
+      },
+    ],
+    methodEmblems: [
+      {
+        label: 'Что можно показать',
+        caption: 'Названный движок, названный запрос, названный день — читается как прибор.',
+      },
+      {
+        label: 'Что действительно несёт сигнал',
+        caption: 'Разрыв между двумя замерами с разницей в недели — тренд, а не снимок.',
+      },
+      {
+        label: 'Что остаётся неизмеримым',
+        caption: 'Глобальный «рейтинг», доказательство причинности по одной дельте, логика движка.',
+      },
+    ],
+    processTerminal: {
+      path: '~/vkvstudio/audit-scope.txt',
+      lines: [
+        '20 покупательских запросов, один прогон.',
+        '5 движков — ChatGPT, Perplexity, Google AI Overviews и AI Mode, Copilot, Gemini.',
+        '2–3 названных конкурента — по вашему выбору.',
+        'Отчёт и письменные вопрос-ответы: 5–10 рабочих дней.',
+        'Ответ на каждый вопрос — в течение одного рабочего дня.',
+      ],
+    },
+    deltaMarks: [
+      'замер 1 — датированная база',
+      'дельта — то, что несёт сигнал',
+      'замер 2 — те же запросы, через месяц',
+    ],
+    checklistItems: [
+      'По каким движкам они делают замеры?',
+      'Сколько запросов и как они выбраны?',
+      'Как часто они повторяют один и тот же набор?',
+      'С какими названными конкурентами сравнивают?',
+      'Что они отказываются обещать?',
+    ],
+    calloutLabel: 'перед покупкой',
+    calloutBody:
+      'Это касается и покупки у этой студии. Прочтите, что аудит реально даёт, прежде чем его заказывать, и как устроены бумаги вокруг него — договор, этапы оплаты, гарантия — прежде чем платить кому угодно, включая меня.',
+    calloutAuditCta: 'Читать состав аудита за €900',
+    calloutTrustCta: 'Читать «Доверие и процесс»',
+  },
+}[lang];
+
+const pageUrl = `${SITE_ORIGIN}/${lang}/services/geo-methodology/`;
+
+// FAQPage text must match the VISIBLE h2/p text verbatim (Google's own
+// requirement — a mismatch is a manual-action risk). The answer is the
+// paragraphs joined by a single space, which is exactly the character
+// sequence the <p> stack renders — splitting the wall into paragraphs
+// therefore cannot desync the node, and that is why `body` is an array.
+// Both q/a slots hold the SAME current-lang string on purpose:
+// faqPageNode(lang, items) only ever reads item.q[lang]/item.a[lang], and
+// copy is already lang-selected above, so this is not a missing translation —
+// it is the one string this page actually renders, kept structurally
+// bilingual to match FaqItem's shape.
+const faqItems = copy.sections.map((s) => ({
+  q: { en: s.heading, ru: s.heading },
+  a: { en: s.body.join(' '), ru: s.body.join(' ') },
+}));
+
+const jsonLd = [
+  techArticleNode({
+    headline: copy.h1,
+    description: copy.description,
+    url: pageUrl,
+    datePublished: '2026-08-20',
+    dateModified: '2026-08-24',
+    // Both were being omitted, which is precisely what techArticleNode's own
+    // doc comment warns a caller not to do: without `image` the node is
+    // ineligible for an Article rich result, and without `inLanguage` the two
+    // locales are indistinguishable to a crawler except by URL. Article and
+    // BlogPosting elsewhere on the site carry both; this was the one node
+    // that did not.
+    lang,
+    image: `${SITE_ORIGIN}/og-geo-methodology.jpg`,
+  }),
+  servicesBreadcrumb(lang, copy.h1, pageUrl),
+  faqPageNode(lang, faqItems),
+];
+
+// This page's mobile LCP element is the hero art, and PageHero cannot preload
+// it for us: an Astro slot does not travel from a nested component up to
+// BaseLayout's `head` slot (src/components/blocks/README.md — "What it does
+// NOT do"). Widths must stay identical to the ones the component requests, or
+// the preload is a second download: the master is 1280 wide, so the family
+// resolves to exactly [768, 1280].
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+// Emblem art, in copy.methodEmblems order: reading (what can be shown),
+// delta (what actually signals), blind (what stays unmeasured).
+const methodEmblemArt = [emReading, emDelta, emBlind];
+
+// The section that carries the delta rail — index 3, "why does a single run
+// prove nothing". Named here rather than written as a bare `3` twice below.
+const DELTA_SECTION = 3;
+const TERMINAL_SECTION = 2;
+const CHECKLIST_SECTION = 6;
+---
+
+<BaseLayout
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  ogImage="/og-geo-methodology.jpg"
+  jsonLd={jsonLd}
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="method-page">
+    {
+      /* Hero: the shared inner-page block (src/components/blocks/PageHero.astro).
+         The art is a precision caliper closed on a field of glowing points —
+         the ones inside the jaws sharp, the ones outside fading into a haze
+         band that marks uncertainty; the page's argument in one frame. The
+         plexus is born where the jaws close on the brightest point, so the
+         network grows out of the single reading the instrument will stand
+         behind. `scrim="center"` is this page's own composition (copy on a
+         plate, focus in the middle of the frame) and matches the radial
+         vignette the local hero used to declare by hand.
+         The scroll hint rides to the EMBLEM strip, not past it: the three
+         frames are the thesis, and the old target (#method-body) jumped the
+         reader straight over them. */
+    }
+    <PageHero
+      lang={lang}
+      eyebrow={copy.eyebrow}
+      title={copy.h1}
+      lede={copy.lede}
+      image={heroArt}
+      scrim="center"
+      plexus={{
+        originX: 0.55,
+        originY: 0.42,
+        anchor: { x: 0.55, y: 0.42, width: 1280, height: 720 },
+      }}
+      scrollTarget="#method-emblems"
+    />
+
+    {/* ── The thesis in three frames, before a single question is read ── */}
+    <section class="method-emblems-section" id="method-emblems">
+      <div class="container">
+        <ul class="method-emblems" role="list">
+          {
+            copy.methodEmblems.map((e, i) => (
+              <li class="method-emblem js-method-emblem">
+                <div class="method-emblem__visual" aria-hidden="true">
+                  <Picture
+                    src={methodEmblemArt[i]}
+                    formats={['avif', 'webp']}
+                    widths={[320, 480, 640]}
+                    sizes="(max-width: 639px) 90vw, (max-width: 959px) 45vw, 21rem"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                {/* The wash rises on hover/tap — the movement the old copy of
+                    this tile promised in a comment and never implemented. */}
+                <div class="method-emblem__glass" aria-hidden="true" />
+                <div class="method-emblem__info">
+                  <span class="method-emblem__label">{e.label}</span>
+                  <p class="method-emblem__caption">{e.caption}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    {/* ── The seven questions ─────────────────────────────────────── */}
+    <section class="method-body" id="method-body">
+      <div class="container">
+        {
+          copy.sections.map((s, i) => (
+            <article class="method-section">
+              {/* Eyebrow and anchor are OUTSIDE the h2/p pair on purpose: the
+                  FAQPage node is built from `heading` and `body` only, so the
+                  section's navigational wiring cannot desync the JSON-LD. */}
+              <p class="method-section__eyebrow text-mono js-method-reveal">
+                <span aria-hidden="true">// </span>
+                {s.eyebrow}
+              </p>
+              <h2 class="js-method-reveal">{s.heading}</h2>
+              <p class="method-anchor text-mono js-method-reveal">{s.anchor}</p>
+              {s.body.map((para) => (
+                <p class="method-section__para js-method-reveal">{para}</p>
+              ))}
+
+              {
+                /* Section 03 (audit scope): the same terminal-window idiom the
+                   audit page's own terms use — "on paper" rendered literally.
+                   No reveal hook on the window itself: its lines carry the
+                   entrance, and nesting one reveal inside another multiplied
+                   the two opacities and made the block fade in twice. */
+                i === TERMINAL_SECTION && (
+                  <div class="method-terminal">
+                    <div class="method-terminal__bar text-mono" aria-hidden="true">
+                      <span class="method-terminal__dots">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      <span>{copy.processTerminal.path}</span>
+                    </div>
+                    <ul class="method-terminal__lines">
+                      {copy.processTerminal.lines.map((line) => (
+                        <li class="js-method-term-line">{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              }
+
+              {
+                /* Section 04 (one run against two): the delta rail. The line
+                   between the two readings is drawn by the scroll position
+                   itself — the only scrub on this page, and the one place
+                   where a scrub illustrates the argument instead of
+                   decorating it. Decorative: the paragraphs above already
+                   carry the whole statement in words. */
+                i === DELTA_SECTION && (
+                  <div class="method-delta" aria-hidden="true">
+                    <div class="method-delta__rail">
+                      <span class="method-delta__track" />
+                      <span class="method-delta__line js-method-delta-line" />
+                      <span class="method-delta__dot js-method-delta-dot" data-at="start" />
+                      <span class="method-delta__dot js-method-delta-dot" data-at="end" />
+                    </div>
+                    <ol class="method-delta__marks">
+                      {copy.deltaMarks.map((mark) => (
+                        <li class="text-mono">{mark}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )
+              }
+
+              {
+                /* Section 07 (before you buy): the five questions as a
+                   numbered checklist a buyer can actually take into a vendor
+                   call. */
+                i === CHECKLIST_SECTION && (
+                  <ol class="method-checklist">
+                    {copy.checklistItems.map((item) => (
+                      <li class="js-method-item">{item}</li>
+                    ))}
+                  </ol>
+                )
+              }
+            </article>
+          ))
+        }
+
+        {
+          /* Outside the FAQ loop on purpose (see the file header comment):
+             this is where the two required links live, kept out of the
+             FAQPage text so the JSON-LD stays a plain-text match for the
+             questions above. */
+        }
+        <blockquote class="method-callout js-method-reveal">
+          <p class="method-callout__label text-mono">
+            <span aria-hidden="true">// </span>{copy.calloutLabel}
+          </p>
+          <p class="method-callout__text">{copy.calloutBody}</p>
+          <div class="method-callout__links">
+            <a href={`/${lang}/services/geo-audit/`}>
+              {copy.calloutAuditCta}
+              <span aria-hidden="true">→</span>
+            </a>
+            <a href={`/${lang}/trust/`}>
+              {copy.calloutTrustCta}
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </blockquote>
+      </div>
+    </section>
+
+    <ServiceCta lang={lang} outcome={t(lang, 'services.ctaOutcomes.geoMethodology')} />
+  </main>
+</BaseLayout>
+
+<script>
+  // Homepage manners on this page too (owner: they are the site norm) —
+  // Lenis smooths the wheel; under reduced motion initLenis() is a no-op.
+  // The hero's own scroll hint and video gate live inside PageHero.
+  import { initLenis } from '@scripts/lenis-init';
+
+  // Motion is an enhancement, never a gatekeeper: nothing here starts hidden
+  // in CSS, so a failed import or an old browser sees a complete page.
+  // gsap.from() does the hide-then-reveal itself, and clearProps hands each
+  // element back to the stylesheet once its tween lands.
+  //
+  // Every value below comes from the site's motion dictionary
+  // (.system/canon/10-motion.md §4.3/§4.4). The previous version of this file
+  // invented its own — y:20 / 0.6 / power2.out on a `top 90%` threshold, one
+  // trigger per tile in a single row — which is the literal recipe for the
+  // owner's verdict "static movement": three tiles in one row all fired in
+  // the same frame, at the very edge of the viewport, over a distance too
+  // small to register.
+  async function initMethodMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // Hero lede cursor parallax — the homepage/geo-audit hero's manners
+    // (geo-audit/index.astro:1019–1065), minus the magnetic CTA: PageHero's
+    // markup here carries no CTA for the cursor to lean toward, only the
+    // lede. Already covered by the reduced-motion gate above; the extra
+    // (hover: hover) and (pointer: fine) gate keeps it off touch and coarse
+    // pointers, and the listener is passive since it only ever reads the
+    // event.
+    const hero = document.querySelector<HTMLElement>('.page-hero');
+    const lede = hero?.querySelector<HTMLElement>('.page-hero__lede');
+    if (hero && lede && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      hero.addEventListener(
+        'mousemove',
+        (e) => {
+          const rect = hero.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width;
+          const y = (e.clientY - rect.top) / rect.height;
+          lede.style.transform = `translate(${(x - 0.5) * -3}px, ${(y - 0.5) * -2}px)`;
+        },
+        { passive: true }
+      );
+      hero.addEventListener('mouseleave', () => {
+        lede.style.transform = '';
+      });
+    }
+
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Section wiring reveals PER ELEMENT — eyebrow, heading, anchor and
+      // each paragraph on its own trigger, the etalon's cascade
+      // (geo-audit/index.astro:637–650). Revealing the whole <article> as one
+      // body moved half a screen of text by 24px, which reads as nothing.
+      document.querySelectorAll<HTMLElement>('.js-method-reveal').forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+      });
+
+      // The three emblems are a GRID OF EQUAL TILES, so the dictionary says:
+      // one trigger on the container, one wave, stagger 0.08, 0.7 expo.out
+      // from y:40 + scale:0.9 (canon §4.3 rows "card entrance" and "stagger",
+      // §4.4 "grid of equal tiles → top 80%"; sample geo-audit:701–714).
+      const emblems = document.querySelectorAll<HTMLElement>('.js-method-emblem');
+      if (emblems.length > 0) {
+        gsap.fromTo(
+          emblems,
+          { opacity: 0, y: 40, scale: 0.9 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            stagger: 0.08,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: '.method-emblems', start: 'top 80%' },
+          }
+        );
+      }
+
+      // Checklist rows: quiet per-item reveals (geo-audit's .js-geo-item).
+      document.querySelectorAll<HTMLElement>('.js-method-item').forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 18,
+          duration: 0.5,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 85%' },
+        });
+      });
+
+      // Terminal lines: type-in stagger, the audit page's own idiom, on the
+      // audit page's own threshold (top 75%). At `top 85%` the typing was
+      // already finished by the time the window was readable.
+      gsap.from('.js-method-term-line', {
+        opacity: 0,
+        x: -16,
+        duration: 0.45,
+        ease: 'power2.out',
+        stagger: 0.22,
+        clearProps: 'all',
+        scrollTrigger: { trigger: '.method-terminal', start: 'top 75%' },
+      });
+
+      // The delta rail: the page's only scrub. `ease: 'none'` is mandatory —
+      // any other curve breaks the 1:1 tie between scroll position and
+      // animation position (canon §4.3 rule 5). The line is the delta; the
+      // two dots are the readings, springing in as they are reached.
+      const deltaLine = document.querySelector<HTMLElement>('.js-method-delta-line');
+      if (deltaLine) {
+        gsap.fromTo(
+          deltaLine,
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: '.method-delta',
+              start: 'top 75%',
+              end: 'bottom 60%',
+              scrub: 0.8,
+            },
+          }
+        );
+
+        document.querySelectorAll<HTMLElement>('.js-method-delta-dot').forEach((dot) => {
+          gsap.from(dot, {
+            scale: 0,
+            duration: 0.6,
+            ease: 'back.out(2.5)',
+            clearProps: 'all',
+            scrollTrigger: { trigger: dot, start: 'top 90%' },
+          });
+        });
+      }
+    } catch (err) {
+      // No rescue pass needed — content was never hidden.
+      console.error('[geo-methodology] motion failed to load:', err);
+    }
+  }
+
+  /**
+   * Emblem tiles on a coarse pointer. `:hover` alone left them completely
+   * dead on a phone — no way to reach the state at all — and mobile Safari's
+   * synthetic hover sticks without a matching leave. A tap toggles `.is-open`
+   * with a singleton (never more than one open), which is the site's
+   * established gesture for this tile family (section-animations.ts:500–534).
+   * The caption stays legible in BOTH states here, unlike the audit page's
+   * retainer cards, so nothing is hidden behind the gesture.
+   */
+  function initMethodEmblemTaps(): void {
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const tiles = Array.from(document.querySelectorAll<HTMLElement>('.js-method-emblem'));
+    if (tiles.length === 0) return;
+
+    for (const tile of tiles) {
+      tile.addEventListener('click', () => {
+        const wasOpen = tile.classList.contains('is-open');
+        for (const other of tiles) other.classList.remove('is-open');
+        if (!wasOpen) tile.classList.add('is-open');
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initMethodMotion();
+      initMethodEmblemTaps();
+    });
+  } else {
+    initLenis();
+    void initMethodMotion();
+    initMethodEmblemTaps();
+  }
+</script>
+
+<style>
+  /* The page frame stays on the page: PageHero computes its own height
+     reserve from these same tokens (see blocks/README.md — "No page frame"),
+     so changing the padding here without changing the component desyncs them. */
+  .method-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .method-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* ── The seven questions ─────────────────────────────────────── */
+  .method-body {
+    margin-bottom: var(--space-8);
+  }
+
+  /* Left-railed on the wide container: the readability cap lives on this
+     text wrapper, same idiom as the etalon's .geo-callout / .geo-terms-window. */
+  .method-section {
+    max-width: var(--container-narrow);
+    margin-bottom: var(--space-10);
+  }
+
+  /* Same recipe as the etalon's .geo-section__eyebrow: size and colour come
+     from .text-mono, only the margin is owned here. */
+  .method-section__eyebrow {
+    margin-bottom: var(--space-4);
+  }
+
+  .method-section h2 {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  /* The etalon's .geo-anchor — one green summary line under the heading, so
+     seven sections can be scanned without reading them. */
+  .method-anchor {
+    font-size: var(--text-sm);
+    color: var(--accent-green-300);
+    max-width: 62ch;
+    margin-bottom: var(--space-6);
+  }
+
+  .method-section__para {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin: 0 0 var(--space-5);
+  }
+
+  .method-section__para:last-of-type {
+    margin-bottom: 0;
+  }
+
+  /* ── The three emblems — the page's thesis before a single question is
+     read. Same recipe as the Stack tiles (image, glass, info) and the audit
+     page's retainer cards, authored locally since it is a shared visual
+     language, not a shared class: obsidian ground, one glowing object, the
+     label on a rising glass wash. ───────────────────────────────────── */
+  .method-emblems-section {
+    padding-block: var(--space-10) var(--space-4);
+  }
+
+  .method-emblems {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-5);
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  .method-emblem {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  .method-emblem:hover,
+  .method-emblem.is-open {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .method-emblem__visual {
+    position: absolute;
+    inset: 0;
+  }
+
+  .method-emblem__visual :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition:
+      transform var(--duration-slow) var(--ease-out),
+      filter var(--duration-slow) var(--ease-out);
+  }
+
+  .method-emblem:hover .method-emblem__visual :global(img),
+  .method-emblem.is-open .method-emblem__visual :global(img) {
+    filter: brightness(1.12);
+  }
+
+  /* Scale gated per the house motion rule (swarm audit 2026-09-06) — and
+     is-open fires on tap, so an ungated transform here moved things for
+     touch users who asked the OS for reduced motion. Brightness stays for
+     everyone: a tint is feedback, not motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .method-emblem:hover .method-emblem__visual :global(img),
+    .method-emblem.is-open .method-emblem__visual :global(img) {
+      transform: scale(1.05);
+    }
+  }
+
+  /* The wash actually rises now. At rest it sits low, so the emblem reads as
+     an object on obsidian; on hover or tap it climbs and the caption gets its
+     surface. The comment above this block promised exactly this and the
+     shipped rule was a static gradient — that gap is half of the owner's
+     "статичное движение". Transform only: no repaint, no layout. */
+  .method-emblem__glass {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      hsla(220, 24%, 6%, 0.92) 0%,
+      hsla(220, 24%, 6%, 0.35) 50%,
+      transparent 100%
+    );
+    transform: translateY(18%);
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  .method-emblem:hover .method-emblem__glass,
+  .method-emblem.is-open .method-emblem__glass {
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .method-emblem__glass {
+      /* The state still exists, it just arrives instantly — a reduced-motion
+         reader gets the same information, never a dead control. */
+      transition: none;
+    }
+
+    .method-emblem__visual :global(img) {
+      transition: none;
+    }
+  }
+
+  .method-emblem__info {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: var(--space-5);
+  }
+
+  .method-emblem__label {
+    display: block;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+  }
+
+  .method-emblem__caption {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ── Terminal window (section 03) — the audit page's "on paper" idiom,
+     authored locally for the same reason as the tiles above. ──────────── */
+  .method-terminal {
+    position: relative;
+    max-width: 56rem;
+    margin-top: var(--space-6);
+    border: 1px solid hsla(0, 0%, 100%, 0.06);
+    border-radius: var(--radius-lg);
+    background: hsla(220, 20%, 10%, 0.75);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, 0.05);
+    overflow: hidden;
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .method-terminal {
+      backdrop-filter: blur(14px) saturate(140%);
+    }
+  }
+
+  .method-terminal__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid hsla(0, 0%, 100%, 0.06);
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .method-terminal__dots {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .method-terminal__dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: var(--radius-full);
+    background: hsla(0, 0%, 100%, 0.12);
+  }
+
+  .method-terminal__dots i:first-child {
+    background: hsla(155, 65%, 50%, 0.45);
+  }
+
+  .method-terminal__lines {
+    list-style: none;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .method-terminal__lines li {
+    position: relative;
+    padding-left: var(--space-6);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: 1.8;
+  }
+
+  .method-terminal__lines li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: var(--accent-green-400);
+  }
+
+  .method-terminal__lines li:last-child::after {
+    content: '▮';
+    margin-left: var(--space-2);
+    color: var(--accent-green-300);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .method-terminal__lines li:last-child::after {
+      animation: method-cursor-blink 1.1s steps(1) infinite;
+    }
+  }
+
+  @keyframes method-cursor-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* ── The delta rail (section 04) ────────────────────────────────
+     Two readings and the line between them, drawn by the scroll position.
+     The rail has a resting track (always visible — the reader with motion
+     off sees a finished diagram, not an empty column) and a green line on
+     top of it that the scrub scales from 0 to 1. */
+  .method-delta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-5);
+    max-width: var(--container-narrow);
+    margin-top: var(--space-6);
+    padding: var(--space-5) 0 var(--space-5) var(--space-1);
+  }
+
+  .method-delta__rail {
+    position: relative;
+    width: 2px;
+  }
+
+  .method-delta__track,
+  .method-delta__line {
+    position: absolute;
+    inset: 0;
+    width: 2px;
+    border-radius: var(--radius-full);
+  }
+
+  .method-delta__track {
+    background: var(--glass-border);
+  }
+
+  .method-delta__line {
+    background: linear-gradient(to bottom, var(--accent-green-400), var(--accent-green-200));
+    transform-origin: top center;
+  }
+
+  .method-delta__dot {
+    position: absolute;
+    left: 50%;
+    width: 11px;
+    height: 11px;
+    margin-left: -5.5px;
+    border-radius: var(--radius-full);
+    background: var(--accent-green-300);
+    box-shadow: var(--glow-green);
+  }
+
+  .method-delta__dot[data-at='start'] {
+    top: 0;
+    margin-top: -5.5px;
+  }
+
+  .method-delta__dot[data-at='end'] {
+    bottom: 0;
+    margin-bottom: -5.5px;
+  }
+
+  .method-delta__marks {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+  }
+
+  .method-delta__marks li {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    letter-spacing: var(--tracking-wide);
+    line-height: 1.6;
+  }
+
+  /* The middle mark names the thing the line IS — give it the line's colour. */
+  .method-delta__marks li:nth-child(2) {
+    color: var(--accent-green-300);
+  }
+
+  /* ── The checklist (section 07) — five questions a buyer can take into a
+     vendor call, numbered so they read as a tool, not more prose. */
+  .method-checklist {
+    counter-reset: method-check;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: var(--container-narrow);
+    margin: var(--space-6) 0 0;
+    padding: 0;
+  }
+
+  .method-checklist li {
+    position: relative;
+    padding-left: var(--space-8);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .method-checklist li::before {
+    counter-increment: method-check;
+    content: counter(method-check, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent-green-400);
+  }
+
+  /* ── The callout: the required "including this studio" caveat ───
+     The etalon's .geo-callout values, not a nearby approximation: green
+     haze rather than the generic glass fill, the etalon's radius, padding
+     and text scale. Two pages of one service ladder making the same gesture
+     look different was the "стили корявенько взяты" complaint. */
+  .method-callout {
+    max-width: var(--container-narrow);
+    margin: 0 0 var(--space-10);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .method-callout__label {
+    color: var(--accent-green-300);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    margin-bottom: var(--space-3);
+  }
+
+  .method-callout__text {
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    margin: 0 0 var(--space-5);
+  }
+
+  .method-callout__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-6);
+  }
+
+  .method-callout__links a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--accent-green-200);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .method-callout__links a:hover {
+    color: var(--accent-green-100);
+  }
+</style>

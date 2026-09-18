@@ -1,0 +1,355 @@
+---
+/**
+ * AboutSection — Career timeline + engineering philosophy
+ *
+ * Vertical timeline with dots (accent-green) and connecting lines.
+ * Scroll reveal animations via GSAP ScrollTrigger (section-animations.ts).
+ *
+ * Content sourced from i18n keys (about.*) populated from author_profile.md.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const timelineItems = [
+  {
+    key: 'photography',
+    icon: '/icons/career-photography.webp',
+    alt: t(lang, 'about.icons.photographyAlt'),
+  },
+  {
+    key: 'marketing',
+    icon: '/icons/career-marketing.webp',
+    alt: t(lang, 'about.icons.marketingAlt'),
+  },
+  {
+    key: 'webdev',
+    icon: '/icons/career-webdev.webp',
+    alt: t(lang, 'about.icons.webdevAlt'),
+  },
+  {
+    key: 'ai',
+    icon: '/icons/career-ai.webp',
+    alt: t(lang, 'about.icons.aiAlt'),
+  },
+] as const;
+---
+
+<section class="about-section" id="about" aria-labelledby="about-heading">
+  <div class="container">
+    {/* Section label */}
+    <p class="text-mono about__label js-about-reveal">{t(lang, 'about.timeline_label')}</p>
+
+    {/* Main headline */}
+    <div class="about__headline js-about-reveal">
+      <h2 id="about-heading" class="about__headline-main">
+        {t(lang, 'about.headline')}
+      </h2>
+      <p class="about__headline-sub text-gradient">
+        {t(lang, 'about.headline_sub')}
+      </p>
+    </div>
+
+    {/* Body copy */}
+    <div class="about__body js-about-reveal">
+      <p class="about__body-text">{t(lang, 'about.body')}</p>
+      <p class="about__body-text">{t(lang, 'about.body2')}</p>
+    </div>
+
+    {/* Career timeline */}
+    <div class="about__timeline" role="list" aria-label={t(lang, 'about.timeline_label')}>
+      {/* Animated vertical line — controlled by GSAP */}
+      <div class="timeline-line js-timeline-line" aria-hidden="true"></div>
+
+      {
+        timelineItems.map((item, index) => (
+          <div
+            class="timeline-item js-timeline-item"
+            role="listitem"
+            style={`--item-index: ${index}`}
+          >
+            {/* Timeline dot */}
+            <div class="timeline-item__dot js-timeline-dot" aria-hidden="true">
+              <div class="timeline-item__dot-inner">
+                <img src={item.icon} alt={item.alt} class="timeline-item__icon" loading="lazy" />
+              </div>
+            </div>
+
+            {/* Content card */}
+            <div class="timeline-item__card glass-panel js-timeline-card">
+              <div class="timeline-item__year text-mono">
+                {t(lang, `about.timeline.${item.key}.year`)}
+              </div>
+              <h3 class="timeline-item__role">{t(lang, `about.timeline.${item.key}.role`)}</h3>
+              <p class="timeline-item__detail">{t(lang, `about.timeline.${item.key}.detail`)}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    {/* Philosophy callout */}
+    <blockquote class="about__philosophy js-about-reveal">
+      <p class="about__philosophy-label text-mono">{t(lang, 'about.philosophy_label')}</p>
+      <p class="about__philosophy-text">{t(lang, 'about.philosophy')}</p>
+    </blockquote>
+  </div>
+</section>
+
+<style>
+  /* ── Section layout ────────────────────────────────────── */
+  .about-section {
+    padding-block: var(--section-gap);
+    background: linear-gradient(
+      to bottom,
+      var(--bg-obsidian) 0%,
+      var(--bg-graphite) 50%,
+      var(--bg-obsidian) 100%
+    );
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle background glow */
+  .about-section::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: -10%;
+    width: 40%;
+    height: 60%;
+    background: radial-gradient(ellipse at center, hsla(155, 60%, 15%, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Section intro ─────────────────────────────────────── */
+  /* No resting opacity: 0 here — GSAP's .fromTo() (section-animations.ts)
+     renders its own "from" state immediately on init (immediateRender
+     defaults true), which already matches this. Hard-coding it in CSS too
+     used to mean a failed/blocked script left this content invisible
+     forever — the etalon rule (geo-audit) is markup renders visible, JS
+     hides-then-reveals, never the other way round. */
+  .about__label {
+    margin-bottom: var(--space-4);
+  }
+
+  .about__headline {
+    margin-bottom: var(--space-8);
+  }
+
+  .about__headline-main {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .about__headline-sub {
+    font-size: var(--text-h2);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+  }
+
+  /* ── Body copy ─────────────────────────────────────────── */
+  .about__body {
+    max-width: var(--container-narrow);
+    margin-bottom: var(--space-16);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .about__body-text {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Timeline ──────────────────────────────────────────── */
+  .about__timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: var(--space-16);
+  }
+
+  /* Animated vertical connecting line — positioned via JS */
+  .timeline-line {
+    position: absolute;
+    left: 19px;
+    top: 0;
+    height: 0;
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      var(--accent-green-300),
+      var(--accent-green-500) 50%,
+      var(--accent-green-300)
+    );
+    transform-origin: top center;
+    transform: scaleY(0);
+    z-index: 0;
+  }
+
+  @media (min-width: 768px) {
+    .timeline-line {
+      left: 23px;
+    }
+  }
+
+  /* ── Timeline item — flex row, dot + card side by side ── */
+  .timeline-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding-bottom: var(--space-10);
+  }
+
+  @media (min-width: 768px) {
+    .timeline-item {
+      gap: var(--space-8);
+    }
+  }
+
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Dot — flex child, auto-centered vertically */
+  .timeline-item__dot {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-graphite);
+    border: 1.5px solid var(--accent-green-300);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 0 0 transparent;
+    z-index: 2;
+    /* No static scale(0)/will-change here: the per-item GSAP timeline's
+       fromTo() applies scale: 0 immediately on init (immediateRender), and a
+       blanket will-change on every resting dot is the exact anti-pattern
+       StackSection's own comments warn against (GPU cost paid whether or not
+       the item is animating). */
+  }
+
+  /* Dot activated state (added by GSAP) */
+  .timeline-item__dot.is-active {
+    animation: dot-pulse 2.5s ease-in-out 0.6s infinite;
+  }
+
+  @keyframes dot-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 12px var(--accent-glow),
+        0 0 0 0 hsla(155, 70%, 50%, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 0 8px hsla(155, 70%, 50%, 0);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .timeline-item__dot {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .timeline-item__dot-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .timeline-item__icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-full);
+  }
+
+  /* Card — starts hidden for GSAP animation */
+  .timeline-item__card {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-6) var(--space-8);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+    /* No static opacity/transform/filter/will-change hidden-state: the
+       per-item GSAP timeline's fromTo() applies its own "from" values
+       immediately on init, same as the etalon's process-steps cards. */
+  }
+
+  .timeline-item__card:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .timeline-item__card:hover ~ * .timeline-item__dot {
+    box-shadow: 0 0 20px var(--accent-glow-strong);
+  }
+
+  .timeline-item__year {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
+  }
+
+  .timeline-item__role {
+    font-size: var(--text-h3);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+    font-weight: var(--weight-semibold);
+  }
+
+  .timeline-item__detail {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+  }
+
+  /* ── Philosophy callout ────────────────────────────────── */
+  .about__philosophy {
+    max-width: var(--container-narrow);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .about__philosophy-label {
+    margin-bottom: var(--space-3);
+  }
+
+  .about__philosophy-text {
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    font-weight: var(--weight-medium);
+  }
+
+  /* Reduced motion: a static state, never a running loop. */
+  @media (prefers-reduced-motion: reduce) {
+    .timeline-item__dot.is-active {
+      animation: none;
+    }
+  }
+</style>

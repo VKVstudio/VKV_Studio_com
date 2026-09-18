@@ -1,0 +1,2496 @@
+---
+/**
+ * /services/geo-audit/ — the wedge page. It must sell a €900 fixed-scope
+ * audit to a cold visitor without a call, so it is the first page to get the
+ * full resonance treatment (see .system/v2_design_manifesto.md).
+ *
+ * Emotional arc: PAS. An AI is answering questions about your market right
+ * now (attention) → here is the answer, and you are not in it (agitate, the
+ * mock answer block) → the audit measures it and hands you the fix list
+ * (solution) → guarantee kills the risk → retainer is the engine after.
+ *
+ * Motion rules: content is NEVER hidden by CSS — GSAP .from() tweens hide
+ * and reveal only when they actually run, so a failed chunk means "no
+ * animation", never "no content". Everything sits behind
+ * prefers-reduced-motion, and tweens end with clearProps.
+ *
+ * Data (deliverables, retainer, guarantee, prices) still comes from
+ * services.ts — this page adds dramaturgy, not a second source of truth.
+ */
+import { Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import MagneticCard from '@components/ui/MagneticCard.svelte';
+import heroArt from '@/assets/services/geo-audit-hero.png';
+import finalBg from '@/assets/services/geo-final-bg.png';
+import retTrack from '@/assets/services/geo-ret-track.png';
+import retReport from '@/assets/services/geo-ret-report.png';
+import retFix from '@/assets/services/geo-ret-fix.png';
+import retCredit from '@/assets/services/geo-ret-credit.png';
+import FaqSection from '@components/sections/FaqSection.astro';
+import { CONTACT_EMAIL } from '@/lib/site-config';
+import { getRung } from '@/data/services';
+import { SERVICES_FAQ } from '@/data/services-faq';
+import { rungJsonLd } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const rung = getRung('geo-audit');
+const faq = SERVICES_FAQ['geo-audit'];
+
+const copy = {
+  en: {
+    h1: 'An AI is answering questions about your market. Right now.',
+    lede: "Whether it mentions you is not a mystery — it's measurable. The audit measures it across ChatGPT, Perplexity, Google AI, Copilot and Gemini, and hands you the fix list: priced, ordered, no fluff.",
+    orderCta: 'Order the audit — €900',
+    mockCta: 'Measure my company — €900',
+    finalCta: 'Start the audit — €900',
+    orderNote:
+      'Report in 5–10 business days · order confirmed within one business day · no call, no forms, no pitch.',
+    heroEmail:
+      'Or write directly: {email} — your domain and 2–3 competitors, that is all. One invoice, paid after the report is delivered, by bank transfer.',
+    mockEyebrow: '// what buyers see',
+    mockQuery: 'best [your service] providers — who should we contact?',
+    mockAnswerIntro: 'Based on available sources, the most cited options are:',
+    mockCompetitorA: 'Competitor A — cited, with a link',
+    mockCompetitorB: 'Competitor B — mentioned once, no link',
+    mockYou: 'Your company — not present in the answer',
+    mockCaption:
+      'This is a composite, not your data — yet. The audit runs twenty real buyer questions against five engines and records every answer, verbatim. Then you know.',
+    mockFix: 'It is repairable. That is the point of the report.',
+    includedLabel: '// deliverables',
+    includedHeading: 'What the €900 buys',
+    includedAnchor:
+      '€900 flat — priced like a diagnostic, not a retainer. And no upsell call at the end.',
+    stepsLabel: '// process',
+    stepsHeading: 'How it works',
+    steps: [
+      {
+        num: '01',
+        title: 'Order by email',
+        body: 'Your domain and two or three competitors — that is everything I need to start. Writing from your company address speeds up confirmation. No access to your systems or customer data: everything is measured from public sources, the way the AI engines see you.',
+      },
+      {
+        num: '02',
+        title: 'Five to ten business days of measurement',
+        body: 'Twenty buyer-intent prompts across five engines, answers recorded verbatim. Share-of-voice against the competitors you named. Entity, schema, llms.txt and crawler access — checked by hand, not by a dashboard.',
+      },
+      {
+        num: '03',
+        title: 'The report, and the way forward',
+        body: 'A written report your team can act on the same day, and a question round in writing — every answer within one business day. Each finding comes with its exact fix. What you do next — your team, me monthly, or nothing — is a decision you make with the map in hand.',
+      },
+    ],
+    guaranteeLabel: '// the guarantee',
+    proofLabel: '// why trust this audit',
+    proofBody:
+      'The checklist I run on your site is the one this site passes. You can verify that yourself, right now: ask any AI agent to browse vkvstudio.com and watch it find everything — then run this page through PageSpeed Insights, or open Chrome DevTools on it: Lighthouse’s agentic-browsing audit passes all three of its checks here, and the machine-readable layer behind that is public, and you can read it yourself. And before you buy AI-visibility work from anyone — including me — read the methodology page: what is measurable, what is not, and what nobody can honestly promise.',
+    proofLink: 'Read the measurement methodology →',
+    retainerLabel: '// monthly',
+    retainerHeading: 'After the audit: the monthly engine',
+    retainerNote:
+      'The audit is a map. The retainer is optional, month to month, and designed so your team could run with the findings alone. That is why staying is a choice, not a lock-in.',
+    termsLabel: '// paper',
+    termsHeading: 'How the audit works, on paper',
+    auditTerms: [
+      'One invoice, issued together with the report — payment after delivery, by bank transfer; the account details and the currency are on the invoice.',
+      'No NDA needed: nothing confidential ever leaves your side — the audit reads only what is public.',
+      'Registered sole proprietorship in Armenia. GMT+4 — my afternoon is your morning; written answers within one business day.',
+      'If the report shows you nothing you can act on — write one sentence naming what is missing, and the invoice is void. That is the whole procedure: no forms, no debate, one honest sentence.',
+      'And to be plain: “no engine cites us yet” is not a defect — that finding, with its fix list, is the report doing its job. The guarantee covers the quality of the map, not the shape of the territory.',
+    ],
+    finalHeading: 'Ready to see your answers?',
+    finalNote:
+      'Questions first? Write to {email} — a straight written answer within one business day.',
+    notIncludedLabel: 'Not included — said up front',
+  },
+  ru: {
+    h1: 'ИИ отвечает на вопросы о вашем рынке. Прямо сейчас.',
+    lede: 'Упоминает ли он вас — не загадка, а измеримая величина. Аудит измеряет её в ChatGPT, Perplexity, Google AI, Copilot и Gemini и выдаёт список исправлений: с ценой, по порядку, без театра.',
+    orderCta: 'Заказать аудит — €900',
+    mockCta: 'Измерить мою компанию — €900',
+    finalCta: 'Запустить аудит — €900',
+    orderNote:
+      'Отчёт за 5–10 рабочих дней · подтверждение заказа в течение одного рабочего дня · без звонка, без форм, без питча.',
+    heroEmail:
+      'Или напрямую: {email} — ваш домен и 2–3 конкурента, это всё. Один счёт, оплата после сдачи отчёта — банковским переводом.',
+    mockEyebrow: '// что видят покупатели',
+    mockQuery: 'лучшие подрядчики по [вашей услуге] — к кому обратиться?',
+    mockAnswerIntro: 'По доступным источникам чаще всего цитируются:',
+    mockCompetitorA: 'Конкурент А — процитирован, со ссылкой',
+    mockCompetitorB: 'Конкурент Б — упомянут один раз, без ссылки',
+    mockYou: 'Ваша компания — в ответе отсутствует',
+    mockCaption:
+      'Это собирательный пример, пока не ваши данные. Аудит прогоняет двадцать настоящих покупательских вопросов через пять движков и записывает каждый ответ дословно. После этого вы не гадаете — вы знаете.',
+    mockFix: 'Это исправимо. В этом и смысл отчёта.',
+    includedLabel: '// состав',
+    includedHeading: 'Что вы получаете за €900',
+    includedAnchor:
+      '€900 фикс — цена диагностики, а не ретейнера. И никакого продающего звонка в конце.',
+    stepsLabel: '// процесс',
+    stepsHeading: 'Как это устроено',
+    steps: [
+      {
+        num: '01',
+        title: 'Заказ по почте',
+        body: 'Ваш домен и два-три конкурента — это всё, что нужно для старта. Письмо с рабочего адреса компании ускоряет подтверждение. Без доступа к вашим системам и данным клиентов: всё измеряется по публичным источникам — так, как вас видят ИИ-движки.',
+      },
+      {
+        num: '02',
+        title: '5–10 рабочих дней измерений',
+        body: 'Двадцать покупательских запросов в пяти движках, ответы записаны дословно. Share-of-voice против названных вами конкурентов. Сущность, разметку, llms.txt и доступ краулеров разбираю я — инженер, а не дашборд.',
+      },
+      {
+        num: '03',
+        title: 'Отчёт — и дорога дальше',
+        body: 'Письменный отчёт, с которым команда может работать в тот же день, и письменный раунд вопросов — ответ на каждый в течение одного рабочего дня. У каждой находки — конкретное исправление. Что делать дальше — ваша команда, я на ретейнере или никто — вы решаете с картой в руках.',
+      },
+    ],
+    guaranteeLabel: '// гарантия',
+    proofLabel: '// почему этому аудиту можно верить',
+    proofBody:
+      'Чек-лист, который я прогоняю по вашему сайту, — тот самый, который проходит этот сайт. Проверьте прямо сейчас: попросите любого ИИ-агента открыть vkvstudio.com и посмотрите, как он найдёт всё, — а потом прогоните эту страницу через PageSpeed Insights или откройте на ней Chrome DevTools: агентный аудит Lighthouse проходит здесь все три проверки, и машиночитаемый слой за ними публичен — его можно открыть и прочитать самому. И прежде чем покупать работу с ИИ-видимостью у кого угодно — включая меня — прочтите страницу методологии: что измеримо, что нет, и чего никто не может честно обещать.',
+    proofLink: 'Читать методологию измерений →',
+    retainerLabel: '// ежемесячно',
+    retainerHeading: 'После аудита: ежемесячное сопровождение',
+    retainerNote:
+      'Аудит — это карта. Ретейнер — транспорт: опционально, помесячно, и устроен так, что вы можете ехать без меня с первого дня. Именно поэтому ехать со мной — безопасно.',
+    termsLabel: '// на бумаге',
+    termsHeading: 'Как аудит устроен на бумаге',
+    auditTerms: [
+      'Один счёт выставляется вместе с отчётом; оплата после сдачи — банковским переводом, реквизиты и валюта указаны в счёте.',
+      'NDA не нужен: ничего конфиденциального с вашей стороны не передаётся — аудит читает только публичное.',
+      'Зарегистрированный ИП в Армении. GMT+4 — моя вторая половина дня это ваше утро; письменные ответы в течение одного рабочего дня.',
+      'Если отчёт не показал ничего применимого — напишите одно предложение: чего в нём не хватило, и счёт аннулируется. Вся процедура: без форм, без споров, одно честное предложение.',
+      'И прямо: «нас пока не цитирует ни один движок» — не брак, а сработавший отчёт: находка плюс план исправлений. Гарантия покрывает качество карты, а не рельеф местности.',
+    ],
+    finalHeading: 'Готовы увидеть свои ответы?',
+    finalNote:
+      'Сначала вопросы? Пишите на {email} — прямой письменный ответ в течение одного рабочего дня.',
+    notIncludedLabel: 'Не входит — сказано заранее',
+  },
+}[lang];
+
+const orderMailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+  'AI Visibility Audit — order'
+)}&body=${encodeURIComponent('Domain:\nCompetitors (2-3):\nAnything specific to check:')}`;
+
+// {email} placeholders render as clickable mailto links around the constant.
+const [heroEmailPre = '', heroEmailPost = ''] = copy.heroEmail.split('{email}');
+const [finalNotePre = '', finalNotePost = ''] = copy.finalNote.split('{email}');
+
+// In-house icons (ComfyUI `icon` line, owner-approved) for the step
+// timeline dots — same idiom as the Career Arc's era icons.
+const stepIcons = [
+  '/icons/geo-step-order.webp',
+  '/icons/geo-step-measure.webp',
+  '/icons/geo-step-report.webp',
+];
+
+// In-house emblems (ComfyUI `scene` line) for the retainer tiles — one per
+// retainer include, in services.ts order: tracking, delta report, fixes
+// implemented, fee credited.
+const retainerArt = [retTrack, retReport, retFix, retCredit];
+// The hero art is this page's mobile LCP element; a head preload with the real
+// srcset takes its discovery off the critical path. Master is 1280 wide, so
+// asking for 1920 would clamp and duplicate a URL.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout
+  lang={lang}
+  title={rung.seo.title[lang]}
+  description={rung.seo.description[lang]}
+  ogImage="/og-geo-audit.jpg"
+  jsonLd={rungJsonLd(lang, rung, faq)}
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="geo-page">
+    {/* ── Hero: the claim ─────────────────────────────── */}
+    <header class="geo-hero">
+      {
+        /* Generated in-house (ComfyUI, Z-Image): the network with one lit
+           node — being found, which is what this page sells. Decorative:
+           empty alt, gradient overlays carry text contrast. */
+      }
+      <div class="geo-hero__art" aria-hidden="true" id="geo-hero-art">
+        <Picture
+          src={heroArt}
+          formats={['avif', 'webp']}
+          widths={[768, 1280]}
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+        {
+          /* The living network: a 10s seamless palindrome loop (WAN morph of
+             the two stills, 337KB webm). No src in markup — the init script
+             assigns it only on desktop, motion allowed, no data-saver; every
+             other visitor keeps the breathing still and pays zero bytes. */
+        }
+        <video
+          id="geo-hero-video"
+          class="geo-hero__video"
+          muted
+          loop
+          playsinline
+          preload="none"
+          data-webm="/geo-hero-loop.webm"
+          data-mp4="/geo-hero-loop.mp4"></video>
+      </div>
+
+      {
+        /* The homepage's growing, mouse-reactive network, layered over the
+           morph: the organic video breathes underneath, the interactive
+           plexus reaches for the cursor on top. Same engine, one import. */
+      }
+      <NeuralPlexus client:idle originX={0.74} originY={0.475} />
+      <div class="container">
+        <p class="geo-hero__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{rung.monoLabel.replace(/^\/\/\s*/, '')}
+        </p>
+        {
+          /* Homepage title idiom (HeroOverlay.svelte's .hero-overlay__title /
+             .hero-letter): the h1 clips its neural-texture background to
+             every glyph beneath it — parent and descendant spans alike,
+             since -webkit-text-fill-color and -webkit-text-stroke are
+             inherited paint properties and background-clip: text reaches
+             the whole box's rendered glyphs. Split by WORD, not by
+             character: each word sits in a `white-space: nowrap` wrapper so
+             the line can only break BETWEEN words, never mid-word, while
+             every letter still gets its own hover target. No `|` delimiter
+             in this copy, so line breaks are left to natural wrap.
+             aria-label carries the real sentence; every span is
+             aria-hidden. */
+        }
+        <h1 class="geo-hero__title" aria-label={copy.h1}>
+          {
+            copy.h1.split(' ').map((word, wordIdx) => [
+              wordIdx > 0 ? ' ' : null,
+              <span class="geo-hero__word" aria-hidden="true">
+                {Array.from(word).map((char) => (
+                  <span class="geo-hero__letter">{char}</span>
+                ))}
+              </span>,
+            ])
+          }
+        </h1>
+        <p class="geo-hero__lede">{copy.lede}</p>
+        <div class="geo-hero__order">
+          <a href={orderMailto} class="geo-hero__cta">
+            {copy.orderCta}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </a>
+          <p class="geo-hero__note text-mono">{copy.orderNote}</p>
+          <p class="geo-hero__email">
+            {heroEmailPre}<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>{heroEmailPost}
+          </p>
+        </div>
+      </div>
+
+      {
+        /* Scroll hint — a full-viewport hero owes the reader a nudge. A real
+           button (owner request): clicking it rides Lenis down to the mock
+           answer, the same way the homepage's ghost link leads to #lab. */
+      }
+      <button type="button" class="geo-hero__scroll js-geo-scroll-hint">
+        <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14"></path>
+          <path d="m19 12-7 7-7-7"></path>
+        </svg>
+      </button>
+    </header>
+
+    {/* ── Agitate: the answer you are not in ──────────── */}
+    <section class="geo-mock" id="geo-mock" aria-label={copy.mockEyebrow.replace(/^\/\/\s*/, '')}>
+      <div class="container">
+        <p class="geo-mock__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{copy.mockEyebrow.replace(/^\/\/\s*/, '')}
+        </p>
+        <div class="geo-mock__card js-geo-mock">
+          <p class="geo-mock__query text-mono">
+            <span class="geo-mock__prompt-mark" aria-hidden="true">›</span>
+            {copy.mockQuery}
+          </p>
+          <div class="geo-mock__answer">
+            <p>{copy.mockAnswerIntro}</p>
+            <ul class="geo-mock__list">
+              <li class="geo-mock__cited js-geo-mock-line">{copy.mockCompetitorA}</li>
+              <li class="geo-mock__cited js-geo-mock-line">{copy.mockCompetitorB}</li>
+              <li class="geo-mock__absent js-geo-mock-line">{copy.mockYou}</li>
+            </ul>
+          </div>
+        </div>
+        <p class="geo-mock__caption">{copy.mockCaption}</p>
+        <p class="geo-mock__fix text-mono">{copy.mockFix}</p>
+        <div class="geo-cta-row">
+          <a href={orderMailto} class="geo-hero__cta geo-hero__cta--compact">{copy.mockCta}</a>
+        </div>
+      </div>
+    </section>
+
+    {/* ── Solution: itemized scope ────────────────────── */}
+    <section class="geo-section">
+      <div class="container">
+        <p class="geo-section__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{copy.includedLabel.replace(/^\/\/\s*/, '')}
+        </p>
+        <h2 class="geo-section__heading js-geo-reveal">{copy.includedHeading}</h2>
+        <p class="geo-anchor text-mono">{copy.includedAnchor}</p>
+        <ul class="geo-deliverables geo-deliverables--tiles">
+          {
+            rung.deliverables.map((d) => (
+              <li class="js-geo-tile">
+                <MagneticCard client:visible strength={0.2}>
+                  <div class="geo-tile">{d[lang]}</div>
+                </MagneticCard>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="geo-excluded">
+          <h2 class="geo-excluded__heading text-mono">{copy.notIncludedLabel}</h2>
+          <ul>
+            {rung.notIncluded.map((d) => <li>{d[lang]}</li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    {/* ── Three steps ─────────────────────────────────── */}
+    <section class="geo-section">
+      <div class="container">
+        <p class="geo-section__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{copy.stepsLabel.replace(/^\/\/\s*/, '')}
+        </p>
+        <h2 class="geo-section__heading js-geo-reveal">{copy.stepsHeading}</h2>
+        {
+          /* The Career Arc mechanic verbatim (AboutSection.astro's
+             .about__timeline): the gradient line the script fills on scroll
+             from first-dot-center to last-dot-center, medallions the icons
+             fully inhabit, glass cards sliding in from blur. This page's own
+             script (initGeoMotion) drives all of it. */
+        }
+        <div class="geo-steps-wrap js-geo-steps">
+          <div class="geo-steps__line js-geo-steps-line" aria-hidden="true"></div>
+          <ol class="geo-steps">
+            {
+              copy.steps.map((s, i) => (
+                <li class="geo-steps__item js-geo-step">
+                  <span class="geo-steps__dot js-geo-step-dot" aria-hidden="true">
+                    <img src={stepIcons[i]} alt="" loading="lazy" width="48" height="48" />
+                  </span>
+                  <div class="geo-steps__card js-geo-step-card">
+                    <span class="geo-steps__num text-mono" aria-hidden="true">
+                      {s.num}
+                    </span>
+                    <h3>{s.title}</h3>
+                    <p>{s.body}</p>
+                  </div>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    {
+      /* ── Guarantee + proof: Engineering Philosophy callouts ──
+        Owner's reading: these are not new blocks — they continue the
+        process above. So they wear AboutSection's .about__philosophy
+        idiom (green edge, mono label, italic statement), exactly the way
+        the philosophy quote follows the Career Arc on the homepage. */
+    }
+    {
+      rung.riskReversal && (
+        <section class="geo-section">
+          <div class="container">
+            <blockquote class="geo-callout js-geo-reveal">
+              <p class="geo-callout__label text-mono">
+                <span aria-hidden="true">// </span>
+                {copy.guaranteeLabel.replace(/^\/\/\s*/, '')}
+              </p>
+              <p class="geo-callout__text">{rung.riskReversal[lang]}</p>
+            </blockquote>
+          </div>
+        </section>
+      )
+    }
+
+    <section class="geo-section">
+      <div class="container">
+        <blockquote class="geo-callout js-geo-reveal">
+          <p class="geo-callout__label text-mono">
+            <span aria-hidden="true">// </span>{copy.proofLabel.replace(/^\/\/\s*/, '')}
+          </p>
+          <p class="geo-callout__text">{copy.proofBody}</p>
+          <a href={`/${lang}/services/geo-methodology/`} class="geo-proof__link">
+            {copy.proofLink.replace(/\s*→\s*$/, '')}
+            <span aria-hidden="true">→</span>
+          </a>
+        </blockquote>
+      </div>
+    </section>
+
+    {
+      /* ── The retainer ─────────────────────────────────────
+        Container widened to --container-max, but the actual content stays
+        capped at 56rem and centered — a visual half-step between the wide
+        deliverables grid above and the narrow FAQ/terms below, not a full
+        jump to edge-to-edge. */
+    }
+    {
+      /* The retainer as Stack tiles (owner directive): each include is a
+         frosted pane over its own in-house emblem — hover thins the glass,
+         the emblem sharpens, the pane drifts against the cursor. Same iris
+         mechanic as StackSection, grain deliberately omitted (manifesto:
+         grain is Stack-exclusive). */
+    }
+    {
+      rung.retainer && (
+        <section class="geo-section">
+          <div class="container">
+            <p class="geo-section__eyebrow text-mono">
+              <span aria-hidden="true">// </span>
+              {copy.retainerLabel.replace(/^\/\/\s*/, '')}
+            </p>
+            <h2 class="geo-section__heading js-geo-reveal">{copy.retainerHeading}</h2>
+            <p class="geo-retainer__note">{copy.retainerNote}</p>
+            <div class="geo-retainer__head js-geo-reveal">
+              <h3>{rung.retainer.title[lang]}</h3>
+              <span class="geo-retainer__price text-mono">{rung.retainer.price[lang]}</span>
+            </div>
+            <div class="geo-ret-grid" role="list">
+              {rung.retainer.includes.map((d, i) => (
+                <div class="geo-ret-card js-geo-ret-card" role="listitem">
+                  <div class="geo-ret-card__visual" aria-hidden="true">
+                    {retainerArt[i] && (
+                      <Picture
+                        src={retainerArt[i]}
+                        formats={['avif', 'webp']}
+                        widths={[420, 640, 960]}
+                        sizes="(max-width: 639px) 100vw, (max-width: 959px) 50vw, 20rem"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    )}
+                  </div>
+                  <div class="geo-ret-card__ring" aria-hidden="true" />
+                  <div class="geo-ret-card__glass js-geo-ret-glass" aria-hidden="true" />
+                  <div class="geo-ret-card__info">{d[lang]}</div>
+                </div>
+              ))}
+            </div>
+            {rung.retainer.lite && (
+              <p class="geo-retainer__lite text-mono">{rung.retainer.lite[lang]}</p>
+            )}
+            <p class="geo-retainer__terms">{rung.retainer.terms[lang]}</p>
+          </div>
+        </section>
+      )
+    }
+
+    {
+      /* ── Audit-specific terms — NOT the generic engagement table: a €900
+        email-ordered product needs its own paper, or "no fine print" dies
+        two sections later (skeptic finding, cross-confirmed). */
+    }
+    <section class="geo-section">
+      <div class="container">
+        <p class="geo-section__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{copy.termsLabel.replace(/^\/\/\s*/, '')}
+        </p>
+        <h2 class="geo-section__heading">{copy.termsHeading}</h2>
+        {
+          /* "On paper" rendered literally: the Build Log's terminal-window
+             idiom — a document you could cat. */
+        }
+        <div class="geo-terms-window js-geo-item">
+          <div class="geo-terms-window__bar text-mono" aria-hidden="true">
+            <span class="geo-terms-window__dots"><i></i><i></i><i></i></span>
+            <span>~/vkvstudio/audit-terms.txt</span>
+          </div>
+          <ul class="geo-terms">
+            {copy.auditTerms.map((term) => <li class="js-geo-term-line">{term}</li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <FaqSection lang={lang} items={faq} id="geo-audit-faq" />
+
+    {/* ── The closer sells THIS product, not a conversation ── */}
+    <section class="geo-final">
+      {
+        /* Generated in-house (ComfyUI, Z-Image): the network dissolving
+           into calm darkness, glow rising from the horizon — the page's
+           last breath before the ask. Decorative; gradients keep the
+           heading field quiet. */
+      }
+      <div class="geo-final__art" aria-hidden="true">
+        <Picture
+          src={finalBg}
+          formats={['avif', 'webp']}
+          widths={[768, 1280, 1920]}
+          sizes="100vw"
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+      <div class="container">
+        <h2 class="geo-final__heading text-h2">{copy.finalHeading}</h2>
+        <a href={orderMailto} class="geo-hero__cta">
+          {copy.finalCta}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path>
+          </svg>
+        </a>
+        <p class="geo-final__note">
+          {finalNotePre}<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>{finalNotePost}
+        </p>
+        <p class="geo-final__trust text-mono">
+          <a href={`/${lang}/trust/`}>
+            {t(lang, 'services.trustLink')}
+            <span aria-hidden="true">→</span>
+          </a>
+        </p>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage's scroll engine on this page too (owner: homepage manners
+  // are the site norm) — Lenis smooths the wheel and pipes ScrollTrigger
+  // updates; under reduced motion initLenis() is a no-op returning null.
+  import { initLenis } from '@scripts/lenis-init';
+
+  // Motion is an enhancement, never a gatekeeper: nothing on this page starts
+  // hidden in CSS, so a failed import or an old browser sees a complete page.
+  // gsap.from() tweens do the hide-then-reveal themselves, and clearProps
+  // hands the elements back to the stylesheet when each tween lands
+  // (checkpoint lesson: leftover inline opacity beats :hover states).
+  async function initGeoMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Section headers reveal AS THE READER ARRIVES, not on page load —
+      // a load-time stagger played below the fold invisibly and looked like
+      // "no animation" by scroll time (owner caught it). Eyebrow → heading →
+      // anchor cascade per section, each on its own trigger.
+      document
+        .querySelectorAll<HTMLElement>(
+          '.geo-section__eyebrow, .geo-section__heading, .geo-anchor, .js-geo-reveal'
+        )
+        .forEach((el) => {
+          gsap.from(el, {
+            opacity: 0,
+            y: 24,
+            duration: 0.7,
+            ease: 'power2.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: el, start: 'top 88%' },
+          });
+        });
+
+      // The mock answer: lines land one by one as the card scrolls in —
+      // the "you are not in the answer" line arrives last, on purpose.
+      gsap.from('.js-geo-mock-line', {
+        opacity: 0,
+        x: -16,
+        duration: 0.5,
+        ease: 'power2.out',
+        stagger: 0.35,
+        clearProps: 'all',
+        scrollTrigger: { trigger: '.js-geo-mock', start: 'top 75%' },
+      });
+
+      // Deliverable tiles: the Lab card entrance (initLabAnimations' phase 1
+      // — rise, settle from a slight scale, expo.out), one trigger per tile
+      // so rows cascade naturally as they enter.
+      document.querySelectorAll<HTMLElement>('.js-geo-tile').forEach((el) => {
+        gsap.fromTo(
+          el,
+          { opacity: 0, y: 50, scale: 0.92 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: el, start: 'top 82%' },
+          }
+        );
+      });
+
+      // Remaining single panels: quiet per-item reveals.
+      document.querySelectorAll<HTMLElement>('.js-geo-item').forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 18,
+          duration: 0.5,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 85%' },
+        });
+      });
+
+      // Retainer tiles: Stack's iris mechanic (initStackAnimations'
+      // open/close) — hover thins the pane to 0.35 while the emblem
+      // sharpens and grows; the pane drifts against the cursor; on touch a
+      // tap toggles, one card open at a time. Entrance is Stack's stagger.
+      const retCards = document.querySelectorAll<HTMLElement>('.js-geo-ret-card');
+      if (retCards.length > 0) {
+        gsap.fromTo(
+          '.js-geo-ret-card',
+          { opacity: 0, y: 40, scale: 0.9 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            stagger: 0.08,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: '.geo-ret-grid', start: 'top 80%' },
+          }
+        );
+
+        const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+        const GLASS_OPEN_OPACITY = 0.35;
+        const EMBLEM_REST = 'blur(2px) drop-shadow(0 0 16px hsla(155, 70%, 50%, 0.4))';
+        const EMBLEM_HOVER = 'blur(0px) drop-shadow(0 0 24px hsla(155, 70%, 50%, 0.6))';
+        let activeTapClose: (() => void) | null = null;
+
+        retCards.forEach((card) => {
+          const glass = card.querySelector<HTMLElement>('.js-geo-ret-glass');
+          const emblem = card.querySelector<HTMLElement>('.geo-ret-card__visual img');
+          if (!glass || !emblem) return;
+
+          const xTo = gsap.quickTo(glass, 'x', { duration: 0.4, ease: 'power2.out' });
+          const yTo = gsap.quickTo(glass, 'y', { duration: 0.4, ease: 'power2.out' });
+
+          const open = (): void => {
+            card.classList.add('is-open');
+            glass.style.willChange = 'transform, opacity';
+            gsap.to(glass, { opacity: GLASS_OPEN_OPACITY, duration: 0.65, ease: 'power2.out' });
+            gsap.to(emblem, {
+              filter: EMBLEM_HOVER,
+              scale: 1.1,
+              duration: 0.5,
+              ease: 'power2.out',
+            });
+          };
+
+          const close = (): void => {
+            card.classList.remove('is-open');
+            gsap.to(glass, {
+              x: 0,
+              y: 0,
+              opacity: 1,
+              duration: 0.5,
+              ease: 'elastic.out(1, 0.5)',
+              onComplete: () => {
+                glass.style.willChange = '';
+              },
+            });
+            gsap.to(emblem, {
+              filter: EMBLEM_REST,
+              scale: 1.06,
+              duration: 0.4,
+              ease: 'power2.out',
+            });
+          };
+
+          if (supportsHover) {
+            card.addEventListener('mouseenter', open);
+            card.addEventListener(
+              'mousemove',
+              (e) => {
+                const rect = card.getBoundingClientRect();
+                const nx = (e.clientX - rect.left) / rect.width - 0.5;
+                const ny = (e.clientY - rect.top) / rect.height - 0.5;
+                xTo(-nx * 12);
+                yTo(-ny * 12);
+              },
+              { passive: true }
+            );
+            card.addEventListener('mouseleave', close);
+          } else {
+            card.addEventListener('click', () => {
+              if (card.classList.contains('is-open')) {
+                close();
+                activeTapClose = null;
+                return;
+              }
+              if (activeTapClose) activeTapClose();
+              open();
+              activeTapClose = close;
+            });
+          }
+        });
+      }
+
+      // The terms terminal types itself: lines land one by one (the mock
+      // card's idiom), ending on the blinking cursor.
+      gsap.from('.js-geo-term-line', {
+        opacity: 0,
+        x: -16,
+        duration: 0.45,
+        ease: 'power2.out',
+        stagger: 0.22,
+        clearProps: 'all',
+        scrollTrigger: { trigger: '.geo-terms-window', start: 'top 75%' },
+      });
+
+      // Process timeline: the Career Arc's "neural signal propagation",
+      // verbatim from initAboutAnimations. The line's real span is baked in
+      // as inline top/height (first-dot-center → last-dot-center), then its
+      // scaleY is scrubbed; each step springs its dot, rotates its icon in
+      // and slides the card out of a blur.
+      const stepsWrap = document.querySelector<HTMLElement>('.js-geo-steps');
+      if (stepsWrap) {
+        const line = stepsWrap.querySelector<HTMLElement>('.js-geo-steps-line');
+        const dots = stepsWrap.querySelectorAll<HTMLElement>('.js-geo-step-dot');
+        const firstDot = dots[0];
+        const lastDot = dots[dots.length - 1];
+
+        if (line && firstDot && lastDot && dots.length >= 2) {
+          const wrapRect = stepsWrap.getBoundingClientRect();
+          const firstRect = firstDot.getBoundingClientRect();
+          const lastRect = lastDot.getBoundingClientRect();
+          const lineTop = firstRect.top - wrapRect.top + firstRect.height / 2;
+          const lineHeight = lastRect.top - wrapRect.top + lastRect.height / 2 - lineTop;
+          line.style.top = `${lineTop}px`;
+          line.style.height = `${lineHeight}px`;
+          line.style.bottom = 'auto';
+
+          gsap.fromTo(
+            line,
+            { scaleY: 0 },
+            {
+              scaleY: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: stepsWrap,
+                start: 'top 75%',
+                end: 'bottom 40%',
+                scrub: 0.8,
+              },
+            }
+          );
+        }
+
+        stepsWrap.querySelectorAll<HTMLElement>('.js-geo-step').forEach((item) => {
+          const dot = item.querySelector<HTMLElement>('.js-geo-step-dot');
+          const icon = dot ? dot.querySelector<HTMLElement>('img') : null;
+          const card = item.querySelector<HTMLElement>('.js-geo-step-card');
+
+          const itemTl = gsap.timeline({
+            scrollTrigger: {
+              trigger: item,
+              start: 'top 78%',
+              toggleActions: 'play none none none',
+            },
+          });
+
+          if (dot) {
+            itemTl.fromTo(
+              dot,
+              { scale: 0, boxShadow: '0 0 0px transparent' },
+              {
+                scale: 1,
+                boxShadow: '0 0 20px hsla(155, 70%, 50%, 0.4)',
+                duration: 0.6,
+                ease: 'back.out(2.5)',
+                onComplete: () => {
+                  dot.classList.add('is-active');
+                },
+              },
+              0
+            );
+          }
+
+          if (icon) {
+            itemTl.fromTo(
+              icon,
+              { rotation: -90, scale: 0.6, opacity: 0 },
+              { rotation: 0, scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.8)' },
+              0.15
+            );
+          }
+
+          if (card) {
+            itemTl.fromTo(
+              card,
+              { opacity: 0, x: -30, filter: 'blur(6px)' },
+              { opacity: 1, x: 0, filter: 'blur(0px)', duration: 0.7, ease: 'expo.out' },
+              0.25
+            );
+          }
+        });
+      }
+    } catch (err) {
+      // No rescue pass needed — content was never hidden.
+      console.error('[geo-audit] motion failed to load:', err);
+    }
+  }
+
+  // The hero video is an enhancement tier above the breathing still: only
+  // desktop-class viewports with motion allowed and no data-saver fetch it
+  // (same gating philosophy as the homepage scrub video). The still stays
+  // rendered underneath — a stalled network or unsupported codec simply
+  // never swaps the layers.
+  function initGeoVideo(): void {
+    const video = document.getElementById('geo-hero-video') as HTMLVideoElement | null;
+    const art = document.getElementById('geo-hero-art');
+    if (!video || !art) return;
+
+    const wantsMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    const saveData =
+      'connection' in navigator &&
+      (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!wantsMotion || saveData) return;
+
+    // The width gate is evaluated once at call time by default, which never
+    // re-fires for a tablet rotated into landscape or a resized browser
+    // window — arm on first match instead of a hard early return.
+    const desktopMq = window.matchMedia('(min-width: 768px)');
+    let lastVisible = false;
+
+    const arm = (): void => {
+      const webm = video.dataset.webm ?? '';
+      const mp4 = video.dataset.mp4 ?? '';
+      video.src = video.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+
+      // Codec fallback: a webm that fails to decode (rare but real on older
+      // Safari/WebKit builds) retries once as mp4 instead of staying dark.
+      video.addEventListener(
+        'error',
+        () => {
+          if (video.src.endsWith('.webm') && mp4) {
+            video.src = mp4;
+            void video.play().catch(() => {});
+          }
+        },
+        { once: true }
+      );
+
+      video.addEventListener(
+        'playing',
+        () => {
+          art.classList.add('geo-hero__art--live');
+        },
+        { once: true }
+      );
+
+      // Chromium pauses offscreen muted video on scroll and does not resume
+      // it. Own the lifecycle instead: in view → play, out of view → pause
+      // (which is also the battery-correct behavior). Same pattern as the
+      // homepage canvas gating.
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            lastVisible = entry.isIntersecting;
+            if (entry.isIntersecting) {
+              void video.play().catch(() => {
+                // Autoplay refused — the breathing still simply remains.
+              });
+            } else {
+              video.pause();
+            }
+          }
+        },
+        { threshold: 0.12 }
+      );
+      io.observe(art);
+
+      // bfcache: browsers pause media on bfcache entry and never
+      // auto-resume it on restore — resume by hand.
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) void video.play().catch(() => {});
+      });
+
+      // Tab-away/back: Chromium keeps paying for a backgrounded video's
+      // decode pipeline unless it is explicitly paused, and IO alone does
+      // not fire on a same-viewport tab switch.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          video.pause();
+        } else if (lastVisible) {
+          void video.play().catch(() => {});
+        }
+      });
+    };
+
+    if (desktopMq.matches) {
+      arm();
+    } else {
+      desktopMq.addEventListener(
+        'change',
+        (e) => {
+          if (e.matches) arm();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  // The scroll hint is a promise — clicking it must keep it. Lenis drives
+  // the ride when it is running; otherwise native smooth scroll, and under
+  // reduced motion an honest instant jump.
+  function initGeoScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-geo-scroll-hint');
+    const target = document.getElementById('geo-mock');
+    if (!hint || !target) return;
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  // The homepage hero's manners, transplanted: the lede drifts on a light
+  // cursor parallax, and the CTA is magnetic — it leans toward the cursor
+  // while hovered (offset factor 0.25, snappier transition via .is-magnetic)
+  // and springs back on leave. Desktop fine-pointer only, reduced-motion
+  // excluded, listeners passive. Same coefficients as HeroOverlay.
+  function initGeoHeroManners(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const hero = document.querySelector<HTMLElement>('.geo-hero');
+    const lede = document.querySelector<HTMLElement>('.geo-hero__lede');
+    const cta = document.querySelector<HTMLElement>('.geo-hero .geo-hero__cta');
+    if (!hero || !lede || !cta) return;
+
+    let hovCta = false;
+    cta.addEventListener('mouseenter', () => {
+      hovCta = true;
+      cta.classList.add('is-magnetic');
+    });
+    cta.addEventListener('mouseleave', () => {
+      hovCta = false;
+      cta.classList.remove('is-magnetic');
+      cta.style.transform = '';
+    });
+
+    hero.addEventListener(
+      'mousemove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        lede.style.transform = `translate(${nx * -3}px, ${ny * -2}px)`;
+
+        if (hovCta) {
+          const cr = cta.getBoundingClientRect();
+          const cx = e.clientX - cr.left - cr.width / 2;
+          const cy = e.clientY - cr.top - cr.height / 2;
+          cta.style.transform = `translate(${cx * 0.25}px, ${cy * 0.25}px)`;
+        }
+      },
+      { passive: true }
+    );
+
+    hero.addEventListener('mouseleave', () => {
+      lede.style.transform = '';
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initGeoMotion();
+      initGeoVideo();
+      initGeoHeroManners();
+      initGeoScrollHint();
+    });
+  } else {
+    initLenis();
+    void initGeoMotion();
+    initGeoVideo();
+    initGeoHeroManners();
+    initGeoScrollHint();
+  }
+</script>
+
+<style>
+  .geo-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  /* The consent sheet is BOTTOM-fixed (CookieConsent.svelte) — coupling
+     padding-TOP to its height bought nothing and shifted the whole page on
+     hydration (mobile CLS 0.187, Lighthouse-caught). Plain padding now. */
+  @media (max-width: 767px) {
+    .geo-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* One container for every section — the homepage norm (owner feedback:
+     blocks read as drifting left/right when widths alternate). The global
+     .container (1280px, auto-centered, safe-area padding) applies as-is;
+     readability is capped per TEXT element (ch/narrow maxes), exactly how
+     Lab/Stack/About handle it. */
+
+  /* Hero copy sits above the plexus canvas (which floats over the art). */
+  .geo-hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Hero ─────────────────────────────────────────── */
+  .geo-hero {
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    overflow: hidden;
+    /* Negative-z-index trap: without its own stacking context the artwork
+       (z-index: -1) paints BEHIND .geo-page's opaque obsidian background
+       and vanishes. isolate scopes the negative layer to this header. */
+    isolation: isolate;
+    /* The claim owns the first screen: fill the viewport minus the page's
+       top padding + InnerHeader (~7.5rem together — min-height, so a short
+       viewport simply scrolls). svh, not vh: mobile URL-bar honesty. */
+    min-height: calc(100vh - 7.5rem);
+    min-height: calc(100svh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The artwork sits behind the copy; two gradients keep the text field
+     calm: left-to-right (the claim sits over near-black) and a bottom fade
+     into the page background so the section has no hard edge. */
+  .geo-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .geo-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.5;
+  }
+
+  /* The network breathes: a slow, barely-there scale-and-glow cycle while
+     the visitor reads. Cheap (compositor-only transform/filter), and gated
+     — reduced-motion readers get the still. */
+  @media (prefers-reduced-motion: no-preference) {
+    .geo-hero__art :global(img) {
+      animation: geo-breathe 9s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes geo-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(1.045);
+      filter: brightness(1.18);
+    }
+  }
+
+  .geo-hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1.2s ease-out;
+  }
+
+  /* Once the loop actually plays, it takes over from the still: video fades
+     to the working opacity, the still dims and stops breathing underneath. */
+  .geo-hero__art--live .geo-hero__video {
+    opacity: 0.5;
+  }
+
+  .geo-hero__art--live :global(img) {
+    opacity: 0.15;
+    animation: none;
+  }
+
+  .geo-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to right, var(--bg-obsidian) 20%, transparent 65%),
+      linear-gradient(to top, var(--bg-obsidian) 4%, transparent 45%);
+  }
+
+  /* The homepage hero badge, transplanted from HeroOverlay.svelte's
+     .hero-overlay__label: mono text on a glass pill, resting green with the
+     breathing glow, hover swaps the hue to blue. Same literals as the
+     homepage (they are component-local there too, not tokens). */
+  .geo-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: hsl(155, 85%, 65%);
+    padding: var(--space-1) var(--space-4);
+    background: hsla(220, 25%, 6%, 0.9);
+    border: 1px solid hsla(155, 50%, 40%, 0.2);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color 0.4s ease-out,
+      border-color 0.4s ease-out,
+      background 0.4s ease-out;
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-hero__eyebrow {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .geo-hero__eyebrow:hover {
+    color: hsl(220, 70%, 65%);
+    border-color: hsla(220, 50%, 50%, 0.25);
+    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
+  }
+
+  /* Homepage title idiom transplanted from HeroOverlay.svelte's
+     .hero-overlay__title, capped smaller for an inner page. The JPEG
+     fallback lives in its own @supports rule below (not a second
+     background-image declaration here) for the same reason documented on
+     the homepage: a plain second declaration reads as a dead duplicate to
+     the CSS minifier and gets pruned, so the fallback would silently never
+     ship. background-clip: text + transparent fill leaves this element
+     nothing but its stroke outline without the fallback. */
+  .geo-hero__title {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    max-width: 20ch;
+    margin: 0 auto var(--space-5);
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px hsla(180, 80%, 55%, 0.7);
+
+    filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .geo-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  /* Same rule as .hero-letter in HeroOverlay.svelte: nothing on a letter or
+     word span may create a new rendering surface (transform, filter,
+     opacity < 1, backdrop-filter, mask, will-change, position+z-index all
+     qualify) — that would render the glyph into its own buffer, where the
+     ancestor's clipped background does not exist, and the letter paints as
+     a bare stroke outline beside its filled neighbours. text-shadow and
+     -webkit-text-stroke-color are painted in the same pass as the parent's
+     clip, so the hover below uses only those. */
+  .geo-hero__word {
+    white-space: nowrap;
+  }
+
+  .geo-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow, 0.4s) var(--ease-out, ease-out),
+      text-shadow var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+    cursor: default;
+  }
+
+  .geo-hero__letter:hover {
+    -webkit-text-stroke-color: hsla(180, 90%, 70%, 0.95);
+    text-shadow:
+      0 0 10px hsla(180, 85%, 60%, 0.55),
+      0 0 22px hsla(180, 85%, 55%, 0.3);
+  }
+
+  @media (max-width: 767px) {
+    .geo-hero__title {
+      /* Smaller texture asset for the box actually painted on a phone —
+         same LCP-diet reasoning as HeroOverlay's mobile override. */
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .geo-hero__letter {
+      transition: none;
+    }
+  }
+
+  /* ── Hero entrance — CSS keyframes, homepage timing ──
+     Staggered like HeroOverlay: title, lede, then the order block (which
+     carries the CTA). Wrapped entirely in the no-preference query, per the
+     v2 manifesto's motion law: outside it these elements are simply
+     visible, never a suppressed animation. */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Snappier than the first cut (0.3s delay + 1s fade): the h1 is the
+       LCP element, and every delayed millisecond of its first paint is
+       billed to LCP. Same curve, same feel, ~0.45s earlier. */
+    .geo-hero__title {
+      animation:
+        geo-hero-title-opacity-in 0.7s ease-out 0.15s backwards,
+        geo-hero-title-transform-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+    }
+
+    .geo-hero__eyebrow {
+      /* Entrance, then the homepage badge's slow glow pulse (label-breathe). */
+      animation:
+        geo-hero-fade-up-15 0.6s ease-out 0.15s backwards,
+        geo-eyebrow-breathe 4s ease-in-out 1.5s infinite;
+    }
+
+    .geo-hero__lede {
+      /* Entrance, then the homepage subtitle's periodic breath of glow. */
+      animation:
+        geo-hero-fade-up-15 0.8s ease-out 0.7s backwards,
+        geo-subtitle-glow 5s ease-in-out 2s infinite;
+    }
+
+    .geo-hero__scroll svg {
+      animation: geo-scroll-nudge 2.2s ease-in-out 2.5s infinite;
+    }
+
+    .geo-hero__order {
+      animation: geo-hero-fade-up-20 0.8s ease-out 1s backwards;
+    }
+  }
+
+  @keyframes geo-hero-title-opacity-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes geo-hero-title-transform-in {
+    from {
+      transform: translateY(20px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes geo-hero-fade-up-15 {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes geo-hero-fade-up-20 {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .geo-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 58ch;
+    margin: 0 auto var(--space-8);
+    line-height: 1.7;
+  }
+
+  @keyframes geo-eyebrow-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes geo-subtitle-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsla(155, 60%, 60%, 0.08));
+    }
+  }
+
+  .geo-hero__scroll {
+    position: absolute;
+    bottom: var(--space-6);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease-out;
+  }
+
+  /* The span carries .text-mono, which paints itself accent-green-300; the
+     hover brightens both the word and the arrow one step above resting. */
+  .geo-hero__scroll:hover,
+  .geo-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  @keyframes geo-scroll-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  /* Homepage CTA recipe, transplanted from HeroOverlay.svelte's
+     .hero-overlay__cta: gradient pill, shimmer sweep, hover glow. Applies
+     to every button using this class — hero, mock-answer and final CTAs;
+     .geo-hero__cta--compact only trims padding/size on top of it. */
+  .geo-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-8);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    text-decoration: none;
+    color: var(--bg-void);
+    background: linear-gradient(135deg, var(--accent-green-300), var(--accent-green-400));
+    border: 1px solid var(--accent-green-200);
+    border-radius: var(--radius-md);
+    position: relative;
+    overflow: hidden;
+    transition:
+      box-shadow 0.3s ease-out,
+      background 0.3s ease-out,
+      border-color 0.3s ease-out;
+  }
+
+  /* Shimmer sweep — same gradient band, timing and delay as HeroOverlay's
+     .hero-overlay__cta::before. That component references an animation
+     named `shimmer-pass` with no matching @keyframes anywhere in the repo
+     (verified by search) — an invalid animation-name is simply ignored per
+     spec, so the homepage sweep never actually plays. Named uniquely here
+     and given real @keyframes so the sweep this page's copy describes
+     actually sweeps, without silently importing that bug. */
+  .geo-hero__cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      hsla(0, 0%, 100%, 0.2) 50%,
+      transparent 70%
+    );
+    background-size: 250% 100%;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .geo-hero__cta::before {
+      animation: geo-cta-shimmer-pass 4s ease-in-out 3s infinite;
+    }
+  }
+
+  @keyframes geo-cta-shimmer-pass {
+    0% {
+      background-position: 200% 0;
+    }
+    50%,
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .geo-hero__cta:hover {
+    box-shadow:
+      0 0 20px var(--accent-glow-strong),
+      0 0 60px var(--accent-glow),
+      inset 0 0 20px hsla(155, 70%, 70%, 0.15);
+    border-color: var(--accent-green-100);
+  }
+
+  .geo-hero__cta svg {
+    transition: transform 0.3s var(--ease-spring);
+  }
+
+  .geo-hero__cta:hover svg {
+    transform: translateX(4px);
+  }
+
+  .geo-hero__note {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    margin-top: var(--space-4);
+  }
+
+  .geo-hero__email {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    margin-top: var(--space-3);
+    max-width: 52ch;
+    margin-inline: auto;
+    line-height: 1.7;
+  }
+
+  .geo-hero__email a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .geo-hero__email a:hover {
+    color: var(--accent-green-300);
+  }
+
+  .geo-cta-row {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--space-8);
+  }
+
+  .geo-hero__cta--compact {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-sm);
+  }
+
+  .geo-anchor {
+    font-size: var(--text-sm);
+    color: var(--accent-green-300);
+    margin-bottom: var(--space-5);
+    /* Same readability cap LabSection/StackSection give their subtitles
+       (.lab__subtitle, .stack__subtitle) — this line sits inside the wide
+       container now and should not stretch into one 1280px-long line. */
+    max-width: 62ch;
+  }
+
+  .geo-final {
+    text-align: center;
+    padding-block: var(--space-16) var(--space-20);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* The generated backdrop: network dissolving from above, horizon glow
+     below, and two obsidian fades so the section has no hard edges. */
+  .geo-final__art {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .geo-final__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.55;
+  }
+
+  .geo-final__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, var(--bg-obsidian) 0%, transparent 35%),
+      linear-gradient(to top, var(--bg-obsidian) 0%, transparent 40%);
+  }
+
+  .geo-final .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Magnetic state: snappier follow while hovered (homepage coefficient). */
+  .geo-hero__cta.is-magnetic {
+    transition-duration: 0.08s;
+  }
+
+  .geo-final__heading {
+    margin-bottom: var(--space-6);
+  }
+
+  .geo-final__note {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    margin-top: var(--space-5);
+  }
+
+  .geo-final__note a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .geo-final__note a:hover {
+    color: var(--accent-green-300);
+  }
+
+  .geo-final__trust {
+    margin-top: var(--space-4);
+    font-size: var(--text-xs);
+  }
+
+  .geo-final__trust a {
+    color: var(--text-ghost);
+    text-decoration: none;
+    transition: var(--transition-colors);
+  }
+
+  .geo-final__trust a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* ── The mock answer ──────────────────────────────── */
+  .geo-mock {
+    padding-block: var(--space-8) var(--space-16);
+  }
+
+  /* Size/color come from .text-mono (same as StackSection's .stack__label)
+     — only margin and the section's own centering live here. */
+  .geo-mock__eyebrow {
+    margin-bottom: var(--space-4);
+    text-align: center;
+  }
+
+  /* 2026 matte glass — same technique as StackSection.astro's
+     .stack__card-glass (veil + backdrop blur/saturate + inset top
+     catch-light), tuned lighter for a static content panel: shallower
+     blur, no grain/turbulence texture (that is Stack's hover-interactive
+     flavor, not this page's). */
+  .geo-mock__card {
+    border: 1px solid hsla(0, 0%, 100%, 0.06);
+    border-radius: var(--radius-lg);
+    background: hsla(220, 20%, 12%, 0.65);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, 0.06);
+    padding: var(--space-6);
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-mock__card {
+      backdrop-filter: blur(18px) saturate(140%);
+    }
+  }
+
+  .geo-mock__query {
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: var(--space-4);
+  }
+
+  .geo-mock__prompt-mark {
+    color: var(--accent-green-400);
+    margin-right: var(--space-2);
+  }
+
+  .geo-mock__answer p {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+  }
+
+  .geo-mock__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .geo-mock__list li {
+    position: relative;
+    padding-left: var(--space-6);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+  }
+
+  .geo-mock__cited {
+    color: var(--text-secondary);
+  }
+
+  .geo-mock__cited::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+
+  .geo-mock__absent {
+    color: var(--text-ghost);
+  }
+
+  .geo-mock__absent::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-ghost);
+  }
+
+  .geo-mock__caption {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    max-width: 58ch;
+    margin: var(--space-6) auto 0;
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  .geo-mock__fix {
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+    text-align: center;
+    margin-top: var(--space-3);
+  }
+
+  /* ── Sections ─────────────────────────────────────── */
+  .geo-section {
+    margin-bottom: var(--space-16);
+  }
+
+  /* Same recipe as StackSection's .stack__label / .about__label — size and
+     color come from .text-mono, only the margin is owned here. */
+  .geo-section__eyebrow {
+    margin-bottom: var(--space-4);
+  }
+
+  /* Homepage heading scale — same treatment as StackSection's .stack__title
+     / AboutSection's .about__headline-main (both h2 elements sized up to
+     --text-h1, not the browser-default h2 size). */
+  .geo-section__heading {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-6);
+  }
+
+  .geo-deliverables {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .geo-deliverables li {
+    position: relative;
+    padding-left: var(--space-6);
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .geo-deliverables li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent-green-400);
+  }
+
+  .geo-deliverables--tight li {
+    font-size: var(--text-sm);
+  }
+
+  /* Grid/tile variant — the deliverables section only (width-rhythm pass).
+     Converts the vertical list into matte-glass tiles: auto-fit lands 3×2 on
+     desktop, 1-col on mobile (forced below, not just implied by auto-fit —
+     see the comment on that query). Every declaration below is doubled on
+     the .geo-deliverables class so it outranks the plain-list rules above
+     regardless of source order; the retainer's .geo-deliverables--tight
+     list never carries --tiles and is untouched. Glass recipe copied from
+     .geo-mock__card (see its comment for why: veil + blur/saturate + a
+     top catch-light, no grain — that's Stack's hover-interactive flavor,
+     not this static panel's). */
+  .geo-deliverables.geo-deliverables--tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-5);
+    counter-reset: geo-deliverable;
+  }
+
+  /* The glass moved from the li onto .geo-tile so the MagneticCard wrapper
+     can tilt the whole pane (li stays a bare grid cell carrying the index
+     counter). The astro-island wrapper must stretch, or tiles in one row
+     end up unequal heights. */
+  .geo-deliverables.geo-deliverables--tiles li {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .geo-deliverables.geo-deliverables--tiles li :global(astro-island) {
+    display: block;
+    flex: 1;
+  }
+
+  /* The Lab card recipe verbatim (LabSection.astro's .lab__card): the
+     shared glass-panel tokens at rest, and on hover the green-to-blue tint,
+     the gentle scale, the accent border and the double glow. */
+  .geo-deliverables.geo-deliverables--tiles .geo-tile {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    box-sizing: border-box;
+    padding: var(--space-8);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition: var(--transition-all);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-deliverables.geo-deliverables--tiles .geo-tile {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  /* Lab's .lab__card-glow layer, as a pseudo-element (the counter owns
+     ::before, so the glow takes ::after). */
+  .geo-deliverables.geo-deliverables--tiles .geo-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-card-hover);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .geo-deliverables.geo-deliverables--tiles .geo-tile:hover {
+    background: linear-gradient(
+      135deg,
+      hsla(155, 50%, 50%, 0.07) 0%,
+      hsla(225, 50%, 50%, 0.07) 100%
+    );
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  /* The scale lives behind the house motion gate (swarm audit 2026-09-06:
+     the etalon itself was the one place that skipped it — trust and
+     LabSection wrap the identical recipe correctly). */
+  @media (prefers-reduced-motion: no-preference) {
+    .geo-deliverables.geo-deliverables--tiles .geo-tile:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  .geo-deliverables.geo-deliverables--tiles .geo-tile:hover::after {
+    opacity: 1;
+  }
+
+  .geo-deliverables.geo-deliverables--tiles .geo-tile:hover::before {
+    color: var(--accent-green-200);
+  }
+
+  /* The mono index replaces the ▸ marker: counter-increment lands on the
+     same ::before that reads it, per spec (a pseudo-element may carry its
+     own counter-increment before its content is computed). Two-digit
+     formatting comes from the built-in decimal-leading-zero counter style,
+     not manual string padding. */
+  .geo-deliverables.geo-deliverables--tiles .geo-tile::before {
+    content: counter(geo-deliverable, decimal-leading-zero);
+    counter-increment: geo-deliverable;
+    position: static;
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent-green-400);
+    margin-bottom: var(--space-3);
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  /* Forced 1-col below the tablet breakpoint: auto-fit's 300px min track
+     would otherwise overflow a ~360px-and-under viewport once the
+     container's own padding is subtracted, which is exactly the
+     horizontal-scroll failure mode this pass has to avoid. */
+  @media (max-width: 767px) {
+    .geo-deliverables.geo-deliverables--tiles {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .geo-excluded {
+    margin-top: var(--space-8);
+    max-width: var(--container-narrow);
+    border-left: 2px solid var(--border-subtle);
+    padding-left: var(--space-5);
+  }
+
+  .geo-excluded__heading {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    margin-bottom: var(--space-3);
+  }
+
+  .geo-excluded ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .geo-excluded li {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+  }
+
+  /* ── Steps: the Career Arc, verbatim ─────────────────
+     AboutSection.astro's .about__timeline recipe: 40/48px medallions the
+     icon fully inhabits, glass-panel cards, and the gradient line whose
+     top/height the script bakes in (dot-center to dot-center) before
+     scrubbing its scaleY. The CSS keeps a full static line as the no-JS
+     state — motion law: nothing hidden without a script running. */
+  .geo-steps-wrap {
+    position: relative;
+  }
+
+  .geo-steps__line {
+    position: absolute;
+    left: 19px;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      var(--accent-green-300),
+      var(--accent-green-500) 50%,
+      var(--accent-green-300)
+    );
+    transform-origin: top center;
+    z-index: 0;
+  }
+
+  @media (min-width: 768px) {
+    .geo-steps__line {
+      left: 23px;
+    }
+  }
+
+  .geo-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .geo-steps__item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding-bottom: var(--space-10);
+  }
+
+  @media (min-width: 768px) {
+    .geo-steps__item {
+      gap: var(--space-8);
+    }
+  }
+
+  .geo-steps__item:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Career Arc medallion: graphite disc, green ring, the icon filling the
+     whole circle. The script springs it in and then .is-active keeps the
+     glow breathing. */
+  .geo-steps__dot {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-graphite);
+    border: 1.5px solid var(--accent-green-300);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    box-shadow: 0 0 0 transparent;
+    z-index: 2;
+  }
+
+  @media (min-width: 768px) {
+    .geo-steps__dot {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .geo-steps__dot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-full);
+    display: block;
+  }
+
+  .geo-steps__dot.is-active {
+    animation: geo-dot-pulse 2.5s ease-in-out 0.6s infinite;
+  }
+
+  @keyframes geo-dot-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 12px var(--accent-glow),
+        0 0 0 0 hsla(155, 70%, 50%, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 0 8px hsla(155, 70%, 50%, 0);
+    }
+  }
+
+  /* Career Arc card: the shared glass panel, hover lights the border and
+     doubles the glow — no lift, exactly like the timeline cards. */
+  .geo-steps__card {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-6) var(--space-8);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-steps__card {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .geo-steps__card:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .geo-steps__num {
+    display: block;
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+
+  .geo-steps__item h3 {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .geo-steps__item p {
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    margin: 0;
+  }
+
+  /* ── Guarantee + proof: Engineering Philosophy callouts ──
+     AboutSection's .about__philosophy verbatim (green edge, faint green
+     wash, mono label, italic statement) — minus its CSS opacity:0, which
+     is the homepage's rescue pattern; here the js-geo-reveal tween owns
+     hide-and-reveal per this page's motion law. */
+  .geo-callout {
+    max-width: var(--container-narrow);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin: 0;
+  }
+
+  .geo-callout__label {
+    margin-bottom: var(--space-3);
+  }
+
+  .geo-callout__text {
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    font-weight: var(--weight-medium);
+  }
+
+  .geo-callout .geo-proof__link {
+    margin-top: var(--space-4);
+  }
+
+  .geo-proof__link {
+    color: var(--accent-green-400);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    transition: var(--transition-colors);
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+
+  .geo-proof__link:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* ── Retainer ─────────────────────────────────────── */
+  .geo-retainer__note {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    max-width: 62ch;
+    margin-bottom: var(--space-5);
+  }
+
+  .geo-retainer__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+  }
+
+  .geo-retainer__head h3 {
+    font-size: var(--text-lg);
+  }
+
+  .geo-retainer__price {
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+  }
+
+  /* The thin-tier downsell: one quiet mono line, deliberately not a card —
+     the priced offer above stays the story. */
+  .geo-retainer__lite {
+    font-size: var(--text-xs);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+    margin: var(--space-5) 0 0;
+  }
+
+  .geo-retainer__terms {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: var(--space-3) 0 0;
+  }
+
+  /* ── Retainer tiles: the Stack iris, grain omitted ───
+     StackSection.astro's layer sandwich — emblem, ring, frosted pane,
+     info plinth — with the emblem filling the whole card (our renders are
+     full-bleed scenes, not floating logos). The script owns open/close;
+     everything here is the resting state plus the .is-open crossfades. */
+  /* One row of four on desktop (owner: логичнее в строку), Stack's own
+     3/4 portrait proportion; 2×2 on tablet, a single 4/3 column on phones
+     where a portrait card would tower. */
+  .geo-ret-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+  }
+
+  @media (min-width: 640px) {
+    .geo-ret-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 960px) {
+    .geo-ret-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .geo-ret-card {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: default;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (min-width: 640px) {
+    .geo-ret-card {
+      aspect-ratio: 3 / 4;
+    }
+  }
+
+  .geo-ret-card__visual {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  /* Overscaled a touch so the resting blur never shows a soft edge. The
+     rest blur is lighter than Stack's (5px vs 7px): these emblems are
+     dimmer than white logos, and the tile read as empty behind the full
+     frost (owner caught it). */
+  .geo-ret-card__visual :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.06);
+    filter: blur(2px) drop-shadow(0 0 16px hsla(155, 70%, 50%, 0.4));
+  }
+
+  .geo-ret-card__ring {
+    position: absolute;
+    inset: 7% 7% 40%;
+    z-index: 1;
+    border-radius: var(--radius-md);
+    border: 1.5px solid hsla(155, 65%, 50%, 0.08);
+    box-shadow:
+      0 0 8px hsla(155, 65%, 50%, 0.04),
+      inset 0 0 8px hsla(155, 65%, 50%, 0.03);
+    opacity: 0;
+    transform: scale(0.92);
+    transition:
+      opacity 0.5s var(--ease-out),
+      transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+      border-color 0.5s var(--ease-out),
+      box-shadow 0.5s var(--ease-out);
+    pointer-events: none;
+  }
+
+  .geo-ret-card.is-open .geo-ret-card__ring {
+    opacity: 1;
+    transform: scale(1);
+    border-color: hsla(155, 65%, 50%, 0.35);
+    box-shadow:
+      0 0 16px hsla(155, 65%, 50%, 0.15),
+      inset 0 0 16px hsla(155, 65%, 50%, 0.08);
+  }
+
+  /* Veil thinner than Stack's 0.88 — the emblem must READ through the
+     frost at rest, not vanish behind it. */
+  .geo-ret-card__glass {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: hsla(220, 20%, 10%, 0.34);
+    backdrop-filter: blur(9px) saturate(150%) brightness(0.95);
+    -webkit-backdrop-filter: blur(9px) saturate(150%) brightness(0.95);
+    border: 1px solid var(--glass-border);
+    border-radius: inherit;
+    box-shadow:
+      inset 0 1px 0 hsla(0, 0%, 100%, 0.07),
+      inset 0 0 0 1px hsla(0, 0%, 100%, 0.025);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+    pointer-events: none;
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-ret-card__glass {
+      backdrop-filter: blur(9px) saturate(150%) brightness(0.95);
+    }
+  }
+
+  /* Specular sheen — same diagonal catch-light as Stack's pane. */
+  .geo-ret-card__glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      115deg,
+      transparent 22%,
+      hsla(0, 0%, 100%, 0.055) 38%,
+      hsla(0, 0%, 100%, 0.015) 46%,
+      transparent 62%
+    );
+    pointer-events: none;
+  }
+
+  .geo-ret-card.is-open .geo-ret-card__glass {
+    border-color: var(--accent-green-300);
+    box-shadow:
+      inset 0 0 30px hsla(155, 65%, 50%, 0.06),
+      0 0 20px hsla(155, 65%, 50%, 0.1);
+  }
+
+  /* The include text rides its own frosted plinth, above the pane so the
+     sentence stays readable while the glass thins. */
+  .geo-ret-card__info {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    min-height: 38%;
+    display: flex;
+    align-items: center;
+    padding: var(--space-4);
+    background: hsla(220, 20%, 10%, 0.88);
+    backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    -webkit-backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    pointer-events: none;
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-ret-card__info {
+      backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    }
+  }
+
+  .geo-ret-card.is-open .geo-ret-card__info {
+    color: var(--text-primary);
+  }
+
+  /* ── Terms ────────────────────────────────────────── */
+  /* The terms as a terminal document — the Build Log window idiom. */
+  /* Capped at a document's reading width and left-railed with the heading
+     — a 1280px terminal would set 140-character lines. */
+  .geo-terms-window {
+    position: relative;
+    max-width: 56rem;
+    border: 1px solid hsla(0, 0%, 100%, 0.06);
+    border-radius: var(--radius-lg);
+    background: hsla(220, 20%, 10%, 0.75);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, 0.05);
+    overflow: hidden;
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .geo-terms-window {
+      backdrop-filter: blur(14px) saturate(140%);
+    }
+  }
+
+  .geo-terms-window__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid hsla(0, 0%, 100%, 0.06);
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .geo-terms-window__dots {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .geo-terms-window__dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: var(--radius-full);
+    background: hsla(0, 0%, 100%, 0.12);
+  }
+
+  .geo-terms-window__dots i:first-child {
+    background: hsla(155, 65%, 50%, 0.45);
+  }
+
+  .geo-terms {
+    list-style: none;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .geo-terms li {
+    position: relative;
+    padding-left: var(--space-6);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: 1.8;
+  }
+
+  .geo-terms li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: var(--accent-green-400);
+  }
+
+  /* The document ends at a live prompt — the terminal is still open. */
+  .geo-terms li:last-child::after {
+    content: '▮';
+    margin-left: var(--space-2);
+    color: var(--accent-green-300);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .geo-terms li:last-child::after {
+      animation: geo-cursor-blink 1.1s steps(1) infinite;
+    }
+  }
+
+  @keyframes geo-cursor-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+</style>

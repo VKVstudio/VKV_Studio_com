@@ -1,0 +1,63 @@
+User-agent: *
+Allow: /
+
+# Traditional search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# AI search / answer engines & crawlers (GEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# DO NOT add a Yandex-specific user-agent group here without reading this.
+# Yandex's parser is not additive: once a group naming its own crawler
+# exists, the wildcard group above is ignored ENTIRELY for Yandex. A
+# partial group (say, one Clean-param line) would therefore silently
+# discard every rule above it. If one is ever needed, restate the full
+# ruleset inside it. The literal directive is left unwritten on purpose,
+# so no parser can mistake this note for the group it warns about.
+# https://yandex.ru/support/webmaster/ru/robot-workings/user-agent
+
+Sitemap: https://vkvstudio.com/sitemap-index.xml

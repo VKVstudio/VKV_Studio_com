@@ -1,0 +1,1037 @@
+---
+/**
+ * PageHero — the inner-page hero, once.
+ * =====================================
+ *
+ * WHY THIS FILE EXISTS. Thirteen `*-hero` class families live in
+ * `src/pages/[lang]/**` across sixteen page files. A measurement of all of
+ * them (`.system/canon/92-hero-diff.md`) hashed every normalised rule body
+ * and found that the eyebrow pill, the letter mechanics of the title, the
+ * scroll hint and the whole title recipe minus three properties are ALREADY
+ * byte-identical in all sixteen copies — the same text, retyped. What
+ * genuinely differs is a short list (§7 of that file): the copy, the picture
+ * and its crop, the direction the scrim darkens, where the plexus is born,
+ * where the scroll button leads, whether there is an extra block under the
+ * lede, and whether the copy sits centred or high.
+ *
+ * So: everything in §6 of the measurement is hardcoded below and cannot be
+ * reached from outside; everything in §7 is a typed prop. Nothing else is a
+ * prop, deliberately — seven title scales and four lede measures are how the
+ * current sprawl happened.
+ *
+ * THREE DEFECTS THE MEASUREMENT FOUND ARE FIXED HERE, NOT COPIED:
+ *  1. The `7.5rem` chrome reserve. Sixteen copies subtract a literal that is
+ *     the sum of `.X-page { padding-top }` + `InnerHeader`'s padding + its
+ *     row height — and every one of those three changes at 767px while the
+ *     literal does not. Measured real sums: 5.5rem desktop, 5.25rem mobile.
+ *     Here the reserve is computed from the same tokens and re-computed on
+ *     the mobile side, so it follows its own inputs.
+ *  2. The mobile scroll-hint override. Present on ten pages (with comments
+ *     calling it "a bug that shipped once already"), missing on six. Here it
+ *     exists once, AFTER the base rule, and cannot go missing.
+ *  3. `env(safe-area-inset-bottom)` under the scroll hint. Both etalons pin
+ *     it on a bare `bottom:`; the correct model is HeroLangSwitcher.svelte:386.
+ *
+ * SCOPE OF STYLES — READ BEFORE ADDING A SELECTOR. Astro scopes this
+ * `<style>` block to elements written in THIS file. Content arriving through
+ * the `under-lede` slot is authored (and scoped) by the caller: a rule like
+ * `.page-hero__extras a { … }` here would silently match nothing. The
+ * deliberate decision is therefore that this component styles only the slot's
+ * WRAPPER — a real element of this file, so its `margin-top` does apply — and
+ * never the slotted content itself. The one place where reaching a child is
+ * unavoidable is the `<Picture>` output (`:global(img)`), because Astro's
+ * image component emits the `<img>` without this file's scope attribute; that
+ * `:global()` is scoped by an ancestor class so it cannot leak page-wide.
+ *
+ * DEGRADATION. No image → no art layer, no plate (a plate over flat obsidian
+ * is an empty frame — canon 01-hero.md B.9), and the hero paints
+ * `--gradient-hero` instead, which is exactly what the two case pages already
+ * do. No video → the still simply breathes. No plexus → nothing is rendered
+ * and the copy stops being lifted over a layer that is not there. Missing
+ * scroll target → the button hides itself instead of staying visible and dead.
+ */
+import type { ImageMetadata } from 'astro';
+import { Picture } from 'astro:assets';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+
+/**
+ * Where the plexus is born, in fractions of the container (0..1), plus an
+ * optional lock onto a point of the cover-cropped media frame. Fixed
+ * container fractions drift as `cover` re-crops at each aspect ratio, so a
+ * hero whose network must grow out of a specific glowing node passes the
+ * anchor. The SELECTOR is not a prop: this component knows which layer ends
+ * up on top (the loop if there is one, the still otherwise), whereas the nine
+ * pages hand-write ids like `#geo-methodology-hero-art img` today. Frame
+ * width/height stay caller-supplied because a video's natural frame is not
+ * knowable from props (the stills are 1280×720, the loops 1024×576).
+ */
+interface PlexusOrigin {
+  originX: number;
+  originY: number;
+  anchor?: { x: number; y: number; width: number; height: number };
+}
+
+interface Props {
+  /** Locale — infrastructure, not a design knob: the scroll hint needs `hero.scroll`. */
+  lang: Lang;
+  /** Mono eyebrow text. A leading `// ` is stripped: the slashes are drawn, not read. */
+  eyebrow: string;
+  /** The h1 sentence, plain. Word/letter splitting happens here. */
+  title: string;
+  /** The lede paragraph. */
+  lede: string;
+  /**
+   * Hero art master. Widths are NOT a prop (a caller once asked a 1280-wide
+   * master for 1920 and got a duplicated URL — geo-audit/index.astro:574);
+   * they are derived from the master below.
+   */
+  image?: ImageMetadata;
+  /**
+   * `object-position` for the art, when the composition needs a specific band
+   * of the frame under the copy (contact uses `center 42%`, trust `center 62%`).
+   * Applied to the still AND to the loop: the pages that crop declare it twice
+   * (trust/index.astro:558 for the image, :586 for the video), and a loop
+   * cropped differently from the still it fades out of visibly jumps.
+   */
+  imagePosition?: string;
+  /**
+   * Which way the scrim darkens — a closed set, because the direction must
+   * follow the light in the frame, while the percentages must not drift
+   * (`agency`/`web` and `geo` differ by 5pp today for no reason).
+   */
+  scrim?: 'left' | 'center' | 'bottom';
+  /**
+   * Optional seamless loop over the still. Only meaningful together with
+   * `image`: the loop lives inside the art layer and fades in over the still.
+   */
+  video?: { webm: string; mp4: string };
+  /** Optional interactive network over the art. */
+  plexus?: PlexusOrigin;
+  /** Where the scroll hint rides to: an id (`#geo-mock`) or any CSS selector. */
+  scrollTarget: string;
+  /**
+   * Vertical anchoring of the copy. `top` sits it in the upper third so a
+   * glowing node further down the frame is not covered (trust does this
+   * deliberately, today via two raw declarations that fight the frame's own
+   * padding).
+   */
+  align?: 'center' | 'top';
+}
+
+const {
+  lang,
+  eyebrow,
+  title,
+  lede,
+  image,
+  imagePosition,
+  scrim = 'bottom',
+  video,
+  plexus,
+  scrollTarget,
+  align = 'center',
+} = Astro.props;
+
+/** The slashes are decoration; the data (`services.ts`) carries them in the string. */
+const eyebrowText = eyebrow.replace(/^\/\/\s*/, '');
+
+/**
+ * Requested widths, derived from the master. Astro clamps any width above the
+ * master and emits a duplicate URL for it, so never ask for more than exists:
+ * a 1280-wide master yields exactly the family's `[768, 1280]`.
+ */
+const HERO_WIDTHS = [768, 1280] as const;
+const heroWidths = image
+  ? [...HERO_WIDTHS.filter((w) => w < image.width), image.width]
+  : [...HERO_WIDTHS];
+
+/** The plate is derived, never a prop: art present → the words need a surface. */
+const hasArt = Boolean(image);
+/** Copy is lifted only when something actually sits on the negative layer. */
+const hasUnderLayer = hasArt || Boolean(plexus);
+const hasExtras = Astro.slots.has('under-lede');
+
+/** Top layer of the art stack — what the plexus anchor should be measured against. */
+const anchorSelector = video && image ? '.page-hero__video' : '.page-hero__art img';
+const plexusAnchor = plexus?.anchor
+  ? {
+      selector: anchorSelector,
+      width: plexus.anchor.width,
+      height: plexus.anchor.height,
+      x: plexus.anchor.x,
+      y: plexus.anchor.y,
+    }
+  : undefined;
+---
+
+<header
+  class:list={[
+    'page-hero',
+    `page-hero--scrim-${scrim}`,
+    align === 'top' && 'page-hero--top',
+    !hasArt && 'page-hero--artless',
+    hasUnderLayer && 'page-hero--layered',
+  ]}
+>
+  {
+    image && (
+      <div class="page-hero__art" aria-hidden="true">
+        <Picture
+          src={image}
+          formats={['avif', 'webp']}
+          widths={heroWidths}
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          style={imagePosition ? `object-position: ${imagePosition}` : undefined}
+        />
+        {video && (
+          <video
+            class="page-hero__video"
+            muted
+            loop
+            playsinline
+            preload="none"
+            data-webm={video.webm}
+            data-mp4={video.mp4}
+            style={imagePosition ? `object-position: ${imagePosition}` : undefined}
+          />
+        )}
+      </div>
+    )
+  }
+
+  {
+    plexus && (
+      <NeuralPlexus
+        client:idle
+        originX={plexus.originX}
+        originY={plexus.originY}
+        anchor={plexusAnchor}
+      />
+    )
+  }
+
+  <div class="container">
+    <div class:list={['page-hero__copy', hasArt && 'hero-plate']}>
+      <p class="page-hero__eyebrow text-mono">
+        <span aria-hidden="true">// </span>{eyebrowText}
+      </p>
+      {
+        /* Split by WORD, not by character: each word sits in its own wrapper
+           so a line can only break BETWEEN words, while every letter keeps
+           its own hover target. `Array.from` cuts by code point, so a
+           surrogate pair survives. Every span is aria-hidden and the h1
+           carries the real sentence in aria-label — otherwise a screen
+           reader would announce a column of letters, or nothing at all. */
+      }
+      <h1 class="page-hero__title" aria-label={title}>
+        {
+          title.split(' ').map((word, wordIdx) => [
+            wordIdx > 0 ? ' ' : null,
+            <span class="page-hero__word" aria-hidden="true">
+              {Array.from(word).map((char) => (
+                <span class="page-hero__letter">{char}</span>
+              ))}
+            </span>,
+          ])
+        }
+      </h1>
+      <p class="page-hero__lede">{lede}</p>
+    </div>
+
+    {
+      /* Wrapper only. The slotted markup carries the CALLER's scope, so no
+         rule in this file can reach inside it — the gap to the lede is the
+         wrapper's own margin, never the lede's margin-bottom (which is how
+         three different values ended up on three pages). */
+      hasExtras && (
+        <div class="page-hero__extras">
+          <slot name="under-lede" />
+        </div>
+      )
+    }
+  </div>
+
+  {
+    /* A full-viewport hero owes the reader a nudge, and the nudge must be a
+       real <button>: focusable, Enter/Space-activated, named by its own text. */
+  }
+  <button type="button" class="page-hero__scroll js-page-hero-scroll" data-target={scrollTarget}>
+    <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 5v14"></path>
+      <path d="m19 12-7 7-7-7"></path>
+    </svg>
+  </button>
+</header>
+
+<style>
+  /* ── Local scale ──────────────────────────────────────────────
+     Every number this component uses lives here, once, and every rule body
+     below references a var(). Two groups:
+
+     (a) values that HAVE a token in global.css — they simply alias it, so a
+         token change reaches the hero;
+     (b) values global.css has no token for. Those are written out here with
+         the source they were measured from. They are not "raw values in the
+         hero" any more — they are this component's declared scale, in one
+         readable block, which is the whole difference between a design
+         system and sixteen copies of a literal.
+
+     Group (b) is deliberately short: the eyebrow's pill colours (component-
+     local on the homepage too, HeroOverlay.svelte:662–673), the title's
+     optical letter-spacing and neon stroke, the art opacities, and the
+     animation timings. */
+  .page-hero {
+    /* (a) Chrome reserve — the defect this component exists to stop
+       repeating. `7.5rem` is copied into sixteen files as "page padding +
+       InnerHeader", but the real sum is 2.5rem (.X-page padding-top) +
+       1.5rem (InnerHeader.astro:41) + the row's 24px min-height
+       (InnerHeader.astro:68) = 5.5rem, and all three change on a phone.
+       Computed, so it follows its inputs. */
+    --hero-nav-row: 1.5rem; /* InnerHeader.astro:68 — min-height: 24px */
+    --hero-chrome: calc(var(--space-10) + var(--space-6) + var(--hero-nav-row));
+
+    /* (b) Eyebrow pill — same literals as HeroOverlay.svelte:662–673. */
+    --hero-pill-fg: hsl(155, 85%, 65%);
+    --hero-pill-bg: hsla(220, 25%, 6%, 0.9);
+    --hero-pill-border: hsla(155, 50%, 40%, 0.2);
+    --hero-pill-fg-hover: hsl(220, 70%, 65%);
+    --hero-pill-border-hover: hsla(220, 50%, 50%, 0.25);
+    --hero-pill-glow-hover: hsla(220, 70%, 60%, 0.4);
+    --hero-pill-blur: 12px;
+
+    /* (b) Title — one scale for the whole family. Seven scales were measured
+       across thirteen classes; none of the six variants answered a question
+       about its page, so this is the etalon's (geo-audit:1239–1243). */
+    --hero-title-size: clamp(2.2rem, 5vw, 3.6rem);
+    --hero-title-leading: 1.05;
+    --hero-title-tracking: -0.03em;
+    --hero-title-measure: 20ch;
+    --hero-title-stroke: 2px;
+    --hero-title-stroke-color: hsla(180, 80%, 55%, 0.7);
+    --hero-title-stroke-hover: hsla(180, 90%, 70%, 0.95);
+    --hero-title-glow-hover: 0 0 10px hsla(180, 85%, 60%, 0.55), 0 0 22px hsla(180, 85%, 55%, 0.3);
+    --hero-title-shadow: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8))
+      drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+
+    /* (b) Lede measure — 58/60/62/68ch were measured; 58 is the etalon's. */
+    --hero-lede-measure: 58ch;
+    /* 1.7, not --leading-relaxed (1.8). Every page in the family sets 1.7 by
+       hand; the diff called 1.8 the worst reading measure of the set. Kept as
+       a literal because there is no 1.7 token — see the note in 92-hero-diff. */
+    --hero-lede-leading: 1.7;
+
+    /* (b) Copy plate width — 46rem, the one width all twelve wrappers agree on. */
+    --hero-copy-measure: 46rem;
+
+    /* (b) Art. Three opacities (0.45/0.5/0.55) were measured with no reason
+       attached; 0.5 is the etalon's and the majority. */
+    --hero-art-opacity: 0.5;
+    /* Zero, not a low value. trust/index.astro:597 sets it to 0 with the note
+       "ghost doubled the knot, owner caught it": at any non-zero opacity the
+       still shows through the moving loop and the subject appears twice.
+       92-hero-diff.md §3.2 ruled the same way; the first draft did not take it. */
+    --hero-art-opacity-live: 0;
+    /* (b) The lede's slow breath. Colour lives here rather than in the keyframe
+       so the scale block stays the single place a value can be read from —
+       and so the "no colour literal outside this block" test keeps working.
+       Value is the family's, unchanged across all sixteen copies. */
+    --hero-lede-glow: hsla(155, 60%, 60%, 0.08);
+
+    --hero-breathe-scale: 1.045;
+    --hero-breathe-brightness: 1.18;
+    --hero-breathe-duration: 9s;
+    --hero-video-fade: 1.2s;
+
+    /* (b) Entrance. Delays are the family's majority, not the etalon's — the
+       etalon holds the lede back 0.7s where eleven pages use 0.3s. */
+    --hero-in-eyebrow: 0.6s;
+    --hero-in-title-opacity: 0.7s;
+    --hero-in-title-transform: 0.9s;
+    --hero-in-lede: 0.6s;
+    --hero-in-delay: 0.15s;
+    --hero-in-delay-lede: 0.3s;
+    --hero-in-delay-extras: 1s;
+    --hero-breath-cycle: 4s;
+    --hero-breath-delay: 1.5s;
+    --hero-nudge-cycle: 2.2s;
+    --hero-nudge-delay: 2.5s;
+    --hero-nudge-travel: 6px;
+    --hero-rise: 15px;
+    --hero-rise-lg: 20px;
+
+    /* (b) WCAG 2.5.5 minimum pointer target. */
+    --hero-tap-min: 44px;
+
+    /* (b) Top-anchored inset. `trust` uses clamp(3rem, 12vh, 7rem) today; 7rem
+       has no token, 6rem (--space-24) does. Where they differ, stated the
+       right way round: below 800px tall both follow 12vh and are identical;
+       from 800px the 6rem ceiling engages while 12vh keeps climbing; above
+       ~933px the two sit a constant 16px apart. So the difference shows on
+       TALL viewports, not short ones — an earlier version of this comment had
+       the arithmetic backwards. 16px higher on a desktop screen is a design
+       call, and 6rem keeps the value on the token scale. */
+    --hero-top-inset: clamp(var(--space-12), 12vh, var(--space-24));
+
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    /* Negative-z trap: without its own stacking context the art (z-index: -1)
+       paints BEHIND the page's opaque obsidian background and vanishes.
+       `isolate` scopes the negative layer to this header. */
+    isolation: isolate;
+    overflow: hidden;
+    /* The claim owns the first screen. Declared twice on purpose: `vh` first
+       as the fallback for engines older than 2022, then `svh` — the SMALL
+       viewport height, which stays put while a mobile URL bar comes and goes,
+       where `dvh` would twitch the scene on every scroll. */
+    min-height: calc(100vh - var(--hero-chrome));
+    min-height: calc(100svh - var(--hero-chrome));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* No art: the hero would otherwise be flat obsidian with words on it. The
+     radial hero gradient is the same substitute the two case pages use. */
+  .page-hero--artless {
+    background: var(--gradient-hero);
+  }
+
+  /* Copy in the upper third — one flag instead of the two raw declarations
+     that fight the frame's own padding today. */
+  .page-hero--top {
+    justify-content: flex-start;
+    padding-block-start: var(--hero-top-inset);
+  }
+
+  /* Lift the copy above the negative layer — only where there IS one. */
+  .page-hero--layered .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Art layer ────────────────────────────────────────────── */
+  .page-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  /* `:global` is required and safe: Astro's <Picture> emits an <img> without
+     this file's scope attribute, and the selector is anchored to a class
+     that only exists inside this component. */
+  .page-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: var(--hero-art-opacity);
+  }
+
+  /* The network breathes while the visitor reads: compositor-only transform
+     and filter. Declared INSIDE no-preference — outside it the frame is
+     simply still, which is a finished state, not a disabled feature. */
+  @media (prefers-reduced-motion: no-preference) {
+    .page-hero__art :global(img) {
+      animation: page-hero-breathe var(--hero-breathe-duration) ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes page-hero-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(var(--hero-breathe-scale));
+      filter: brightness(var(--hero-breathe-brightness));
+    }
+  }
+
+  .page-hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity var(--hero-video-fade) ease-out;
+  }
+
+  /* Once the loop actually plays it takes over: the video fades to the
+     working opacity, the still dims and stops breathing underneath. */
+  .page-hero__art--live .page-hero__video {
+    opacity: var(--hero-art-opacity);
+  }
+
+  .page-hero__art--live :global(img) {
+    opacity: var(--hero-art-opacity-live);
+    animation: none;
+  }
+
+  /* ── Scrim ────────────────────────────────────────────────────
+     Direction follows the light in the frame; the stops do not vary. */
+  .page-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .page-hero--scrim-left .page-hero__art::after {
+    background:
+      linear-gradient(to right, var(--bg-obsidian) 20%, transparent 65%),
+      linear-gradient(to top, var(--bg-obsidian) 4%, transparent 45%);
+  }
+
+  .page-hero--scrim-center .page-hero__art::after {
+    background:
+      radial-gradient(ellipse 60% 70% at 50% 45%, var(--bg-obsidian) 25%, transparent 75%),
+      linear-gradient(to top, var(--bg-obsidian) 4%, transparent 40%);
+  }
+
+  .page-hero--scrim-bottom .page-hero__art::after {
+    background:
+      linear-gradient(to bottom, var(--bg-obsidian) 4%, transparent 40%),
+      linear-gradient(to top, var(--bg-obsidian) 6%, transparent 42%);
+  }
+
+  /* ── Copy column ──────────────────────────────────────────── */
+  .page-hero__copy {
+    max-width: var(--hero-copy-measure);
+    margin-inline: auto;
+  }
+
+  /* ── Eyebrow ──────────────────────────────────────────────── */
+  .page-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: var(--hero-pill-fg);
+    padding: var(--space-1) var(--space-4);
+    background: var(--hero-pill-bg);
+    border: 1px solid var(--hero-pill-border);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(var(--hero-pill-blur));
+    -webkit-backdrop-filter: blur(var(--hero-pill-blur));
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color var(--duration-slow) var(--ease-out),
+      border-color var(--duration-slow) var(--ease-out),
+      background var(--duration-slow) var(--ease-out);
+    /* Not a link and not a button — say so with the cursor. */
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  .page-hero__eyebrow:hover {
+    color: var(--hero-pill-fg-hover);
+    border-color: var(--hero-pill-border-hover);
+    text-shadow: 0 0 12px var(--hero-pill-glow-hover);
+  }
+
+  /* The standard property, restated where a minifier cannot rewrite it away.
+     Verified in dist for .glass-panel/.hero-plate (global.css:449–460):
+     without this only the -webkit- alias ships and Chromium renders the pill
+     with no blur at all. The pill declares the same pair and had no such
+     restatement on any of the sixteen pages. */
+  @supports (backdrop-filter: blur(1px)) {
+    .page-hero__eyebrow {
+      backdrop-filter: blur(var(--hero-pill-blur));
+    }
+  }
+
+  /* ── Title ────────────────────────────────────────────────────
+     The fill is a PICTURE clipped to the glyphs, not a colour. Hence the
+     JPEG fallback lives in its own @supports rule rather than as a second
+     background-image declaration here: a plain duplicate reads as dead to
+     the minifier and gets pruned, and background-clip: text with a
+     transparent fill and no image leaves nothing but an outline. */
+  .page-hero__title {
+    font-size: var(--hero-title-size);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--hero-title-tracking);
+    line-height: var(--hero-title-leading);
+    max-width: var(--hero-title-measure);
+    margin: 0 auto var(--space-5);
+    /* Three lines is the normal case here — balance them. */
+    text-wrap: balance;
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: var(--hero-title-stroke) var(--hero-title-stroke-color);
+
+    filter: var(--hero-title-shadow);
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .page-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  /* THE LAW OF THE LETTER — copy it verbatim if you ever move this.
+     Nothing on a letter or word span may create a new rendering surface:
+     transform, filter, opacity < 1, backdrop-filter, mask, will-change,
+     perspective, isolation, position+z-index all qualify. Each renders the
+     glyph into its own buffer, where the ancestor's clipped background does
+     not exist, and the letter paints as a bare outline beside its filled
+     neighbours — the thrice-reported "doubled first letter". Only
+     text-shadow and -webkit-text-stroke-color are painted in the same pass
+     as the parent's clip, so the hover below uses only those. A previous
+     "fix" kept `filter: brightness()` with a comment claiming filters are
+     safe in place. That was wrong; the bug survived it. */
+  .page-hero__word {
+    white-space: nowrap;
+  }
+
+  .page-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow) var(--ease-out),
+      text-shadow var(--duration-slow) var(--ease-out);
+    cursor: default;
+  }
+
+  .page-hero__letter:hover {
+    -webkit-text-stroke-color: var(--hero-title-stroke-hover);
+    text-shadow: var(--hero-title-glow-hover);
+  }
+
+  /* ── Lede ─────────────────────────────────────────────────── */
+  .page-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: var(--hero-lede-measure);
+    /* No bottom margin: the gap to whatever follows belongs to the FOLLOWING
+       block, or three pages end up with three different ledes. */
+    margin: 0 auto;
+    line-height: var(--hero-lede-leading);
+  }
+
+  /* ── Slot wrapper (see the scope note in the frontmatter) ─── */
+  .page-hero__extras {
+    margin-top: var(--space-8);
+  }
+
+  /* ── Scroll hint ──────────────────────────────────────────── */
+  /* `hidden` must actually hide. The UA sheet's `[hidden] { display: none }`
+     loses to an author `display: flex` on origin alone, so without this rule
+     the "missing target → the button hides itself" promise in the header
+     comment silently produced a visible, dead button instead. */
+  .page-hero__scroll[hidden] {
+    display: none;
+  }
+
+  .page-hero__scroll {
+    position: absolute;
+    /* The etalons pin this on a bare `bottom:` and slide under the home
+       indicator on a notched phone. HeroLangSwitcher.svelte:386 is the
+       correct model. */
+    bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    /* WCAG 2.5.5: the stack already measures ~52px tall, but a shorter label
+       must not be able to shrink the target below the floor. */
+    min-width: var(--hero-tap-min);
+    min-height: var(--hero-tap-min);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  /* The span carries .text-mono, which paints itself accent-green-300; the
+     hover brightens both the word and the arrow one step above resting. */
+  .page-hero__scroll:hover,
+  .page-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  /* Restated locally on purpose. The global ring (global.css:393–397) already
+     covers this button, but this element is the component's only keyboard
+     target and it must not be able to lose its ring to a future global edit. */
+  .page-hero__scroll:focus-visible {
+    outline: 2px solid var(--accent-green-400);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── Entrance ─────────────────────────────────────────────────
+     CSS keyframes, never GSAP: the h1 is the LCP element and must paint on
+     the first frame without waiting for hydration. `backwards` holds the
+     from-state through the delay, otherwise the element flashes in its final
+     position and then jumps. The whole cascade is declared INSIDE
+     no-preference, so a reduced-motion reader gets finished elements rather
+     than suppressed animations. */
+  @media (prefers-reduced-motion: no-preference) {
+    .page-hero__eyebrow {
+      animation:
+        page-hero-rise var(--hero-in-eyebrow) ease-out var(--hero-in-delay) backwards,
+        page-hero-pill-breathe var(--hero-breath-cycle) ease-in-out var(--hero-breath-delay)
+          infinite;
+    }
+
+    .page-hero__title {
+      animation:
+        page-hero-title-in var(--hero-in-title-opacity) ease-out var(--hero-in-delay) backwards,
+        page-hero-title-lift var(--hero-in-title-transform) var(--ease-out) var(--hero-in-delay)
+          backwards;
+    }
+
+    /* Two animations, not one. The rise is the entrance; the glow is the slow
+       breath that keeps the lede alive afterwards — all sixteen hand-written
+       heroes carry it (`… -lede-glow 5s ease-in-out 2s infinite`), and the
+       first draft of this component dropped it. Losing it is exactly the
+       "движения не видно" the owner has already complained about once. */
+    .page-hero__lede {
+      animation:
+        page-hero-rise var(--hero-in-lede) ease-out var(--hero-in-delay-lede) backwards,
+        page-hero-lede-glow 5s ease-in-out 2s infinite;
+    }
+
+    .page-hero__extras {
+      animation: page-hero-rise-lg var(--hero-in-lede) ease-out var(--hero-in-delay-extras)
+        backwards;
+    }
+
+    .page-hero__scroll svg {
+      animation: page-hero-nudge var(--hero-nudge-cycle) ease-in-out var(--hero-nudge-delay)
+        infinite;
+    }
+  }
+
+  /* The one reduce-side rule the family already gets right: kill the hover
+     transition, keep the hover. */
+  @media (prefers-reduced-motion: reduce) {
+    .page-hero__letter {
+      transition: none;
+    }
+  }
+
+  @keyframes page-hero-title-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes page-hero-title-lift {
+    from {
+      transform: translateY(var(--hero-rise-lg));
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes page-hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(var(--hero-rise));
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Values lifted verbatim from the sixteen copies (trust/index.astro:791–799
+     and its fifteen twins): a drop-shadow that swells and fades, never a
+     filter on a transform property and never a repaint of layout. */
+  @keyframes page-hero-lede-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px var(--hero-lede-glow));
+    }
+  }
+
+  @keyframes page-hero-rise-lg {
+    from {
+      opacity: 0;
+      transform: translateY(var(--hero-rise-lg));
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes page-hero-pill-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes page-hero-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(var(--hero-nudge-travel));
+    }
+  }
+
+  /* ── Mobile ───────────────────────────────────────────────────
+     EVERY rule below overrides a rule of equal specificity above it, so this
+     block MUST stay last in the file. That is not style advice: the scroll
+     hint's mobile position was silently lost twice on this project for
+     exactly this reason, and six of the sixteen pages still ship without it. */
+  @media (max-width: 767px) {
+    .page-hero {
+      /* The reserve shrinks with its inputs: the page's top padding drops to
+         --space-4 and the nav row grows to 44px for touch
+         (InnerHeader.astro:83). The literal 7.5rem tracked neither. */
+      --hero-nav-row: 2.75rem;
+      --hero-chrome: calc(var(--space-4) + var(--space-6) + var(--hero-nav-row));
+    }
+
+    .page-hero__title {
+      /* A smaller texture for the box a phone actually paints — the same
+         LCP diet as HeroOverlay's mobile override (measured: 6004ms → 4056ms
+         simulated mobile LCP from this swap alone). */
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+
+    .page-hero__word {
+      /* `white-space: nowrap` suppresses wrapping outright, which means
+         `overflow-wrap` cannot rescue an over-long word inside it — the
+         canon's proposed insurance would have been inert. On a phone the
+         measure is ~296px inside the plate and a Russian compound
+         ("конфиденциальности") renders 371px wide, so without this the word
+         hangs 75px outside the glass.
+
+         MEASURED, 2026-08-25, /ru/privacy/ at 375px: with `overflow-wrap:
+         normal` the word is one line and overflows; with `break-word` (or
+         `anywhere` — identical here) it wraps as «конфиденциальн|ости», an
+         arbitrary point with no hyphen. `break-word` is the value kept
+         because it leaves min-content sizing alone; `anywhere` does not.
+
+         `hyphens: auto` was tried here and removed. The title is one
+         <span> per letter (the text-stroke effect needs that), and no engine
+         hyphenates a word split across inline boxes: Blink and WebKit look
+         for opportunities within a single shaping run inside one LayoutText,
+         Gecko within one nsTextFrame. Note this is IMPLEMENTATION
+         behaviour, not a rule of CSS Text 3 — the spec forbids nothing here,
+         the engines simply do not do it. It could not be confirmed in the
+         preview browser either: probed with lang="en", "de" and "ru", it
+         hyphenates NOTHING, so it carries no dictionaries and can neither
+         prove nor disprove anything. A declaration that cannot be shown to
+         do something does not get to stay.
+
+         The remedy that would yield correct Russian without relying on a
+         dictionary is a smaller type step on phones. That changes an
+         approved hero, so it is the owner's call
+         (.system/fixes/pages-repair.md, З-5).
+
+         On desktop nowrap still holds. */
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
+
+    .page-hero__scroll {
+      /* Pinned to the bottom the hint lands on the last lines of the copy on
+         a short phone. Same specificity as the base rule, so source order
+         decides — this block is why it must stay last. */
+      position: static;
+      transform: none;
+      margin-top: var(--space-6);
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Two behaviours, once. Both were copied per page: the video gate exists in
+   * four near-identical ~60-line versions, and the scroll handler in three
+   * versions, one of which (the three Lab pages) forgot Lenis entirely and so
+   * scrolls differently from every other page on the site.
+   */
+
+  /** The loop is a luxury: desktop only, motion allowed, no data-saver. */
+  function initHeroVideo(): void {
+    const art = document.querySelector<HTMLElement>('.page-hero__art');
+    const video = art?.querySelector<HTMLVideoElement>('.page-hero__video');
+    if (!art || !video) return;
+
+    const wantsMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    const saveData =
+      'connection' in navigator &&
+      (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!wantsMotion || saveData) return;
+
+    // Evaluated once, a width gate never re-fires for a tablet rotated into
+    // landscape or a resized window — arm on first match instead.
+    const desktopMq = window.matchMedia('(min-width: 768px)');
+    let lastVisible = false;
+
+    const arm = (): void => {
+      const webm = video.dataset.webm ?? '';
+      const mp4 = video.dataset.mp4 ?? '';
+      video.src = video.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+
+      // A webm that fails to decode (rare but real on older WebKit) retries
+      // once as mp4 instead of staying dark.
+      video.addEventListener(
+        'error',
+        () => {
+          if (video.src.endsWith('.webm') && mp4) {
+            video.src = mp4;
+            void video.play().catch(() => {});
+          }
+        },
+        { once: true }
+      );
+
+      video.addEventListener(
+        'playing',
+        () => {
+          art.classList.add('page-hero__art--live');
+        },
+        { once: true }
+      );
+
+      // Chromium pauses an offscreen muted video on scroll and never resumes
+      // it. Own the lifecycle: in view → play, out of view → pause (which is
+      // also the battery-correct behaviour).
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            lastVisible = entry.isIntersecting;
+            if (entry.isIntersecting) {
+              void video.play().catch(() => {
+                // Autoplay refused — the breathing still simply remains.
+              });
+            } else {
+              video.pause();
+            }
+          }
+        },
+        { threshold: 0.12 }
+      );
+      io.observe(art);
+
+      // bfcache: browsers pause media on entry and never auto-resume on
+      // restore — resume by hand.
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) void video.play().catch(() => {});
+      });
+
+      // Tab-away/back: Chromium keeps paying for a backgrounded video's
+      // decode pipeline unless it is explicitly paused, and the observer does
+      // not fire on a same-viewport tab switch.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          video.pause();
+        } else if (lastVisible) {
+          void video.play().catch(() => {});
+        }
+      });
+    };
+
+    if (desktopMq.matches) {
+      arm();
+    } else {
+      desktopMq.addEventListener(
+        'change',
+        (e) => {
+          if (e.matches) arm();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  /**
+   * The hint is a promise, so clicking it must keep it. Lenis drives the ride
+   * when it is running (native smooth scroll is NOT equivalent while Lenis
+   * owns the scroll globally); under reduced motion, an honest instant jump.
+   * If the target does not exist the button hides itself rather than staying
+   * visible and dead.
+   */
+  function initHeroScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-page-hero-scroll');
+    if (!hint) return;
+
+    const selector = hint.dataset.target ?? '';
+    const target = selector ? document.querySelector<HTMLElement>(selector) : null;
+    if (!target) {
+      hint.hidden = true;
+      return;
+    }
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  function initPageHero(): void {
+    initHeroVideo();
+    initHeroScrollHint();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPageHero);
+  } else {
+    initPageHero();
+  }
+</script>

@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════
+   VKVstudio — Hero Section Styles
+   Source of truth: .system/design_system.md §7 (Scroll-Driven Animation)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── HERO CONTAINER ─────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  height: 800vh; /* 700vh scroll distance for 20sec video */
+  background-color: var(--bg-void);
+}
+
+/* ── STICKY VIEWPORT ────────────────────────────────────────── */
+
+/* svh, not vh or dvh. On a phone `vh` resolves to the LARGEST viewport — the
+   height with the browser chrome hidden — so a 100vh stage is taller than what
+   is actually on screen at load and its bottom edge starts below the fold.
+   `dvh` fixes that but re-resolves as the URL bar hides and shows, resizing the
+   stage mid-scroll. `svh` is the small (chrome-visible) height: stable for the
+   whole scroll, and the hero always fits. Identical to vh on desktop. */
+.hero__sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh; /* fallback for pre-2022 engines without svh */
+  height: 100svh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── CANVAS (Fullscreen Video Rendering) ────────────────────── */
+
+.hero__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Hidden video element used for frame seeking (Tier 2 fallback) */
+.hero__video {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── GRADIENT OVERLAY (readability over video) ──────────────── */
+
+.hero__gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      hsla(220, 20%, 3%, 0.3) 0%,
+      hsla(220, 20%, 3%, 0.1) 30%,
+      hsla(220, 20%, 3%, 0.1) 50%,
+      hsla(220, 20%, 3%, 0.5) 80%,
+      hsla(220, 20%, 3%, 0.85) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── TEXT OVERLAY (container for Svelte HeroOverlay island) ──── */
+
+#hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  /* JS controls opacity and transform via inline styles */
+  will-change: opacity, transform;
+}
+
+/* ── SCROLL INDICATOR ───────────────────────────────────────── */
+
+.hero__scroll-indicator {
+  position: absolute;
+  bottom: var(--space-8);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+
+.hero__scroll-indicator--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero__scroll-arrow {
+  width: 24px;
+  height: 24px;
+  animation: hero-bounce 2s var(--ease-in-out) infinite;
+}
+
+@keyframes hero-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(8px);
+    opacity: 0.5;
+  }
+}
+
+/* ── POSTER IMAGE (Tier 3 / reduced-motion / mobile) ─────────── */
+
+.hero__poster {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-void);
+}
+
+.hero__poster picture {
+  display: contents;
+}
+
+.hero__poster-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── STATIC MODE (mobile + prefers-reduced-motion, set by init script) ──
+   HeroCanvas.astro's init() adds this class BEFORE ever assigning the
+   24.5 MB `hero-scroll.mp4` to the video element, so on mobile no video
+   bytes are fetched at all — this is the mobile LCP fix, not just a
+   visual fallback. */
+.hero--static {
+  height: 100vh; /* fallback */
+  height: 100svh; /* see .hero__sticky — this is the path phones actually take */
+}
+
+.hero--static .hero__canvas,
+.hero--static .hero__video {
+  display: none;
+}
+
+.hero--static .hero__poster {
+  display: block;
+}
+
+.hero--static .hero__scroll-indicator {
+  display: none;
+}
+
+/* ── REDUCED MOTION ─────────────────────────────────────────── */
+/* CSS-only belt-and-suspenders for prefers-reduced-motion in case this
+   paints before the init script (above) has run. */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    height: 100vh; /* No scroll scrubbing — fallback */
+    height: 100svh;
+  }
+
+  .hero__canvas {
+    display: none;
+  }
+
+  .hero__poster {
+    display: block;
+  }
+
+  .hero__overlay {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero__scroll-indicator {
+    display: none;
+  }
+
+  .hero__scroll-arrow {
+    animation: none;
+  }
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+
+/* NOTE: the subtitle and CTA are OWNED by HeroOverlay.svelte's scoped styles
+   (class names `hero-overlay__subtitle` / `hero-overlay__cta`). Rules for
+   them used to live here under the old `hero__*` names — dead selectors that
+   shipped to production matching nothing, left behind when the elements moved
+   into the component. Deleted rather than renamed: the component's scoped
+   rules out-rank bare external selectors anyway, and the current mobile hero
+   (glass panel) was reviewed as-is. Style those elements in the component. */
+@media (max-width: 639px) {
+  .hero__scroll-indicator {
+    bottom: var(--space-6);
+  }
+}

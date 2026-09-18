@@ -1,0 +1,335 @@
+---
+/**
+ * Footer — copyright, built-with, the site's secondary links, and the language
+ * switcher.
+ *
+ * Rendered by BaseLayout, so it is on every page. It used to be imported by
+ * the homepage alone: ten of the twelve pages — all three Lab tools in both
+ * languages, the Build Log and the Privacy Policy — ended with nothing. A
+ * visitor who arrived on /en/lab/tokenizer/ from a search result had no link
+ * to the Privacy Policy, no link to the Build Log, and no way at all to reach
+ * the Russian version short of editing the URL. The Lab pages are the ones a
+ * stranger is most likely to land on directly.
+ */
+import type { Lang } from '@i18n/utils';
+import { t, getAltLang } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const altLang = getAltLang(lang);
+const year = new Date().getFullYear();
+
+/**
+ * The same page in the other language — not that language's homepage.
+ *
+ * Swapping only the leading locale segment keeps the reader where they were:
+ * /en/lab/tokenizer/ → /ru/lab/tokenizer/. Every route on this site exists in
+ * both locales (getStaticPaths returns en and ru for all of them), so the
+ * target is always real. Anything without a locale prefix — the root shell —
+ * has no counterpart to preserve and falls back to the locale root.
+ */
+const path = Astro.url.pathname;
+const altHref = /^\/(en|ru)(\/|$)/.test(path)
+  ? path.replace(/^\/(en|ru)/, `/${altLang}`)
+  : `/${altLang}/`;
+
+/**
+ * Screen-reader warning for the four links that leave the site in a new tab
+ * (G201 / WCAG 3.2.5): astro.build, svelte.dev, GitHub, LinkedIn. Sighted users
+ * get no visible change; a screen reader now announces the jump before it
+ * happens instead of the user discovering a new tab afterwards.
+ *
+ * Wording and the "— " separator are copied verbatim from the pattern already
+ * shipped in ContactFunnel.svelte (NEW_TAB_HINT, used on the Cal.com link in
+ * the success panel) — one phrasing across the site, not two. Kept as a local
+ * const there and here rather than an i18n key, for the same reason: it is a
+ * mechanical a11y string, not editorial copy.
+ *
+ * The two text links carry it as a `.visually-hidden` span appended to the link
+ * text. The two social links CANNOT: they have `aria-label`, which replaces the
+ * element's content for AT, so a hidden span inside them would never be spoken.
+ * There the hint is appended to the label itself — same sentence, same order.
+ */
+const NEW_TAB_HINT: Record<'en' | 'ru', string> = {
+  en: 'opens in a new tab',
+  ru: 'открывается в новой вкладке',
+};
+const newTab = NEW_TAB_HINT[lang];
+---
+
+<footer class="site-footer">
+  <div class="footer__inner container">
+    {/* Left: copyright + built-with */}
+    <div class="footer__left">
+      <span class="footer__copyright text-mono">
+        © {year}
+        {t(lang, 'footer.copyright')}
+      </span>
+      <span class="footer__built">
+        {t(lang, 'footer.built_with')}
+        <a
+          href="https://astro.build"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="footer__tech-link">Astro<span class="visually-hidden">— {newTab}</span></a
+        >
+        +
+        <a
+          href="https://svelte.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="footer__tech-link">Svelte<span class="visually-hidden">— {newTab}</span></a
+        >
+        ·
+        <span class="footer__deployed">{t(lang, 'footer.deployed_on')}</span>
+      </span>
+    </div>
+
+    {/* Right: lang switch + social links */}
+    <div class="footer__links">
+      {/* The commercial spine: reachable from every page, not only the hero CTA */}
+      <a href={`/${lang}/services/`} class="footer__privacy-link">
+        {t(lang, 'nav.services')}
+      </a>
+      <a href={`/${lang}/trust/`} class="footer__privacy-link">
+        {t(lang, 'services.trustLink')}
+      </a>
+      <a href={`/${lang}/contact/`} class="footer__privacy-link">
+        {t(lang, 'nav.contact')}
+      </a>
+      {/* Build Log link */}
+      <a href={`/${lang}/log/`} class="footer__privacy-link">
+        {t(lang, 'footer.logLink')}
+      </a>
+      {/* Privacy policy link */}
+      <a href={`/${lang}/privacy/`} class="footer__privacy-link">
+        {t(lang, 'footer.privacyLink')}
+      </a>
+      {/* Language switcher — moved from header */}
+      <a
+        href={altHref}
+        hreflang={altLang}
+        class="footer__lang-switch"
+        id="footer-lang-switch"
+        aria-label={`// lang: ${lang} → ${altLang} — ${t(lang, 'footer.langSwitchLabel')}`}
+      >
+        <span class="footer__lang-comment">// lang:</span>
+        <span class="footer__lang-value">{lang}</span>
+        <span class="footer__lang-arrow">→ {altLang}</span>
+      </a>
+      <a
+        href="https://github.com/smartbulldog-pro"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="footer__social-link"
+        aria-label={`GitHub — ${newTab}`}
+      >
+        {/* GitHub icon */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"
+          ></path>
+        </svg>
+      </a>
+      <a
+        href="https://www.linkedin.com/in/smartbulldog"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="footer__social-link"
+        aria-label={`LinkedIn — ${newTab}`}
+      >
+        {/* LinkedIn icon */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path
+            d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+          ></path>
+        </svg>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--border-subtle);
+    padding-block: var(--space-8);
+    background: var(--bg-void);
+  }
+
+  .footer__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+
+  .footer__left {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .footer__copyright {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .footer__built {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+  }
+
+  .footer__tech-link {
+    color: var(--accent-green-400);
+    text-decoration: none;
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  .footer__tech-link:hover {
+    color: var(--accent-green-300);
+  }
+
+  .footer__deployed {
+    color: var(--text-ghost);
+  }
+
+  .footer__links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .footer__social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: var(--transition-all);
+  }
+
+  .footer__social-link:hover {
+    color: var(--accent-green-300);
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glow-green);
+  }
+
+  .footer__privacy-link {
+    /* Standalone footer nav links (not inline in a sentence like the tech links
+       above), so WCAG 2.5.8's inline exemption does not apply — give them a 24px
+       tap target. Text size/appearance unchanged. */
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--duration-normal) var(--ease-out);
+    white-space: nowrap;
+  }
+
+  .footer__privacy-link:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* ── Language switcher (moved from header) ───────────────── */
+  .footer__lang-switch {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-decoration: none;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-3);
+    transition: var(--transition-all);
+    flex-shrink: 0;
+  }
+
+  .footer__lang-comment {
+    color: var(--text-ghost);
+  }
+
+  .footer__lang-value {
+    color: var(--accent-green-300);
+    font-weight: var(--weight-medium);
+  }
+
+  .footer__lang-arrow {
+    color: var(--text-muted);
+    margin-left: var(--space-1);
+  }
+
+  .footer__lang-switch:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glow-green);
+    background: hsla(155, 65%, 50%, 0.05);
+  }
+
+  /* ── Mobile: let the right-side link row wrap ─────────────────
+     RU copy ("Политика конфиденциальности") is long enough that, combined
+     with the nowrap lang-switch pill + 2 social icons, .footer__links
+     overflowed the viewport at narrow widths (horizontal scroll on RU
+     home, colliding with the fixed Synapse orb). Desktop has ample room
+     so this media query never changes the wide-viewport layout. */
+  @media (max-width: 639px) {
+    .footer__links {
+      flex-wrap: wrap;
+      row-gap: var(--space-3);
+    }
+
+    .footer__privacy-link {
+      white-space: normal;
+    }
+  }
+
+  /* ── Mobile: 44px touch targets ───────────────────────────────
+     Measured from the declarations above: the social buttons render 36×36
+     (width/height 36px, and the global reset sets box-sizing: border-box, so
+     the 1px border is inside — 36, not 38); the nav links render 24px
+     (min-height 24 vs. an 11.2px × 1.6 line box ≈ 18px); the language pill
+     renders ≈28px (17.9px line box + 8px padding + 2px border). All three clear
+     WCAG 2.5.8 AA (24px) but miss this project's own 44×44 bar, which is the
+     one that matters on a phone — a 36px icon square and a 24px text link are
+     genuinely hard to hit with a thumb.
+
+     Desktop is deliberately left alone: with a mouse the existing sizes are
+     comfortable and growing them would change a tuned layout. Same split, same
+     767px breakpoint as InnerHeader.astro and PricingCard.astro — the pattern
+     already accepted in this codebase.
+
+     MUST stay after the base rules (and after the 639px block): all of these
+     selectors are single-class, so specificity is equal and only source order
+     decides. Moved above .footer__social-link / .footer__privacy-link, this
+     block silently does nothing. */
+  @media (max-width: 767px) {
+    .footer__social-link {
+      width: 44px;
+      height: 44px;
+    }
+
+    .footer__privacy-link {
+      min-height: 44px;
+    }
+
+    .footer__lang-switch {
+      min-height: 44px;
+    }
+  }
+</style>

@@ -1,0 +1,413 @@
+---
+/**
+ * LabSection — AI microservices showcase
+ *
+ * 3 glassmorphism cards with magnetic hover (Svelte island).
+ * Cards "fly out of depth" on scroll via GSAP ScrollTrigger.
+ *
+ * Microservices (in priority order):
+ *   1. Edge Tokenizer Profiler
+ *   2. Prompt Architect
+ *   3. Embedding Space Explorer
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import MagneticCard from '@components/ui/MagneticCard.svelte';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const cards = [
+  {
+    key: 'tokenizer',
+    href: `/${lang}/lab/tokenizer/`,
+    image: '/icons/lab-tokenizer.jpg',
+    alt: t(lang, 'lab.tokenizer.previewAlt'),
+    accent: 'green',
+  },
+  {
+    key: 'prompt',
+    href: `/${lang}/lab/prompt/`,
+    image: '/icons/lab-prompt.jpg',
+    alt: t(lang, 'lab.prompt.previewAlt'),
+    accent: 'blue',
+  },
+  {
+    key: 'embeddings',
+    href: `/${lang}/lab/embeddings/`,
+    image: '/icons/lab-embeddings.jpg',
+    alt: t(lang, 'lab.embeddings.previewAlt'),
+    accent: 'green',
+  },
+] as const;
+---
+
+<section class="lab-section" id="lab" aria-labelledby="lab-heading">
+  <div class="container">
+    {/* Section header */}
+    <div class="lab__header js-lab-header">
+      <p class="text-mono lab__label">{t(lang, 'services.proofEyebrow')}</p>
+      <h2 id="lab-heading" class="lab__title">{t(lang, 'lab.title')}</h2>
+      <p class="lab__subtitle">{t(lang, 'lab.subtitle')}</p>
+    </div>
+
+    {/* Cards grid */}
+    <div class="lab__grid" role="list">
+      {
+        cards.map((card, index) => (
+          <div class="lab__card-wrap js-lab-card" style={`--card-index: ${index}`} role="listitem">
+            <MagneticCard client:visible strength={0.2}>
+              <a
+                href={card.href}
+                class={`lab__card glass-panel lab__card--${card.accent}`}
+                id={`lab-card-${card.key}`}
+              >
+                {/* Hero illustration */}
+                <div class={`lab__card-visual lab__card-visual--${card.accent}`}>
+                  <picture>
+                    <source srcset={card.image.replace('.jpg', '.avif')} type="image/avif" />
+                    <source srcset={card.image.replace('.jpg', '.webp')} type="image/webp" />
+                    <img src={card.image} alt={card.alt} class="lab__card-image" loading="lazy" />
+                  </picture>
+                </div>
+
+                {/* Content */}
+                <div class="lab__card-content">
+                  <h3 class="lab__card-title">{t(lang, `lab.${card.key}.title`)}</h3>
+                  <p class="lab__card-desc">{t(lang, `lab.${card.key}.description`)}</p>
+                </div>
+
+                {/* CTA arrow */}
+                <span class="lab__card-cta text-mono">{t(lang, 'lab.open')}</span>
+
+                {/* Hover glow overlay */}
+                <div class="lab__card-glow" aria-hidden="true" />
+              </a>
+            </MagneticCard>
+          </div>
+        ))
+      }
+    </div>
+
+    {/* Bridge back to the paid ladder — the free tier should never dead-end */}
+    <a class="lab__all-services" href={`/${lang}/services/`}
+      >{t(lang, 'services.allServices')} <span aria-hidden="true">→</span></a
+    >
+  </div>
+</section>
+
+<style>
+  /* ── Section layout ────────────────────────────────────── */
+  .lab-section {
+    padding-block: var(--section-gap);
+    background: var(--bg-obsidian);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Radial ambient glow */
+  .lab-section::before {
+    content: '';
+    position: absolute;
+    top: 30%;
+    right: -5%;
+    width: 50%;
+    height: 70%;
+    background: radial-gradient(ellipse at center, hsla(225, 65%, 55%, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Section header ────────────────────────────────────── */
+  /* No resting opacity: 0 — section-animations.ts' fromTo() applies its own
+     "from" state immediately on init; a blocked/failed script must leave
+     this content visible, not permanently hidden (etalon rule). */
+  .lab__header {
+    margin-bottom: var(--space-16);
+  }
+
+  .lab__label {
+    margin-bottom: var(--space-4);
+  }
+
+  .lab__title {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .lab__subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    max-width: 56ch;
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Cards grid ────────────────────────────────────────── */
+  .lab__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .lab__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .lab__card-wrap {
+    /* No static opacity/transform hidden-state — see .lab__header comment
+       above; the entrance tween's own immediateRender covers the happy
+       path, so the resting CSS state must stay visible. */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Card ──────────────────────────────────────────────── */
+  .lab__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--space-8);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-all);
+    height: 100%;
+    /* Glass panel styles */
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .lab__card {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .lab__card:hover {
+    background: linear-gradient(
+      135deg,
+      hsla(155, 50%, 50%, 0.07) 0%,
+      hsla(225, 50%, 50%, 0.07) 100%
+    );
+  }
+
+  /* Hover lift/zoom is motion, not just a color/glow shift — kept fully
+     behind reduced-motion (PricingCard's own precedent) so those users get
+     an identical resting card with a color/glow-only hover, never a forced
+     scale or nudge. */
+  @media (prefers-reduced-motion: no-preference) {
+    .lab__card:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  .lab__card--green:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .lab__card--blue:hover {
+    border-color: var(--accent-blue-300);
+    box-shadow: var(--glass-shadow), var(--glow-blue);
+  }
+
+  /* `<picture>` is inline by default — make it a transparent wrapper so the
+     `<img>` inside fills `.lab__card-visual` exactly as before. */
+  picture {
+    display: contents;
+  }
+
+  /* ── Card illustration ─────────────────────────────────── */
+  .lab__card-visual {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* Gradient mask at bottom for seamless blend */
+  .lab__card-visual::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to top, var(--glass-bg) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .lab__card-visual--green {
+    border: 1px solid hsla(155, 65%, 50%, 0.15);
+    box-shadow: inset 0 0 20px hsla(155, 65%, 50%, 0.05);
+  }
+
+  .lab__card-visual--blue {
+    border: 1px solid hsla(225, 65%, 55%, 0.15);
+    box-shadow: inset 0 0 20px hsla(225, 65%, 55%, 0.05);
+  }
+
+  .lab__card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lab__card:hover .lab__card-image {
+      transform: scale(1.06);
+    }
+  }
+
+  .lab__card:hover .lab__card-visual--green {
+    border-color: hsla(155, 65%, 50%, 0.35);
+    box-shadow:
+      inset 0 0 30px hsla(155, 65%, 50%, 0.1),
+      0 0 16px hsla(155, 65%, 50%, 0.15);
+  }
+
+  .lab__card:hover .lab__card-visual--blue {
+    border-color: hsla(225, 65%, 55%, 0.35);
+    box-shadow:
+      inset 0 0 30px hsla(225, 65%, 55%, 0.1),
+      0 0 16px hsla(225, 65%, 55%, 0.15);
+  }
+
+  /* ── Card content ──────────────────────────────────────── */
+  .lab__card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .lab__card-title {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    line-height: var(--leading-snug);
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  .lab__card--green:hover .lab__card-title {
+    color: var(--accent-green-200);
+  }
+
+  .lab__card--blue:hover .lab__card-title {
+    color: var(--accent-blue-200);
+  }
+
+  .lab__card-desc {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── CTA link ──────────────────────────────────────────── */
+  .lab__card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+    transition: var(--transition-all);
+    opacity: 0.6;
+    margin-top: auto;
+  }
+
+  .lab__card--green .lab__card-cta {
+    color: var(--accent-green-300);
+  }
+
+  /* blue-300 measured 3.55:1 against this card's real background stack at
+     11.84px — below the 4.5:1 needed for normal text, and the single finding in
+     the whole audit that axe and Lighthouse report as a violation rather than a
+     judgement call. The two green cards sit at 9.16:1 on the same background.
+     Raised one step, to ~4.8:1, HERE rather than on the token: --accent-blue-300
+     has six users and four of them are borders and backgrounds, which answer to
+     a 3:1 threshold — lifting the token would repaint the Synapse terminal and
+     the tokenizer model chips to fix a link. */
+  .lab__card--blue .lab__card-cta {
+    color: var(--accent-blue-200);
+  }
+
+  .lab__card:hover .lab__card-cta {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lab__card:hover .lab__card-cta {
+      transform: translateX(4px);
+    }
+  }
+
+  /* Touch devices never fire :hover — without this the "Open" affordance
+     rested permanently dim on the exact device class that most needs it
+     (no cursor to signal the card is a link). :active gives tap-down a
+     moment of feedback; hover-capable hybrids keep the rule above. */
+  @media (hover: none) {
+    .lab__card-cta {
+      opacity: 0.85;
+    }
+
+    .lab__card:active .lab__card-cta {
+      opacity: 1;
+    }
+  }
+
+  /* ── Hover glow overlay ────────────────────────────────── */
+  .lab__card-glow {
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-card-hover);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .lab__card:hover .lab__card-glow {
+    opacity: 1;
+  }
+
+  /* ── Bridge to the paid ladder ─────────────────────────── */
+  .lab__all-services {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    margin-top: var(--space-10);
+    color: var(--accent-green-400);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    text-decoration: none;
+    transition: var(--transition-colors);
+  }
+
+  .lab__all-services:hover {
+    color: var(--accent-green-300);
+  }
+</style>

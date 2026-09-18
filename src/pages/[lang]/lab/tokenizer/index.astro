@@ -1,0 +1,210 @@
+---
+import { getImage } from 'astro:assets';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import InnerHeader from '../../../../components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import TokenizerApp from '../../../../components/lab/tokenizer/TokenizerApp.svelte';
+import LabCopilot from '../../../../components/lab/LabCopilot.svelte';
+import FaqSection from '../../../../components/sections/FaqSection.astro';
+import LabToolsNav from '../../../../components/lab/LabToolsNav.astro';
+import LabServiceBridge from '@components/lab/LabServiceBridge.astro';
+import { LAB_FAQ } from '../../../../data/lab-faq';
+import { t } from '../../../../i18n/utils';
+import heroArt from '@/assets/lab/tokenizer-hero.png';
+
+export function getStaticPaths() {
+  return [{ params: { lang: 'en' } }, { params: { lang: 'ru' } }];
+}
+
+const { lang } = Astro.params;
+const activeLang = (lang as 'en' | 'ru') || 'en';
+
+/**
+ * LCP preload for the hero still. PageHero cannot emit this itself — an Astro
+ * slot does not travel from a nested component up to BaseLayout's `head` slot
+ * — so the link stays here (blocks/README.md, "What it does NOT do").
+ * The widths MUST equal the ones the component requests, or the preload is a
+ * second download: the master is 1280 wide, so PageHero derives exactly
+ * [768, 1280] from it.
+ */
+const HERO_WIDTHS = [768, 1280] as const;
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+const seoData = {
+  en: {
+    title: 'Edge Tokenizer Profiler | VKVstudio Lab',
+    description:
+      'Visualize how LLMs see your text. Compare token counts, costs, and context usage across models in real time.',
+  },
+  ru: {
+    title: 'Edge Tokenizer Profiler | VKVstudio Лаборатория',
+    description:
+      'Визуализируйте, как LLM видят ваш текст. Сравнивайте токены, стоимость и использование контекстного окна для моделей в реальном времени.',
+  },
+};
+
+const meta = seoData[activeLang] || seoData.en;
+
+const homeUrl = `https://vkvstudio.com/${activeLang}/`;
+const toolUrl = `https://vkvstudio.com/${activeLang}/lab/tokenizer/`;
+
+const faq = LAB_FAQ.tokenizer;
+
+const jsonLd = [
+  // Built from the same array the visible section below maps over. Google
+  // stopped showing FAQ rich results for sites like this one in 2023, so the
+  // rendered answers are what earns the ranking; this block is here because
+  // AI answer engines still read it, and because it costs nothing to keep the
+  // machine-readable copy exactly equal to the human-readable one.
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q[activeLang],
+      acceptedAnswer: { '@type': 'Answer', text: item.a[activeLang] },
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Edge Tokenizer Profiler',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'All',
+    url: toolUrl,
+    description: meta.description,
+    featureList:
+      activeLang === 'ru'
+        ? [
+            'Подсчёт токенов в реальном времени для GPT, Gemini, Claude и Llama',
+            'Сравнение стоимости между моделями',
+            'Визуализация использования контекстного окна',
+            'Открытые токенизаторы считаются в браузере; для Claude и Gemini точное число берётся через API',
+          ]
+        : [
+            'Real-time token counts for GPT, Gemini, Claude, and Llama',
+            'Side-by-side cost comparison across models',
+            'Context-window usage visualization',
+            'Open tokenizers run in your browser; Claude and Gemini get their exact counts through an API',
+          ],
+    // @id reference, NOT a fresh inline Person. Inlining one here created a
+    // SECOND, anonymous "Valerii" node on the same page alongside the
+    // "Valerii Karpov" defined in BaseLayout — the exact entity fragmentation
+    // the @id graph exists to prevent. Confirmed by validator.schema.org,
+    // which rendered them as two separate people.
+    // Note also: this SoftwareApplication node is deliberately kept even
+    // though Google's Rich Results Test flags it as missing
+    // aggregateRating/review. Those require real user ratings; inventing them
+    // is spam markup and a manual-action risk. The node stays because AI
+    // answer engines read it, and it is truthful.
+    author: { '@id': 'https://vkvstudio.com/#person' },
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t(activeLang, 'nav.home'), item: homeUrl },
+      { '@type': 'ListItem', position: 2, name: t(activeLang, 'nav.lab'), item: `${homeUrl}#lab` },
+      { '@type': 'ListItem', position: 3, name: t(activeLang, 'tokenizer.title'), item: toolUrl },
+    ],
+  },
+];
+---
+
+<BaseLayout title={meta.title} description={meta.description} lang={lang} jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={activeLang} />
+  <main id="main-content" class="lab-page">
+    {
+      /* The shared inner-page hero. Copy is unchanged — the same three i18n
+         keys the hand-written header read. What is new is the art: the page
+         had none because src/assets/lab/ did not exist, which is why the
+         header read as empty however faithfully the etalon CSS was copied
+         (.system/gaps/gap-lab.md).
+
+         NO `plexus` on the three Lab pages, deliberately. These carry the
+         heaviest islands on the site (tokenizer engine, WebGL, workers) and
+         NeuralPlexus is another client:idle Svelte island — a second animated
+         canvas competing with the tool for the same main thread. The art
+         already breathes; that is the movement the header was missing.
+
+         The page's own scroll-hint <script> went with the markup. Behaviour
+         is unchanged: PageHero rides Lenis only when `window.lenisInstance`
+         exists, and Lenis is still never initialised on these three pages
+         (nothing here imports initLenis), so the click resolves to the same
+         native scrollIntoView it always did. The house rule stands — page
+         shell only, never touch the island's own wheel/keyboard handling. */
+    }
+    <PageHero
+      lang={activeLang}
+      eyebrow={t(activeLang, 'nav.lab').toLowerCase()}
+      title={t(activeLang, 'tokenizer.title')}
+      lede={t(activeLang, 'tokenizer.subtitle')}
+      image={heroArt}
+      scrim="center"
+      scrollTarget="#lab-tool"
+    />
+
+    <section class="lab-content" id="lab-tool">
+      <div class="container">
+        <TokenizerApp lang={activeLang} client:idle />
+      </div>
+    </section>
+
+    <FaqSection
+      lang={activeLang}
+      items={faq.items}
+      heading={faq.heading[activeLang]}
+      id="tokenizer-faq"
+    />
+
+    {
+      /* The free tier must not dead-end: after the FAQ the visitor has
+        actually used the tool, and LabToolsNav alone would only loop
+        them back to the other two free ones. */
+    }
+    <LabServiceBridge lang={activeLang} tool="tokenizer" />
+
+    <LabToolsNav lang={activeLang} current="tokenizer" />
+
+    <LabCopilot tool="tokenizer" lang={activeLang} client:idle />
+  </main>
+</BaseLayout>
+
+<style>
+  .lab-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  /* No fixed header on this page (InnerHeader is static, not fixed) — a
+     desktop-sized top offset is just dead air on a phone. */
+  @media (max-width: 767px) {
+    .lab-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* The tool's own anchor. Without it the scroll hint parks the section flush
+     against the top edge of the window (precedent: .log-entry in
+     log/index.astro). */
+  .lab-content {
+    scroll-margin-top: var(--space-24);
+  }
+
+  .lab-content .container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    /* Mirrors .container's safe-area guard (global.css) — this scoped rule
+       outranks the global one, and the flat 16px it used to write here made
+       the tool the widest section on the site and dropped the notch guard
+       that `max(..., env())` exists for. Same form as the prompt page. */
+    padding-left: max(var(--container-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right, 0px));
+  }
+</style>

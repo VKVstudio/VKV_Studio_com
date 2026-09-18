@@ -1,0 +1,119 @@
+---
+/**
+ * 404 page.
+ *
+ * Without this file Cloudflare Pages falls back to serving dist/index.html for
+ * any unmatched path — which is the meta-refresh redirect shell from
+ * index.astro. The result was that EVERY unknown URL answered **HTTP 200** and
+ * bounced the visitor to /en/: an unbounded crawlable URL space all returning
+ * the same "page", and Soft 404 errors in Search Console. Astro emits this file
+ * as dist/404.html, which Pages serves with a real 404 status.
+ *
+ * Deliberately bilingual and static: a 404 can be reached from either locale (or
+ * from none — a bare mistyped path has no language), so it shows both rather
+ * than guessing. No Svelte islands, no fonts, no video — an error page should be
+ * the cheapest thing on the site.
+ */
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- An error page must never be indexed, and must not pass link equity. -->
+    <meta name="robots" content="noindex, follow" />
+    <title>404 — Page not found | VKVstudio</title>
+  </head>
+  <body>
+    <main>
+      <p class="code">404</p>
+      <h1>This page doesn't exist</h1>
+      <p class="sub"><span lang="ru">Такой страницы нет.</span></p>
+
+      <nav aria-label="Where to go next">
+        <a href="/en/">← Home</a>
+        <a href="/ru/">← <span lang="ru">Главная</span></a>
+      </nav>
+
+      <p class="hint">The Lab / <span lang="ru">Лаборатория</span></p>
+      <nav aria-label="Lab tools">
+        <a href="/en/lab/tokenizer/">Tokenizer</a>
+        <a href="/en/lab/prompt/">Prompt Architect</a>
+        <a href="/en/lab/embeddings/">Embeddings</a>
+      </nav>
+    </main>
+
+    <style is:global>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #05070a;
+        color: #e6f2ef;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        text-align: center;
+        padding: 2rem 1.25rem;
+      }
+      main {
+        max-width: 34rem;
+      }
+      .code {
+        margin: 0;
+        font-family: ui-monospace, 'JetBrains Mono', 'Cascadia Code', monospace;
+        font-size: clamp(3.5rem, 14vw, 6rem);
+        line-height: 1;
+        letter-spacing: -0.04em;
+        color: #30e8e8;
+      }
+      h1 {
+        margin: 0.75rem 0 0.25rem;
+        font-size: clamp(1.25rem, 4vw, 1.75rem);
+        font-weight: 600;
+      }
+      .sub {
+        margin: 0 0 2rem;
+        color: #8fa6a2;
+      }
+      .hint {
+        margin: 2.25rem 0 0.75rem;
+        font-size: 0.8rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #64807c;
+      }
+      nav {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      nav a {
+        /* 24px minimum target size — WCAG 2.2 SC 2.5.8, same rule applied
+           across the rest of the site. */
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 1rem;
+        border: 1px solid #1d3330;
+        border-radius: 999px;
+        color: #cfe9e4;
+        text-decoration: none;
+        transition: border-color 0.2s ease-out, color 0.2s ease-out;
+      }
+      nav a:hover,
+      nav a:focus-visible {
+        border-color: #30e8e8;
+        color: #ffffff;
+      }
+    </style>
+  </body>
+</html>

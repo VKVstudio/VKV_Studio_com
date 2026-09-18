@@ -1,0 +1,1018 @@
+---
+/**
+ * /contact/ — the funnel. Twenty pages already point here ("Start a
+ * conversation"), and the site FAQ promises "four short questions" — this
+ * page IS that promise. Written-first by design: the deliverable of the
+ * form is a written reply from the engineer within one business day; the
+ * 30-minute call is the optional second door (Cal.com link-out, never an
+ * embed — CSP and the Lighthouse-100 budget both say no third-party
+ * scripts).
+ *
+ * The form has no backend on purpose (CSP form-action 'none'): answers
+ * become a prefilled email in the visitor's OWN mail client. Nothing is
+ * collected, nothing can leak — stated on the page, because for a buyer
+ * being sold "your data never leaves your infrastructure", a contact form
+ * that provably cannot leak is proof of worldview, not a limitation.
+ */
+import { Image, Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import FaqSection from '@components/sections/FaqSection.astro';
+import ContactFunnel from '@components/contact/ContactFunnel.svelte';
+import portrait from '@/assets/people/valerii-lens.png';
+import heroArt from '@/assets/contact/contact-hero.png';
+import { CAL_BOOKING_URL, CONTACT_EMAIL } from '@/lib/site-config';
+import { SITE_ORIGIN } from '@/data/services';
+import { breadcrumbNode, faqPageNode } from '@/lib/services-jsonld';
+import type { FaqItem } from '@/data/faq';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+// This page's own mini-FAQ (Princeton GEO: FAQPage markup on a page that
+// already answers these questions measurably lifts AI-citation odds). No
+// aggregateRating, ever — see services-jsonld.ts's house rule.
+const CONTACT_FAQ: FaqItem[] = [
+  {
+    q: {
+      en: 'Do I need to book a call first?',
+      ru: 'Нужно ли сначала записываться на созвон?',
+    },
+    a: {
+      en: 'No. The funnel is written-first: four short questions produce a written reply from the engineer within one business day. A 30-minute call is optional and appears only after you submit the form, or you can book one anytime through the Cal.com link.',
+      ru: 'Нет. Воронка построена вокруг письма: четыре коротких вопроса — и вы получаете письменный ответ инженера в течение одного рабочего дня. 30-минутный созвон необязателен и появляется только после отправки формы, либо вы можете записаться на него в любой момент по ссылке Cal.com.',
+    },
+  },
+  {
+    q: {
+      en: 'How fast will I get a reply?',
+      ru: 'Как быстро придёт ответ?',
+    },
+    a: {
+      en: 'Within one business day, on EU business hours (the engineer works from GMT+4). Messages sent on a weekend or a holiday are answered on the next business day.',
+      ru: 'В течение одного рабочего дня, в часы ЕС (инженер работает из часового пояса GMT+4). Сообщения, отправленные в выходной или праздник, получают ответ в следующий рабочий день.',
+    },
+  },
+  {
+    q: {
+      en: 'Who actually reads what I write?',
+      ru: 'Кто на самом деле читает то, что я пишу?',
+    },
+    a: {
+      en: 'Valerii — the engineer who would do the work — reads it himself. There is no sales team and no intake form that routes to someone else; the person who answers is the person who would build the project.',
+      ru: 'Валерий — инженер, который будет выполнять работу, — читает сообщение сам. Нет ни отдела продаж, ни формы, которая передаёт сообщение кому-то ещё: отвечает тот же человек, который будет делать проект.',
+    },
+  },
+  {
+    q: {
+      en: 'What happens after I send the form?',
+      ru: 'Что происходит после отправки формы?',
+    },
+    a: {
+      en: 'You get an honest, written read on fit, approach and budget within one business day — not a sales pitch. If the project is not a good fit, that is what the reply will say, and why.',
+      ru: 'В течение одного рабочего дня вы получаете честную письменную оценку задачи, подхода и бюджета — а не рекламный питч. Если проект не подходит, в ответе так и будет написано и объяснено, почему.',
+    },
+  },
+];
+
+const copy = {
+  en: {
+    title: 'Hire an AI & Web Engineer — Contact | VKVstudio',
+    description:
+      'Hire an AI/web engineer directly — no sales inbox. You get a written reply within one business day: an honest read on fit, approach and budget.',
+    h1: 'Start the conversation in writing',
+    lede: 'Four short answers — that is the whole form. You get a written reply from the engineer himself within one business day: an honest read on fit, approach and budget. No call required; if you want one anyway, the calendar link appears after the form.',
+    formHeading: 'four questions',
+    directPre: 'Prefer plain email? Write to ',
+    directPost: ' — same promise, same person.',
+    calPre: 'Prefer to talk it through first? ',
+    calLink: 'Book a 30-minute call',
+    calPost: ' — anytime, no form required; the same person answers.',
+    answerer:
+      'Your answers land with Valerii — the engineer who does the work: RAG assistants, self-hosted AI, AI-visibility audits and Astro sites — not a sales inbox.',
+    answererAlt: 'Valerii Karpov, the engineer who replies, holding a lens to his eye',
+    backendNote:
+      'This form has no backend by design: your answers become an email in your own mail client, and nothing is sent or stored until you press Send there.',
+    linksLinePre: 'Not sure what to ask yet? The ',
+    linksLineLadder: 'service ladder',
+    linksLineMid: ' and prices are public, and ',
+    linksLineTrust: 'Trust & Process',
+    linksLinePost: ' answers the procurement questions in advance.',
+    labels: {
+      company: 'Company or website',
+      companyHint: 'acme.com',
+      task: 'What needs to be done?',
+      taskHint:
+        'A few sentences are enough: what you sell, what should change, what made you look for help now.',
+      budget: 'Budget range',
+      timeline: 'When',
+      choose: 'Choose…',
+      submit: 'Compose the email',
+      successHeading: 'Your email is drafted',
+      successBody:
+        'The button opens the draft in your own mail client — nothing is sent until you press Send there. This form has no backend, by design: your answers exist only in this tab and in the email you control. Send it, and a written reply lands within one business day. If no mail app opens, use the address below the form — same email, same promise.',
+      openMail: 'Open the email draft',
+      orCal: 'Or book a 30-minute call instead',
+      editAnswers: 'Edit your answers',
+      replyPromise:
+        'A written reply within one business day — EU hours, GMT+4. Contract and NDA before any work beyond the audit.',
+      errors: {
+        required: 'This one is needed to answer you properly.',
+        'too-short': 'Add a sentence or two — enough to answer in writing.',
+        'too-long': 'That is more than the field can hold — trim it a little.',
+      },
+    },
+  },
+  ru: {
+    title: 'Связаться с AI-инженером | VKVstudio',
+    description:
+      'Напишите инженеру напрямую — без отдела продаж. Письменный ответ в течение одного рабочего дня: честная оценка задачи, подхода и бюджета.',
+    h1: 'Начните разговор с письма',
+    lede: 'Четыре коротких ответа — это вся форма. Вы получаете письменный ответ самого инженера в течение одного рабочего дня: честную оценку задачи, подхода и бюджета. Созвон не обязателен; если он всё же нужен — ссылка на календарь появится после формы.',
+    formHeading: 'четыре вопроса',
+    directPre: 'Привычнее написать напрямую? Пишите на ',
+    directPost: ' — обещание то же, человек тот же.',
+    calPre: 'Хотите сначала обсудить голосом? ',
+    calLink: 'Забронируйте 30-минутный созвон',
+    calPost: ' — в любое время, без формы; отвечает тот же человек.',
+    answerer:
+      'Ваши ответы попадают к Валерию — инженеру, который делает работу: RAG-ассистенты, self-hosted AI, аудиты ИИ-видимости и сайты на Astro, — а не в отдел продаж.',
+    answererAlt: 'Валерий Карпов — инженер, который ответит, — с лупой у глаза',
+    backendNote:
+      'У этой формы намеренно нет бэкенда: ответы превращаются в письмо в вашем почтовом клиенте, и ничего не отправляется и не сохраняется, пока вы сами не нажмёте «Отправить».',
+    linksLinePre: 'Не знаете, с чего начать? ',
+    // The link label is the destination, not the whole clause — and the
+    // fragment after it must not OPEN with punctuation: the template puts a
+    // line break between `</a>` and this string, and Astro keeps that
+    // whitespace, so a leading comma rendered as «открыты , а». The leading
+    // space here mirrors the EN shape and is collapsed by HTML either way.
+    linksLineLadder: 'Лестница услуг',
+    linksLineMid: ' и цены открыты, а ',
+    linksLineTrust: '«Доверие и процесс»',
+    linksLinePost: ' заранее отвечает на вопросы отдела закупок.',
+    labels: {
+      company: 'Компания или сайт',
+      companyHint: 'acme.com',
+      task: 'Что нужно сделать?',
+      taskHint:
+        'Достаточно нескольких предложений: что вы продаёте, что должно измениться, почему стали искать помощь именно сейчас.',
+      budget: 'Вилка бюджета',
+      timeline: 'Когда',
+      choose: 'Выберите…',
+      submit: 'Составить письмо',
+      successHeading: 'Письмо готово',
+      successBody:
+        'Кнопка откроет черновик в вашем почтовом клиенте — ничего не отправится, пока вы сами не нажмёте «Отправить». Бэкенда у формы нет, намеренно: ваши ответы существуют только в этой вкладке и в письме, которым управляете вы. Отправьте — и письменный ответ придёт в течение одного рабочего дня. Если почтовый клиент не открылся, напишите на адрес под формой — то же письмо, то же обещание.',
+      openMail: 'Открыть черновик письма',
+      orCal: 'Или выбрать время для 30-минутного созвона',
+      editAnswers: 'Изменить ответы',
+      replyPromise:
+        'Письменный ответ в течение одного рабочего дня — часы ЕС, GMT+4. Договор и NDA — до начала работ, кроме аудита.',
+      errors: {
+        required: 'Без этого не получится ответить предметно.',
+        'too-short': 'Ещё предложение-два — чтобы ответить письменно и по делу.',
+        'too-long': 'Это больше, чем вмещает поле, — сократите немного.',
+      },
+    },
+  },
+}[lang];
+
+// The hero art is this page's mobile LCP element. The master is a 1280px
+// still (checked against the PNG's own IHDR), so the preload/srcset widths
+// stop at 1280 — requesting 1920 from a 1280 master silently clamps and
+// duplicates the 1280 URL (etalon: services/index.astro).
+const heroPreloads = await Promise.all(
+  [768, 1280].map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${[768, 1280][i]}w`).join(', ');
+
+const pageUrl = `${SITE_ORIGIN}/${lang}/contact/`;
+const jsonLd = [
+  breadcrumbNode(lang, [
+    { name: t(lang, 'nav.home'), item: `${SITE_ORIGIN}/${lang}/` },
+    { name: t(lang, 'nav.contact'), item: pageUrl },
+  ]),
+  faqPageNode(lang, CONTACT_FAQ),
+];
+---
+
+<BaseLayout
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  jsonLd={jsonLd}
+  ogImage="/og-contact.jpg"
+  pageType={['WebPage', 'ContactPage']}
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="contact-page">
+    {
+      /* Hero in the etalon's (geo-audit) idiom family: glass-pill eyebrow
+         with the breathing glow, the h1 clipping the neural texture into
+         its glyphs word-by-word, the entrance cascade, the lede's periodic
+         glow. The ComfyUI art layer lands here once the owner approves a
+         sketch (still first, then the morph loop — same pipeline as the
+         geo hero). */
+    }
+    <header class="contact-hero">
+      {
+        /* The signal in flight: one thread crossing the frame, a message
+           pulse mid-way — passing right behind the title. Generated
+           in-house (ComfyUI, Z-Image). */
+      }
+      <div class="contact-hero__art" aria-hidden="true" id="contact-hero-art">
+        <Picture
+          src={heroArt}
+          formats={['avif', 'webp']}
+          widths={[768, 1280]}
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+        {
+          /* The living signal: light leaves the centre along the thread —
+             one stream to the envelope, one to the calendar. A letter,
+             answered. Composited rather than generated (tools/art/
+             contact-sparks.py traces the thread in this very still and runs
+             the light along it), so the background never drifts and the loop
+             is seamless by construction. Same gating as every hero loop. */
+        }
+        <video
+          id="contact-hero-video"
+          class="contact-hero__video"
+          muted
+          loop
+          playsinline
+          preload="none"
+          data-webm="/contact-hero-loop.webm"
+          data-mp4="/contact-hero-loop.mp4"></video>
+      </div>
+      {
+        /* Born at the knot where the thread splits toward the envelope and the
+           calendar — the same point the sparks leave from, measured in the
+           loop's own frame (638, 385 of 1280×720). */
+      }
+      <NeuralPlexus
+        client:idle
+        originX={0.5014}
+        originY={0.5347}
+        anchor={{
+          selector: '#contact-hero-video',
+          width: 1024,
+          height: 576,
+          x: 0.5014,
+          y: 0.5347,
+        }}
+        originGlow
+        pace={1.8}
+      />
+      <div class="container">
+        {
+          /* The copy sits on a plate: the art behind it is a photograph, and a
+             photograph will always win against unbacked text somewhere. */
+        }
+        <div class="contact-hero__plate hero-plate">
+          <p class="contact-hero__eyebrow text-mono">
+            <span aria-hidden="true">// </span>{t(lang, 'nav.contact').toLowerCase()}
+          </p>
+          <h1 class="contact-hero__title" aria-label={copy.h1}>
+            {
+              copy.h1.split(' ').map((word, wordIdx) => [
+                wordIdx > 0 ? ' ' : null,
+                <span class="contact-hero__word" aria-hidden="true">
+                  {Array.from(word).map((char) => (
+                    <span class="contact-hero__letter">{char}</span>
+                  ))}
+                </span>,
+              ])
+            }
+          </h1>
+          <p class="contact-hero__lede">{copy.lede}</p>
+        </div>
+      </div>
+
+      {/* Full-viewport hero owes the reader a nudge (etalon pattern). */}
+      <button type="button" class="contact-hero__scroll js-contact-scroll-hint">
+        <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14"></path>
+          <path d="m19 12-7 7-7-7"></path>
+        </svg>
+      </button>
+    </header>
+
+    <section class="contact-funnel" id="contact-form" aria-labelledby="contact-form-heading">
+      <div class="container">
+        {
+          /* The page's main block had no heading at all, so its outline read
+             h1 → (unnamed) → h2 FAQ. Visually quiet, structurally load-bearing. */
+        }
+        <h2 id="contact-form-heading" class="contact-funnel__heading text-mono js-contact-reveal">
+          <span aria-hidden="true">// </span>{copy.formHeading}
+        </h2>
+        {
+          /* The face behind the promise — a real photo, no AI retouching.
+             Forms convert to humans, not to inboxes. */
+        }
+        <div class="contact-answerer js-contact-reveal">
+          <Image
+            src={portrait}
+            alt={copy.answererAlt}
+            width={128}
+            height={128}
+            widths={[64, 128]}
+            sizes="64px"
+            class="contact-answerer__photo"
+            loading="lazy"
+            decoding="async"
+          />
+          <p class="contact-answerer__text">{copy.answerer}</p>
+        </div>
+        <ContactFunnel client:visible lang={lang} labels={copy.labels} />
+        {
+          /* The strongest trust claim on the page ("no backend, by design")
+             previously lived only inside the Svelte success panel — serialized
+             island props a crawler never renders. This is the same claim as
+             plain server-rendered text, so it ships in the HTML a machine
+             actually reads. */
+        }
+        <p class="contact-direct js-contact-reveal">{copy.backendNote}</p>
+        <p class="contact-direct js-contact-reveal">
+          {copy.directPre}<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>{copy.directPost}
+        </p>
+        {
+          /* The FAQ below promises a booking link works "anytime" — not
+             only after the form is submitted. This is that link: same
+             CAL_BOOKING_URL the success panel uses, visible before anyone
+             fills anything in, styled no louder than the plain-email
+             fallback above it (secondary door, per site-config.ts). */
+        }
+        <p class="contact-direct js-contact-reveal">
+          {copy.calPre}<a href={CAL_BOOKING_URL} target="_blank" rel="noopener noreferrer"
+            >{copy.calLink}</a
+          >{copy.calPost}
+        </p>
+        <p class="contact-direct js-contact-reveal">
+          {copy.linksLinePre}<a href={`/${lang}/services/`}>{copy.linksLineLadder}</a>
+          {copy.linksLineMid}<a href={`/${lang}/trust/`}>{copy.linksLineTrust}</a>
+          {copy.linksLinePost}
+        </p>
+      </div>
+    </section>
+
+    <FaqSection lang={lang} items={CONTACT_FAQ} id="contact-faq" />
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage scroll engine (etalon manners): Lenis smooths the wheel;
+  // a light cursor parallax on the lede. Reduced motion turns both off at
+  // the source (initLenis returns null; the manners gate themselves).
+  import { initLenis } from '@scripts/lenis-init';
+
+  // The hero loop, gated like every hero loop (etalon recipe verbatim).
+  function initContactVideo(): void {
+    const video = document.getElementById('contact-hero-video') as HTMLVideoElement | null;
+    const art = document.getElementById('contact-hero-art');
+    if (!video || !art) return;
+
+    const wantsMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    const saveData =
+      'connection' in navigator &&
+      (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!wantsMotion || saveData) return;
+
+    const mp4 = video.dataset.mp4 ?? '';
+    let lastVisible = false;
+
+    // The width gate used to be evaluated once at load; a resize across the
+    // 768px breakpoint (fold/unfold, devtools) never re-armed it. Arm once,
+    // the first time the viewport actually qualifies.
+    const arm = (): void => {
+      const webm = video.dataset.webm ?? '';
+      video.src = video.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+
+      // Codec fallback: some browsers advertise webm support but fail to
+      // decode this particular VP9 profile — fall back to the mp4 sibling.
+      video.addEventListener(
+        'error',
+        () => {
+          if (video.src.endsWith('.webm') && mp4) {
+            video.src = mp4;
+            void video.play().catch(() => {});
+          }
+        },
+        { once: true }
+      );
+
+      video.addEventListener(
+        'playing',
+        () => {
+          art.classList.add('contact-hero__art--live');
+        },
+        { once: true }
+      );
+
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            lastVisible = entry.isIntersecting;
+            if (entry.isIntersecting) {
+              void video.play().catch(() => {
+                // Autoplay refused — the breathing still simply remains.
+              });
+            } else {
+              video.pause();
+            }
+          }
+        },
+        { threshold: 0.12 }
+      );
+      io.observe(art);
+
+      // bfcache: browsers pause media on bfcache entry and never
+      // auto-resume it on restore.
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) void video.play().catch(() => {});
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          video.pause();
+        } else if (lastVisible) {
+          void video.play().catch(() => {});
+        }
+      });
+    };
+
+    const mq = window.matchMedia('(min-width: 768px)');
+    if (mq.matches) {
+      arm();
+    } else {
+      mq.addEventListener(
+        'change',
+        (e) => {
+          if (e.matches) arm();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  function initContactManners(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const hero = document.querySelector<HTMLElement>('.contact-hero');
+    const lede = document.querySelector<HTMLElement>('.contact-hero__lede');
+    if (!hero || !lede) return;
+
+    hero.addEventListener(
+      'mousemove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        lede.style.transform = `translate(${nx * -3}px, ${ny * -2}px)`;
+      },
+      { passive: true }
+    );
+
+    hero.addEventListener('mouseleave', () => {
+      lede.style.transform = '';
+    });
+  }
+
+  // The scroll hint keeps its promise: Lenis rides down to the form.
+  /**
+   * Scroll reveal for the second half of the page — a verbatim transplant of
+   * `initTrustMotion` (trust/index.astro:466), which is the site's canonical
+   * recipe. Until now this page had no GSAP at all: everything below the fold
+   * simply stood there, next to an animated hero.
+   *
+   * `gsap.from`, never `fromTo`: the copy is visible in the CSS and the tween
+   * only ever animates TOWARD that state, so a failed import leaves a
+   * readable page rather than an invisible one. `clearProps: 'all'` because an
+   * inline opacity outlives the tween and beats `:hover` — that has bitten
+   * this project before.
+   *
+   * The ContactFunnel island is deliberately NOT a target: it is
+   * `client:visible`, and hiding its wrapper would postpone hydration and tie
+   * a working form to a motion library.
+   */
+  async function initContactMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      document.querySelectorAll<HTMLElement>('.js-contact-reveal').forEach((el) => {
+        // A keyboard user can reach these before the scroll trigger fires —
+        // and four of the six carry real links (the address, the booking
+        // link, /services/, /trust/). Landing focus on an invisible target
+        // is a trap, so focus fast-forwards the element's own tween. Four
+        // other pages already do this; the recipe copied here came from the
+        // one that did not.
+        const tw = gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+        el.addEventListener('focusin', () => tw.progress(1), { once: true });
+      });
+    } catch (err) {
+      console.error('[contact] motion failed to load:', err);
+    }
+  }
+
+  function initContactScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-contact-scroll-hint');
+    const target = document.getElementById('contact-form');
+    if (!hint || !target) return;
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initContactMotion();
+      initContactVideo();
+      initContactManners();
+      initContactScrollHint();
+    });
+  } else {
+    initLenis();
+    void initContactMotion();
+    initContactVideo();
+    initContactManners();
+    initContactScrollHint();
+  }
+</script>
+
+<style>
+  .contact-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .contact-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* ── Hero: the etalon idiom family ─────────────────── */
+  .contact-hero {
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    isolation: isolate;
+    overflow: hidden;
+    /* Full first screen (owner) — the two doors own it, the form waits
+       behind the fold with the scroll hint's promise. */
+    min-height: calc(100vh - 7.5rem);
+    min-height: calc(100svh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .contact-hero__scroll {
+    position: absolute;
+    /* The gesture bar on a modern phone owns the last ~34px of the viewport;
+       a hint pinned at a bare --space-6 sits inside it. */
+    bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease-out;
+  }
+
+  .contact-hero__scroll:hover,
+  .contact-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .contact-hero__scroll svg {
+      animation: contact-scroll-nudge 2.2s ease-in-out 2.5s infinite;
+    }
+  }
+
+  @keyframes contact-scroll-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  .contact-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  /* The thread aligns with the title band; edges fade into the page. */
+  .contact-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 42%;
+    opacity: 0.5;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .contact-hero__art :global(img) {
+      animation: contact-breathe 9s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes contact-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(1.035);
+      filter: brightness(1.18);
+    }
+  }
+
+  .contact-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, var(--bg-obsidian) 2%, transparent 30%),
+      linear-gradient(to top, var(--bg-obsidian) 6%, transparent 40%);
+  }
+
+  .contact-hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 42%;
+    opacity: 0;
+    transition: opacity 1.2s ease-out;
+  }
+
+  .contact-hero__art--live .contact-hero__video {
+    opacity: 0.5;
+  }
+
+  /* Video and still are framed differently — a ghost of the still under
+     the loop doubles the image (owner caught it on trust). Once the loop
+     plays, the still leaves entirely. */
+  .contact-hero__art--live :global(img) {
+    opacity: 0;
+    animation: none;
+  }
+
+  .contact-hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The homepage hero badge (HeroOverlay's .hero-overlay__label): mono on
+     a glass pill, resting green, blue on hover — same literals as there. */
+  .contact-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: hsl(155, 85%, 65%);
+    padding: var(--space-1) var(--space-4);
+    background: hsla(220, 25%, 6%, 0.9);
+    border: 1px solid hsla(155, 50%, 40%, 0.2);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color 0.4s ease-out,
+      border-color 0.4s ease-out,
+      background 0.4s ease-out;
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .contact-hero__eyebrow {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .contact-hero__eyebrow:hover {
+    color: hsl(220, 70%, 65%);
+    border-color: hsla(220, 50%, 50%, 0.25);
+    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
+  }
+
+  /* The neural-texture title (geo-audit's .geo-hero__title recipe — see
+     its comments for why the JPEG fallback lives in @supports and why
+     letter spans must never create their own rendering surface). */
+  .contact-hero__title {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    max-width: 22ch;
+    margin: 0 auto var(--space-5);
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px hsla(180, 80%, 55%, 0.7);
+
+    filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .contact-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  @media (max-width: 767px) {
+    .contact-hero__title {
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+  }
+
+  .contact-hero__word {
+    white-space: nowrap;
+  }
+
+  .contact-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow, 0.4s) var(--ease-out, ease-out),
+      text-shadow var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+    cursor: default;
+  }
+
+  .contact-hero__letter:hover {
+    -webkit-text-stroke-color: hsla(180, 90%, 70%, 0.95);
+    text-shadow:
+      0 0 10px hsla(180, 85%, 60%, 0.55),
+      0 0 22px hsla(180, 85%, 55%, 0.3);
+  }
+
+  .contact-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 60ch;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── Entrance cascade — the etalon's timings, CSS-only ── */
+  @media (prefers-reduced-motion: no-preference) {
+    .contact-hero__eyebrow {
+      animation:
+        contact-fade-up-15 0.6s ease-out 0.15s backwards,
+        contact-eyebrow-breathe 4s ease-in-out 1.5s infinite;
+    }
+
+    .contact-hero__title {
+      animation:
+        contact-title-opacity-in 0.7s ease-out 0.15s backwards,
+        contact-title-transform-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+    }
+
+    .contact-hero__lede {
+      animation:
+        contact-fade-up-15 0.6s ease-out 0.3s backwards,
+        contact-lede-glow 5s ease-in-out 2s infinite;
+    }
+
+    /* The section's load-time entrance is gone: the hero is a full viewport
+       tall, so this block was always below the fold and the 0.8s tween had
+       finished long before anyone scrolled to it — the exact complaint the
+       owner raised on other pages ("it just sits there"). Its replacement is
+       the per-element scroll reveal in initContactMotion, which fires when
+       the reader arrives. The `contact-fade-up-20` keyframes stay: removing
+       them is a deletion, and deletions go through the owner. */
+  }
+
+  @keyframes contact-fade-up-15 {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes contact-fade-up-20 {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes contact-title-opacity-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes contact-title-transform-in {
+    from {
+      transform: translateY(20px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes contact-eyebrow-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes contact-lede-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsla(155, 60%, 60%, 0.08));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .contact-hero__letter {
+      transition: none;
+    }
+  }
+
+  /* The funnel reads at document width, not billboard width. */
+  .contact-funnel .container {
+    max-width: 44rem;
+  }
+
+  .contact-funnel {
+    padding-bottom: var(--space-20);
+  }
+
+  .contact-answerer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .contact-answerer__photo {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--glass-border);
+    flex-shrink: 0;
+  }
+
+  .contact-answerer__text {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    max-width: 40ch;
+    text-align: left;
+  }
+
+  .contact-direct {
+    margin-top: var(--space-6);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .contact-direct a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .contact-direct a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* Same fix as trust: on short phones the pinned hint lands on the last
+     lines of the lede. Static flow puts it under them instead. Placed at
+     the end of the sheet so source order cannot un-do it. The second
+     clause catches the landscape phone (812×375 is wider than 767px, so
+     the width query alone left the hint pinned over the lede). */
+  @media (max-width: 767px), ((max-height: 767px) and (pointer: coarse)) {
+    .contact-hero__scroll {
+      position: static;
+      transform: none;
+      margin-top: var(--space-6);
+    }
+  }
+
+  .contact-funnel__heading {
+    margin-bottom: var(--space-6);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    color: var(--accent-green-300);
+  }
+
+  /* The plate hugs the copy rather than the container: a full-width wash would
+     read as a band across the page instead of a surface under the words. */
+  .contact-hero__plate {
+    max-width: 46rem;
+    margin-inline: auto;
+  }
+</style>

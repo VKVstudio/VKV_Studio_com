@@ -1,0 +1,909 @@
+---
+/**
+ * /services/websites/ — the etalon hero, adapted. Argument in one line: speed
+ * you can see, because nothing ships that the visitor does not need. The
+ * page answers the buyer's real objection first ("builders are free, why pay
+ * you") in its own FAQ entry (services-faq.ts), and proves the Lighthouse
+ * claim by being the claim: this very page runs the same Astro/vanilla-CSS
+ * stack it sells.
+ *
+ * Data (deliverables, exclusions, guarantee, engagement terms) still comes
+ * from services.ts / services-faq.ts — this page adds the hero and the
+ * "what ships" dramaturgy, never a second source of truth.
+ */
+import { Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import MagneticCard from '@components/ui/MagneticCard.svelte';
+import FaqSection from '@components/sections/FaqSection.astro';
+import ServiceCta from '@components/services/ServiceCta.astro';
+import heroArt from '@/assets/services/rung2-web.png';
+import { ENGAGEMENT_TERMS, getRung } from '@/data/services';
+import { SERVICES_FAQ } from '@/data/services-faq';
+import { rungJsonLd } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const rung = getRung('websites');
+const faq = SERVICES_FAQ.websites;
+
+const copy = {
+  en: {
+    h1: "The Lighthouse target isn't a promise. It's a clause in the contract.",
+    lede: '€3,500–5,500, fixed scope, three to five weeks. The performance target goes into the contract, is measured on the real page with your real content — not an empty template — and the final milestone waits until it is hit. This exact site is the proof: Astro, vanilla CSS, desktop Lighthouse 100 on the pages without a video hero — and 99 on the homepage, which runs one anyway.',
+    shipEyebrow: '// what ships',
+    shipHeading: 'What actually ships on your site?',
+    cutHeading: 'What gets cut',
+    cutItems: [
+      'Framework tax. A five-page marketing site does not need a client-side framework runtime — anything that does not react to input ships as static HTML, nothing more.',
+      'Tracker weight. No analytics suite loads ahead of your first paragraph. If you need numbers, they come from server logs, or from a script that costs you nothing in Largest Contentful Paint.',
+      'A hero video that blocks paint. Every video on this site is gated behind a still image, and never loads on a phone, under reduced motion, or with data-saver on — it plays only once the page is already interactive.',
+    ],
+    staysHeading: 'What stays',
+    linksPre: 'See where this package sits on ',
+    linksLadder: 'the full price ladder',
+    linksMid: ', or read how the contract, milestones and warranty work on the ',
+    linksTrust: 'Trust & Process',
+    linksPost: ' page.',
+  },
+  ru: {
+    h1: 'Целевой Lighthouse — не обещание, а пункт договора.',
+    lede: `€3 500–5 500, фиксированный скоуп, три-пять недель. Целевой балл Lighthouse прописывается в договоре и измеряется на реальной странице с реальным контентом — а не на пустом шаблоне, — и финальный платёж ждёт, пока цель не будет достигнута. Доказательство — этот самый сайт: Astro, чистый CSS, Lighthouse 100 на десктопе там, где нет видео, — и 99 на главной, где видео всё-таки крутится.`,
+    shipEyebrow: '// что грузится',
+    shipHeading: 'Что на самом деле грузится на вашем сайте?',
+    cutHeading: 'Что срезано',
+    cutItems: [
+      'Налог на фреймворк. Пятистраничному маркетинговому сайту не нужен клиентский рантайм фреймворка — всё, что не реагирует на действия пользователя, отдаётся статическим HTML и ничем больше.',
+      'Вес трекеров. Ни один аналитический скрипт не грузится раньше вашего первого абзаца. Нужны цифры — берём их из серверных логов или из скрипта, который ничего не стоит вам в Largest Contentful Paint.',
+      'Видео в hero, блокирующее отрисовку. Каждое видео на этом сайте спрятано за статичной картинкой и никогда не грузится на телефоне, при включённой опции «уменьшить анимацию» или при экономии трафика — запускается оно только после того, как страница уже интерактивна.',
+    ],
+    staysHeading: 'Что остаётся',
+    linksPre: 'Посмотрите, где эта ступень стоит на ',
+    linksLadder: 'полной лестнице цен',
+    linksMid: ', или прочитайте, как устроены договор, этапы оплаты и гарантия на странице ',
+    linksTrust: '«Доверие и процесс»',
+    linksPost: '.',
+  },
+}[lang];
+
+// The hero art is this page's mobile LCP element (etalon pattern). The
+// master is a 1280px still, so the preload/srcset widths stop at 1280 —
+// requesting 1920 from a 1280 master silently clamps and duplicates the
+// 1280 URL (documented on services/index.astro and contact/index.astro).
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout
+  lang={lang}
+  title={rung.seo.title[lang]}
+  description={rung.seo.description[lang]}
+  jsonLd={rungJsonLd(lang, rung, faq)}
+  ogImage="/og-websites.jpg"
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="web-page">
+    <header class="web-hero">
+      {
+        /* Generated in-house (ComfyUI): one flawless pane of dark glass, a
+           clean beam passing straight through it, heavy blocks falling away
+           below — speed you can see, nothing ships the visitor doesn't
+           need. Decorative; gradients keep the text field readable. */
+      }
+      <div class="web-hero__art" aria-hidden="true" id="websites-hero-art">
+        <Picture
+          src={heroArt}
+          formats={['avif', 'webp']}
+          widths={HERO_WIDTHS}
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </div>
+      {
+        /* Born where the beam crosses the pane — the single point of light
+           the whole still is built around, roughly centred and a shade
+           above mid-frame since the falling blocks occupy the lower half.
+           No hero video on this page (wired later, per house rule), so the
+           anchor targets the still image itself. */
+      }
+      <NeuralPlexus
+        client:idle
+        originX={0.5}
+        originY={0.4}
+        anchor={{ selector: '#websites-hero-art img', width: 1280, height: 720, x: 0.5, y: 0.4 }}
+      />
+      <div class="container">
+        <p class="web-hero__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{rung.monoLabel.replace(/^\/\/\s*/, '')}
+        </p>
+        <h1 class="web-hero__title" aria-label={copy.h1}>
+          {
+            copy.h1.split(' ').map((word, wordIdx) => [
+              wordIdx > 0 ? ' ' : null,
+              <span class="web-hero__word" aria-hidden="true">
+                {Array.from(word).map((char) => (
+                  <span class="web-hero__letter">{char}</span>
+                ))}
+              </span>,
+            ])
+          }
+        </h1>
+        <p class="web-hero__lede">{copy.lede}</p>
+      </div>
+
+      {/* Full-viewport hero owes the reader a nudge (etalon pattern). */}
+      <button type="button" class="web-hero__scroll js-web-scroll-hint">
+        <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14"></path>
+          <path d="m19 12-7 7-7-7"></path>
+        </svg>
+      </button>
+    </header>
+
+    {/* ── What ships, what doesn't: the concrete argument ── */}
+    <section class="web-section" id="web-ship" aria-labelledby="web-ship-heading">
+      <div class="container">
+        <p class="web-section__eyebrow text-mono js-web-reveal">
+          <span aria-hidden="true">// </span>{copy.shipEyebrow.replace(/^\/\/\s*/, '')}
+        </p>
+        <h2 id="web-ship-heading" class="web-section__heading js-web-reveal">
+          {copy.shipHeading}
+        </h2>
+        <div class="web-ship-grid">
+          <MagneticCard client:visible strength={0.2}>
+            <div class="web-ship-card js-web-card">
+              <h3 class="web-ship-card__heading web-ship-card__heading--cut">
+                {copy.cutHeading}
+              </h3>
+              <ul class="web-list web-list--cut">
+                {copy.cutItems.map((item) => <li>{item}</li>)}
+              </ul>
+            </div>
+          </MagneticCard>
+          <MagneticCard client:visible strength={0.2}>
+            <div class="web-ship-card js-web-card">
+              <h3 class="web-ship-card__heading web-ship-card__heading--stays">
+                {copy.staysHeading}
+              </h3>
+              <ul class="web-list web-list--stays">
+                {rung.deliverables.map((d) => <li>{d[lang]}</li>)}
+              </ul>
+            </div>
+          </MagneticCard>
+          <MagneticCard client:visible strength={0.2}>
+            <div class="web-ship-card js-web-card">
+              <h3 class="web-ship-card__heading web-ship-card__heading--excluded">
+                {t(lang, 'services.notIncludedLabel')}
+              </h3>
+              <ul class="web-list web-list--excluded">
+                {rung.notIncluded.map((d) => <li>{d[lang]}</li>)}
+              </ul>
+            </div>
+          </MagneticCard>
+        </div>
+      </div>
+    </section>
+
+    {
+      /* ── The guarantee: the etalon's callout idiom. Rendered bare, same as
+       ServiceRungLayout's own .rung-guarantee__label — no "// " prefix, so
+       the capitalised shared string never collides with this page's other,
+       genuinely lowercase mono eyebrows ("// what ships", "// proof"). ── */
+    }
+    {
+      rung.riskReversal && (
+        <section class="web-section">
+          <div class="container">
+            <blockquote class="web-callout js-web-reveal">
+              <p class="web-callout__label text-mono">{t(lang, 'services.guaranteeLabel')}</p>
+              <p class="web-callout__text">{rung.riskReversal[lang]}</p>
+            </blockquote>
+          </div>
+        </section>
+      )
+    }
+
+    {/* ── How it works on paper — the shared engagement terms ── */}
+    <section class="web-section">
+      <div class="container">
+        <h2 class="web-section__heading js-web-reveal">{t(lang, 'services.termsHeading')}</h2>
+        <ul class="web-list web-list--terms">
+          {ENGAGEMENT_TERMS.map((term) => <li class="js-web-reveal">{term[lang]}</li>)}
+        </ul>
+      </div>
+    </section>
+
+    {/* ── Proof: the case study ── */}
+    {
+      rung.caseLabel && (
+        <section class="web-section">
+          <div class="container">
+            <p class="web-proof__eyebrow text-mono js-web-reveal">
+              <span aria-hidden="true">// </span>
+              {t(lang, 'services.proofEyebrow').replace(/^\/\/\s*/, '')}
+            </p>
+            <p class="web-proof__text js-web-reveal">
+              {rung.caseHref ? (
+                <a href={`/${lang}${rung.caseHref}`}>{rung.caseLabel[lang]}</a>
+              ) : (
+                rung.caseLabel[lang]
+              )}
+            </p>
+          </div>
+        </section>
+      )
+    }
+
+    <section class="web-section web-section--links">
+      <div class="container">
+        <p class="web-links js-web-reveal">
+          {copy.linksPre}<a href={`/${lang}/services/`}>{copy.linksLadder}</a>{copy.linksMid}<a
+            href={`/${lang}/trust/`}>{copy.linksTrust}</a
+          >{copy.linksPost}
+        </p>
+      </div>
+    </section>
+
+    <FaqSection lang={lang} items={faq} id="websites-faq" />
+
+    <ServiceCta lang={lang} />
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage's scroll engine + the etalon's motion grammar. Motion is an
+  // enhancement, never a gatekeeper: nothing on this page starts hidden in
+  // CSS, so a failed import or an old browser sees a complete page. gsap
+  // .from()/.fromTo() own hide-and-reveal, and every tween ends with
+  // clearProps, handing the element back to the stylesheet.
+  import { initLenis } from '@scripts/lenis-init';
+
+  async function initWebMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      document.querySelectorAll<HTMLElement>('.js-web-reveal').forEach((el) => {
+        const tw = gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+        // A keyboard user tabbing in before the trigger fires must not land
+        // on an invisible link (the FAQ/proof/links rows carry real ones).
+        el.addEventListener('focusin', () => tw.progress(1), { once: true });
+      });
+
+      // The cut/stays cards: the Lab card entrance (rise, settle from a
+      // slight scale), one trigger per card. Amplitude and threshold are the
+      // etalon's tile dictionary (geo-audit's .js-geo-tile), not a local
+      // variant — a shallower rise fired earlier is what made these cards
+      // read as a different page.
+      document.querySelectorAll<HTMLElement>('.js-web-card').forEach((el) => {
+        gsap.fromTo(
+          el,
+          { opacity: 0, y: 50, scale: 0.92 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: el, start: 'top 82%' },
+          }
+        );
+      });
+    } catch (err) {
+      // No rescue pass needed — content was never hidden.
+      console.error('[websites] motion failed to load:', err);
+    }
+  }
+
+  // The hero's manners: a light cursor parallax on the lede, desktop
+  // fine-pointer only, reduced-motion excluded (etalon recipe).
+  function initWebHeroManners(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const hero = document.querySelector<HTMLElement>('.web-hero');
+    const lede = document.querySelector<HTMLElement>('.web-hero__lede');
+    if (!hero || !lede) return;
+
+    hero.addEventListener(
+      'mousemove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        lede.style.transform = `translate(${nx * -3}px, ${ny * -2}px)`;
+      },
+      { passive: true }
+    );
+
+    hero.addEventListener('mouseleave', () => {
+      lede.style.transform = '';
+    });
+  }
+
+  // The scroll hint keeps its promise: Lenis rides down to the "what ships"
+  // section.
+  function initWebScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-web-scroll-hint');
+    const target = document.getElementById('web-ship');
+    if (!hint || !target) return;
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initWebMotion();
+      initWebHeroManners();
+      initWebScrollHint();
+    });
+  } else {
+    initLenis();
+    void initWebMotion();
+    initWebHeroManners();
+    initWebScrollHint();
+  }
+</script>
+
+<style>
+  .web-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .web-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* ── Hero: the etalon idiom family ─────────────────── */
+  .web-hero {
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    isolation: isolate;
+    overflow: hidden;
+    min-height: calc(100vh - 7.5rem);
+    min-height: calc(100svh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .web-hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .web-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .web-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.5;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .web-hero__art :global(img) {
+      animation: web-breathe 9s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes web-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(1.045);
+      filter: brightness(1.15);
+    }
+  }
+
+  .web-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to right, var(--bg-obsidian) 15%, transparent 60%),
+      linear-gradient(to top, var(--bg-obsidian) 4%, transparent 42%);
+  }
+
+  /* The homepage hero badge (HeroOverlay's .hero-overlay__label). */
+  .web-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: hsl(155, 85%, 65%);
+    padding: var(--space-1) var(--space-4);
+    background: hsla(220, 25%, 6%, 0.9);
+    border: 1px solid hsla(155, 50%, 40%, 0.2);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color 0.4s ease-out,
+      border-color 0.4s ease-out,
+      background 0.4s ease-out;
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .web-hero__eyebrow {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .web-hero__eyebrow:hover {
+    color: hsl(220, 70%, 65%);
+    border-color: hsla(220, 50%, 50%, 0.25);
+    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
+  }
+
+  /* The neural-texture title — geo-audit's .geo-hero__title recipe
+     (rendering-surface and minifier caveats documented there). */
+  .web-hero__title {
+    font-size: clamp(2.1rem, 4.8vw, 3.4rem);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    max-width: 22ch;
+    margin: 0 auto var(--space-5);
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px hsla(180, 80%, 55%, 0.7);
+
+    filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .web-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  @media (max-width: 767px) {
+    .web-hero__title {
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+  }
+
+  .web-hero__word {
+    white-space: nowrap;
+  }
+
+  .web-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow, 0.4s) var(--ease-out, ease-out),
+      text-shadow var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+    cursor: default;
+  }
+
+  .web-hero__letter:hover {
+    -webkit-text-stroke-color: hsla(180, 90%, 70%, 0.95);
+    text-shadow:
+      0 0 10px hsla(180, 85%, 60%, 0.55),
+      0 0 22px hsla(180, 85%, 55%, 0.3);
+  }
+
+  .web-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 58ch;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .web-hero__eyebrow {
+      animation:
+        web-fade-up-15 0.6s ease-out 0.15s backwards,
+        web-eyebrow-breathe 4s ease-in-out 1.5s infinite;
+    }
+
+    .web-hero__title {
+      animation:
+        web-title-opacity-in 0.7s ease-out 0.15s backwards,
+        web-title-transform-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+    }
+
+    .web-hero__lede {
+      animation:
+        web-fade-up-15 0.6s ease-out 0.3s backwards,
+        web-lede-glow 5s ease-in-out 2s infinite;
+    }
+  }
+
+  @keyframes web-fade-up-15 {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes web-title-opacity-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes web-title-transform-in {
+    from {
+      transform: translateY(20px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes web-eyebrow-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes web-lede-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsla(155, 60%, 60%, 0.08));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .web-hero__letter {
+      transition: none;
+    }
+  }
+
+  .web-hero__scroll {
+    position: absolute;
+    /* The gesture bar on a modern phone owns the last ~34px of the viewport;
+       a hint pinned at a bare --space-6 sits inside it. */
+    bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease-out;
+  }
+
+  .web-hero__scroll:hover,
+  .web-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .web-hero__scroll svg {
+      animation: web-scroll-nudge 2.2s ease-in-out 2.5s infinite;
+    }
+  }
+
+  @keyframes web-scroll-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  /* ── Body sections ──────────────────────────────────── */
+  .web-section {
+    margin-bottom: var(--space-16);
+  }
+
+  .web-section--links {
+    margin-bottom: var(--space-8);
+  }
+
+  /* No font-size here on purpose: the size comes from `.text-mono`
+     (global.css) — the etalon's `.geo-section__eyebrow` overrides nothing,
+     and a local --text-xs made every mono marker on this page a step
+     smaller than the rest of the family. */
+  .web-section__eyebrow {
+    margin-bottom: var(--space-4);
+  }
+
+  .web-section__heading {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-6);
+  }
+
+  .web-ship-grid {
+    max-width: var(--container-max);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-8);
+  }
+
+  @media (max-width: 1023px) {
+    .web-ship-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .web-ship-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* The MagneticCard island is now the direct grid item (geo-audit:378-388
+     idiom): the grid's own default `align-items: stretch` already gives it
+     the row's full height, same as .web-ship-card got for free before the
+     wrapper existed. Without this rule the island is display: contents
+     (Astro's own injected astro-island rule — audit correction 2026-08-30),
+     which would hand the grid-item role to .magnetic-wrapper instead;
+     blockifying keeps the chain identical to the trust page. Child
+     combinator to match that page's rule exactly. */
+  .web-ship-grid > :global(astro-island) {
+    display: block;
+  }
+
+  .web-ship-card {
+    /* Chained down from the astro-island's grid-stretched height through
+       MagneticCard's own .magnetic-wrapper (height: 100% there already) —
+       without this, the matte card shrinks to its content and tiles in the
+       same row go uneven (the exact failure geo-audit's .geo-tile guards
+       against with this identical property). */
+    height: 100%;
+    padding: var(--space-6);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--bg-void);
+  }
+
+  .web-ship-card__heading {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-4);
+  }
+
+  .web-ship-card__heading--cut {
+    color: var(--text-muted);
+  }
+
+  .web-ship-card__heading--stays {
+    color: var(--accent-green-300);
+  }
+
+  .web-ship-card__heading--excluded {
+    color: var(--text-muted);
+  }
+
+  .web-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .web-list li {
+    position: relative;
+    padding-left: var(--space-6);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .web-list--cut li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-ghost);
+  }
+
+  .web-list--stays li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent-green-400);
+  }
+
+  .web-list--excluded li::before {
+    content: '×';
+    position: absolute;
+    left: 0;
+    color: var(--text-ghost);
+  }
+
+  .web-list--terms {
+    max-width: var(--container-narrow);
+  }
+
+  .web-list--terms li::before {
+    content: '§';
+    position: absolute;
+    left: 0;
+    color: var(--text-ghost);
+  }
+
+  /* The etalon's callout recipe (geo-audit's .geo-callout / contact's terms
+     window family): green edge, faint wash, italic statement. */
+  .web-callout {
+    max-width: var(--container-narrow);
+    margin: 0;
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .web-callout__label {
+    margin: 0 0 var(--space-3);
+  }
+
+  .web-callout__text {
+    margin: 0;
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    font-weight: var(--weight-medium);
+  }
+
+  /* The green of `.text-mono` stays: taking the class for its typeface and
+     then cancelling its colour is the anti-pattern the canon names by name
+     (01-hero E-1-бис). The etalon's proof label is green too. */
+  .web-proof__eyebrow {
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+
+  .web-proof__text {
+    max-width: var(--container-narrow);
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .web-proof__text a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .web-proof__text a:hover {
+    color: var(--accent-green-300);
+  }
+
+  .web-links {
+    max-width: var(--container-narrow);
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .web-links a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .web-links a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* Same fix as trust/services/contact: on short phones the pinned hint
+     lands on the last lines of the lede. Static flow puts it under them
+     instead. Placed at the end of the sheet so source order cannot un-do
+     it — this rule MUST come after the base absolute rule above. */
+  @media (max-width: 767px) {
+    .web-hero__scroll {
+      position: static;
+      transform: none;
+      margin-top: var(--space-6);
+    }
+  }
+</style>

@@ -1,0 +1,168 @@
+---
+/**
+ * Cross-links between the three Lab tools.
+ *
+ * Before this, every Lab page linked only back to the home page, so the three
+ * most substantial pages on the site formed no cluster at all: to get from the
+ * tokenizer to the embedding explorer you had to go home and start again, and a
+ * crawler arriving at one tool found no path to the other two. Both problems
+ * have the same one-line fix.
+ *
+ * `current` is excluded rather than rendered as a disabled item — a link to the
+ * page you are already on is noise for a reader and a self-reference for a
+ * crawler.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import type { LabTool } from '@/lib/lab-copilot-content';
+
+interface Props {
+  lang: Lang;
+  current: LabTool;
+}
+const { lang, current } = Astro.props;
+
+const TOOLS: { id: LabTool; href: string; titleKey: string; subtitleKey: string }[] = [
+  {
+    id: 'tokenizer',
+    href: 'lab/tokenizer',
+    titleKey: 'tokenizer.title',
+    subtitleKey: 'tokenizer.subtitle',
+  },
+  { id: 'prompt', href: 'lab/prompt', titleKey: 'prompt.title', subtitleKey: 'prompt.subtitle' },
+  {
+    id: 'embeddings',
+    href: 'lab/embeddings',
+    titleKey: 'embeddings.title',
+    subtitleKey: 'embeddings.subtitle',
+  },
+];
+
+const others = TOOLS.filter((tool) => tool.id !== current);
+---
+
+<nav class="lab-nav" aria-label={t(lang, 'nav.lab')}>
+  <div class="container">
+    {
+      /* House mono-eyebrow idiom: the slashes are decoration, so they are
+        aria-hidden and the label alone is what gets read. Matches PageHero,
+        ServiceRungLayout, PricingCard and LabServiceBridge — which sits
+        directly above this nav, where the mismatch was visible. (That last
+        claim was false when it was written: the bridge was still printing
+        its slashes as content, and an audit caught it. Both are fixed.) */
+    }
+    <p class="lab-nav__eyebrow text-mono">
+      <span aria-hidden="true">// </span>{t(lang, 'nav.lab')}
+    </p>
+    <ul class="lab-nav__list">
+      {
+        others.map((tool) => (
+          <li>
+            <a class="lab-nav__card" href={`/${lang}/${tool.href}/`}>
+              <span class="lab-nav__title">{t(lang, tool.titleKey)}</span>
+              <span class="lab-nav__subtitle">{t(lang, tool.subtitleKey)}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</nav>
+
+<style>
+  .lab-nav {
+    padding: 0 0 var(--space-24);
+    background: var(--bg-obsidian);
+  }
+
+  .lab-nav .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    /* Mirrors .container instead of flattening it to 16px: the flat value
+       overwrote `max(--container-padding, env(safe-area-inset-*))`, which is
+       what keeps content clear of the camera cutout in landscape, and capped
+       the side air where the clamp allows more. Same repair as the three Lab
+       pages and privacy. */
+    padding-left: max(var(--container-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right, 0px));
+  }
+
+  .lab-nav__eyebrow {
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    margin-bottom: var(--space-4);
+  }
+
+  .lab-nav__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    /* Two cards on a wide screen, stacked below ~640px without a media query. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: var(--space-4);
+  }
+
+  /* House glass-card idiom (LabServiceBridge's .lab-bridge__panel, .geo-tile):
+     the shared glass-panel tokens at rest — --glass-bg/--glass-border/
+     --glass-shadow plus the webkit-prefixed blur. Written out here rather
+     than via the global .glass-panel utility class because Astro's scoped
+     selector would outrank that class's border/border-radius, leaving the
+     old flat border showing through underneath the token values. */
+  .lab-nav__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 100%;
+    padding: var(--space-5);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+
+  /* Standard property restated where a minifier cannot fold it into the
+     -webkit- alias — same fix as global.css's .glass-panel/.hero-plate. */
+  @supports (backdrop-filter: blur(1px)) {
+    .lab-nav__card {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .lab-nav__card:hover,
+  .lab-nav__card:focus-within {
+    border-color: var(--accent-green-300);
+  }
+
+  /* No local :focus-visible. The global ring (global.css:393) is
+     --accent-green-400 at 2px offset WITH a border-radius; the override that
+     used to live here changed the colour, doubled the offset and dropped the
+     radius, so the one nav on the site looked different under the keyboard
+     for no reason. */
+
+  .lab-nav__title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+  }
+
+  .lab-nav__subtitle {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lab-nav__card {
+      transition:
+        border-color var(--duration-normal) var(--ease-out),
+        color var(--duration-normal) var(--ease-out);
+    }
+  }
+</style>

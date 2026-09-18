@@ -1,0 +1,160 @@
+---
+/**
+ * FAQ — visible answers, on the home page only.
+ *
+ * Two jobs at once. For a person: the questions someone actually asks about
+ * this site, answered on the page instead of buried in three different tools.
+ * For a machine: the home page was the thinnest page on the site (~350 words of
+ * server-rendered text) while being the one most likely to be retrieved for
+ * "who is Valerii" — and it never once said the word "Synapse" in its body HTML.
+ *
+ * Rendered as <details>/<summary> rather than a custom widget on purpose:
+ * accordion content counts as visible to Google, it works with zero JavaScript
+ * (which matters because most AI crawlers do not run any), and the disclosure
+ * behaviour is native, so keyboard and screen-reader support come for free.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import { FAQ, type FaqItem } from '@/data/faq';
+
+interface Props {
+  lang: Lang;
+  /** Defaults to the sitewide FAQ; Lab pages pass their own tool-specific set. */
+  items?: FaqItem[];
+  /** Overrides the `faq.heading` translation. */
+  heading?: string;
+  /**
+   * A page may carry more than one of these (a Lab page has its tool FAQ, and
+   * could gain another later), so the anchor and its aria-labelledby target
+   * have to be unique per instance — duplicate ids break the label association
+   * and give a crawler two things claiming to be `#faq`.
+   */
+  id?: string;
+}
+const { lang, items = FAQ, heading, id = 'faq' } = Astro.props;
+const headingId = `${id}-heading`;
+---
+
+<section class="faq" id={id} aria-labelledby={headingId}>
+  <div class="container">
+    <p class="faq__eyebrow text-mono">{t(lang, 'faq.eyebrow')}</p>
+    <h2 id={headingId} class="faq__heading text-h2">{heading ?? t(lang, 'faq.heading')}</h2>
+
+    <ul class="faq__list">
+      {
+        items.map((item, i) => (
+          <li class="faq__item">
+            <details open={i === 0}>
+              <summary class="faq__q">
+                <span>{item.q[lang]}</span>
+                <span class="faq__chevron" aria-hidden="true" />
+              </summary>
+              <p class="faq__a">{item.a[lang]}</p>
+            </details>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .faq {
+    padding: var(--space-24) 0;
+    background: var(--bg-obsidian);
+  }
+
+  .faq .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+  }
+
+  .faq__eyebrow {
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+  }
+
+  .faq__heading {
+    margin-bottom: var(--space-10);
+  }
+
+  .faq__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .faq__item {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .faq__q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    /* 44px keeps this well clear of the 24px WCAG 2.2 minimum target size,
+       which matters most here because the whole row is the control. */
+    min-height: 44px;
+    padding: var(--space-4) 0;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    list-style: none;
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  /* Hide the native disclosure triangle in both engines; the chevron below
+     replaces it so the marker can be styled and animated. */
+  .faq__q::-webkit-details-marker {
+    display: none;
+  }
+  .faq__q::marker {
+    content: '';
+  }
+
+  .faq__q:hover {
+    color: var(--accent-green-300);
+  }
+
+  .faq__q:focus-visible {
+    outline: 2px solid var(--accent-green-300);
+    outline-offset: 4px;
+  }
+
+  .faq__chevron {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--accent-green-300);
+    border-bottom: 2px solid var(--accent-green-300);
+    transform: rotate(45deg) translate(-2px, -2px);
+  }
+
+  details[open] .faq__chevron {
+    transform: rotate(-135deg) translate(-2px, -2px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .faq__chevron {
+      transition: transform var(--duration-normal) var(--ease-out);
+    }
+  }
+
+  .faq__a {
+    margin: 0;
+    padding: 0 0 var(--space-6);
+    max-width: 62ch;
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+</style>

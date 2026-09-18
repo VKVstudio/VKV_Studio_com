@@ -1,0 +1,174 @@
+---
+/**
+ * ServicesTeaser — the homepage's first pitch of the service ladder, sitting
+ * directly under the hero. Same proof strip and PricingCard grid as
+ * /services/, just fewer words: the full narrative lives on the ladder page,
+ * this is the "start small, scale on proof" hook plus a link there.
+ *
+ * Deliberately outside the section-animation rescue-selector system: no
+ * opacity:0 initial state, no .js-* hooks, so it renders fully with
+ * JavaScript disabled.
+ */
+import PricingCard from '@components/services/PricingCard.astro';
+import { PROOF_STRIP, SERVICES } from '@/data/services';
+import { t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<section class="services-teaser" id="services" aria-labelledby="services-teaser-heading">
+  <div class="container">
+    <p class="services-teaser__eyebrow text-mono">{t(lang, 'services.eyebrow')}</p>
+    <h2 id="services-teaser-heading" class="text-h2">{t(lang, 'services.teaserHeading')}</h2>
+    <p class="services-teaser__sub">{t(lang, 'services.teaserSub')}</p>
+
+    <ul class="services-teaser__proof-strip">
+      {
+        PROOF_STRIP.map((item) => (
+          <li>
+            <span class="services-teaser__proof-value text-mono">{item.value[lang]}</span>
+            <span class="services-teaser__proof-label">{item.label[lang]}</span>
+            <span class="services-teaser__proof-qualifier">{item.qualifier[lang]}</span>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="services-teaser__grid">
+      {SERVICES.map((rung) => <PricingCard lang={lang} rung={rung} headingTag="h3" />)}
+    </div>
+
+    <a class="services-teaser__all" href={`/${lang}/services/`}
+      >{t(lang, 'services.allServices')} <span aria-hidden="true">→</span></a
+    >
+  </div>
+</section>
+
+<style>
+  .services-teaser {
+    padding-block: var(--space-20);
+  }
+
+  @media (max-width: 767px) {
+    .services-teaser {
+      padding-block: var(--space-12);
+    }
+  }
+
+  .services-teaser .container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+  }
+
+  .services-teaser__eyebrow {
+    font-size: var(--text-sm);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-3);
+  }
+
+  .services-teaser h2 {
+    margin-bottom: var(--space-5);
+  }
+
+  .services-teaser__sub {
+    color: var(--text-secondary);
+    max-width: 68ch;
+    line-height: 1.8;
+    margin-bottom: var(--space-12);
+  }
+
+  .services-teaser__proof-strip {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-16);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+  }
+
+  @media (max-width: 767px) {
+    .services-teaser__proof-strip {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Same matte-glass idiom as PricingCard and StackSection, thinner veil:
+     this strip is a supporting proof point, not a clickable rung, so it
+     reads related but quieter than the cards below it. */
+  .services-teaser__proof-strip li {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    border: 1px solid hsla(0, 0%, 100%, 0.05);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    background: hsla(220, 20%, 12%, 0.35);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, 0.04);
+    text-align: center;
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .services-teaser__proof-strip li {
+      backdrop-filter: blur(14px) saturate(140%);
+    }
+  }
+
+  .services-teaser__proof-value {
+    color: var(--accent-green-300);
+    font-size: var(--text-lg);
+  }
+
+  .services-teaser__proof-label {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  .services-teaser__proof-qualifier {
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+  }
+
+  .services-teaser__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+
+  @media (max-width: 767px) {
+    .services-teaser__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .services-teaser__all {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    color: var(--accent-green-400);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    text-decoration: none;
+    transition: var(--transition-colors);
+  }
+
+  .services-teaser__all:hover {
+    color: var(--accent-green-300);
+  }
+</style>

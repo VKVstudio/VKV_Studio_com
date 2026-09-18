@@ -1,0 +1,468 @@
+---
+import type { Lang } from '@i18n/utils';
+import { t, supportedLangs } from '@i18n/utils';
+import CookieConsent from '@components/ui/CookieConsent.svelte';
+import Footer from '@components/layout/Footer.astro';
+import { CONTACT_EMAIL } from '@/lib/site-config';
+import '@styles/global.css';
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  description?: string;
+  /** Open Graph type — 'website' for nearly everything on this site. */
+  ogType?: 'website' | 'article';
+  /** ISO date. Only meaningful with ogType="article" — og:type=article
+   *  without a published time is an incomplete card that crawlers and social
+   *  previews both notice. */
+  articlePublished?: string;
+  articleModified?: string;
+  /** Absolute path to an OG/Twitter image. Defaults to the locale's share card. */
+  ogImage?: string;
+  /** Extra schema.org type(s) for THIS page's WebPage node — e.g. ContactPage.
+   *  Two page-scoped nodes claiming one URL make the graph ambiguous, so a
+   *  route declares what it is instead of adding a rival node. */
+  pageType?: string | string[];
+  /** Extra JSON-LD nodes for this specific page (SoftwareApplication, BreadcrumbList, ...).
+   *  Each entry must be a complete, self-contained node (its own "@context"/"@type"). */
+  jsonLd?: Record<string, unknown>[];
+}
+
+const {
+  lang: propsLang,
+  title,
+  description,
+  ogType = 'website',
+  ogImage,
+  pageType,
+  articlePublished,
+  articleModified,
+  jsonLd = [],
+} = Astro.props;
+const lang = propsLang || ((Astro.url.pathname.startsWith('/ru') ? 'ru' : 'en') as Lang);
+const pageTitle = title || t(lang, 'meta.title');
+const pageDescription = description || t(lang, 'meta.description');
+
+const SITE_URL = 'https://vkvstudio.com';
+
+// JSON-LD is injected via set:html (raw). Escape '<' so a data string that ever
+// contains '</script' can't close the tag early and spill into raw HTML. In HTML
+// "script data state" entity refs are NOT decoded, so a Unicode escape (<),
+// not &lt;, is the correct fix — the JSON parser decodes it back to '<'.
+const ldjson = (obj: unknown): string => JSON.stringify(obj).replace(/</g, '\\u003c');
+
+// --- Canonical + hreflang: derived from the CURRENT route, never the lang root. ---
+// e.g. rawPath "/en/lab/tokenizer/" -> restPath "/lab/tokenizer/"
+//      rawPath "/ru/"               -> restPath "/"
+const rawPath = Astro.url.pathname;
+const restPath = rawPath.replace(/^\/(en|ru)(\/|$)/, '/') || '/';
+const canonicalUrl = `${SITE_URL}/${lang}${restPath}`;
+const alternateUrls: Record<Lang, string> = {
+  en: `${SITE_URL}/en${restPath}`,
+  ru: `${SITE_URL}/ru${restPath}`,
+};
+const xDefaultUrl = alternateUrls.en;
+
+// The sitewide FAQPage block was REMOVED 2026-08-09 and now lives on the home
+// page only, built from src/data/faq.ts — the same array the visible FAQ
+// section renders, so markup and copy cannot drift apart.
+// Why it had to move: the identical six questions were emitted on ALL 12 pages
+// while appearing in the body of none, so the privacy policy was carrying
+// "Can I hire Valerii?" in its structured data. Google requires marked-up
+// content to be visible. (Note this is a JS comment, not an HTML one — the
+// previous version of this note was an HTML comment and therefore shipped the
+// word "FAQPage" to every page it was supposed to have been removed from.)
+/**
+ * Share card. The default used to be the 1024x1024 logo at 534 KB, paired with
+ * `twitter:card: summary` — a correct pairing, but it buys the smallest preview
+ * a platform offers: a thumbnail beside the text. Every social platform and
+ * chat app lays out link previews for 1.91:1, so a purpose-made 1200x630 card
+ * gets the large treatment instead, at 66 KB rather than 534.
+ *
+ * Localised, because the card carries a sentence: an English subtitle under a
+ * Russian page is the sort of detail people notice and nobody mentions.
+ * `Organization.logo` in the JSON-LD below still points at the square logo —
+ * that field wants a logo, not a banner.
+ */
+const OG_COVER = { en: '/og-cover.jpg', ru: '/og-cover-ru.jpg' } as const;
+const resolvedOgImage = `${SITE_URL}${ogImage || OG_COVER[lang as 'en' | 'ru'] || OG_COVER.en}`;
+const ogImageAlt =
+  lang === 'ru'
+    ? 'VKVstudio — студия AI-инженерии: дообученная Gemma 4, RAG и три инструмента в браузере'
+    : 'VKVstudio — AI engineering studio: a fine-tuned Gemma 4, RAG, and three browser tools';
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    {
+      /* Per-page head extras (e.g. LCP-image preloads) — filled via
+         <element slot="head"> from pages that need it. */
+    }
+    <slot name="head" />
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: without it every env(safe-area-inset-*) in the
+         codebase resolves to its 0px fallback on ALL browsers (spec-mandated),
+         so the safe-area handling that exists (cookie sheet) was a no-op on
+         notched/gesture-bar phones. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content={pageDescription} />
+
+    <!-- Self-hosted fonts preload — only the Inter subset for THIS locale is on the
+         critical path (EN pages don't fetch the Cyrillic subset and vice-versa); the
+         other subset still loads on demand via @font-face when a glyph needs it. -->
+    {
+      lang === 'ru' ? (
+        <link
+          rel="preload"
+          href="/fonts/inter-cyrillic.woff2"
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+      ) : (
+        <link
+          rel="preload"
+          href="/fonts/inter-latin.woff2"
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+      )
+    }
+    {
+      /* Same branch as Inter above — this one was unconditional, so /ru/ spent a
+         preload slot on the LATIN subset it barely renders while the Cyrillic
+         one it actually needs waited for @font-face discovery. */
+      lang === 'ru' ? (
+        <link
+          rel="preload"
+          href="/fonts/jetbrains-mono-cyrillic.woff2"
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+      ) : (
+        <link
+          rel="preload"
+          href="/fonts/jetbrains-mono-latin.woff2"
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+      )
+    }
+    {
+      /* …and RU needs the Latin subsets TOO, which is not what the comment above
+         assumed. Measured on /ru/: the browser requests all four files, and it
+         raises the two Latin ones to VeryHigh — the priority it only assigns to
+         a font some glyph on screen is waiting for. It has to: the Russian hero
+         says «Self-hosted модели, RAG-ассистенты», the wordmark VKVstudio is set
+         in the mono face, the euro sign U+20AC lives in the Latin unicode-range,
+         and the page carries 714 Latin letters in all. Un-preloaded, they were
+         discovered only when the style sheet was parsed — 175 ms against 16 ms
+         for the Cyrillic pair, a full extra discovery round-trip for 80 KB that
+         were going to be downloaded either way.
+
+         Declared AFTER the Cyrillic pair on purpose: same-`as` preloads are
+         fetched in document order, and Cyrillic carries 6232 of the 6946 letters
+         on the page. This adds no bytes to /ru/ — it moves bytes earlier. The
+         EN branch above is already complete: /en/ never requests Cyrillic. */
+      lang === 'ru' && (
+        <>
+          <link
+            rel="preload"
+            href="/fonts/inter-latin.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+          />
+          <link
+            rel="preload"
+            href="/fonts/jetbrains-mono-latin.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin
+          />
+        </>
+      )
+    }
+
+    {
+      /* Web app manifest — so "Install app" gives the site its own name, icon and
+         colour instead of a bare shortcut with a screenshot of the favicon.
+         Deliberately manifest-ONLY: there is no service worker and there should
+         not be one. A static portfolio gains almost nothing from offline caching,
+         and a service worker is the standard way to keep serving a stale bundle
+         after a deploy — the exact failure this site already met once today, from
+         a different direction. Installability without a cache is the honest half
+         of the feature: the part that helps, without the part that lies about
+         what version you are looking at.
+
+         `theme_color` is repeated as a meta tag because the manifest colour only
+         applies once installed; the meta tag colours the address bar for everyone
+         else on mobile. Both are --bg-void, so the browser chrome continues the
+         page instead of framing it. */
+    }
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#060709" />
+
+    <!-- Canonical: self-referential — this page's own URL, NEVER the lang root -->
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Hreflang: equivalent page in each locale, derived from the current path -->
+    {
+      supportedLangs.map((altLang) => (
+        <link rel="alternate" hreflang={altLang} href={alternateUrls[altLang]} />
+      ))
+    }
+    <link rel="alternate" hreflang="x-default" href={xDefaultUrl} />
+
+    <!-- OG Tags -->
+    <meta property="og:site_name" content="VKVstudio" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:type" content={ogType} />
+    {
+      ogType === 'article' && articlePublished && (
+        <meta property="article:published_time" content={articlePublished} />
+      )
+    }
+    {
+      ogType === 'article' && articleModified && (
+        <meta property="article:modified_time" content={articleModified} />
+      )
+    }
+    <meta property="og:locale" content={lang === 'ru' ? 'ru_RU' : 'en_US'} />
+    <meta property="og:locale:alternate" content={lang === 'ru' ? 'en_US' : 'ru_RU'} />
+    <meta property="og:image" content={resolvedOgImage} />
+    {
+      /* Dimensions describe the default card only — a caller-supplied ogImage
+        has unknown size, and declaring the wrong one is worse than declaring
+        none: the scraper reserves a box the image does not fill. */
+    }
+    {
+      !ogImage && (
+        <>
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+        </>
+      )
+    }
+    <meta property="og:image:alt" content={ogImageAlt} />
+
+    <!-- summary_large_image, now that a real 1200x630 card exists.
+         This was deliberately `summary` while the only image was the square
+         1024x1024 logo: summary_large_image expects roughly 1.91:1 and
+         centre-crops anything else, which cut the top and bottom off the logo
+         on every share to X, LinkedIn, Slack and Discord. The card is
+         purpose-built at that ratio now, so the large treatment fits. -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={resolvedOgImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
+
+    <title>{pageTitle}</title>
+
+    <!-- Favicon (placeholder) -->
+    {
+      /* The old favicon.svg was a 480-byte placeholder — a grey square with a
+         green chevron — and the comment beside it had said "placeholder" long
+         enough for that to stop being temporary. These are the real monogram,
+         thickened and flattened to one brand colour so it survives being drawn
+         at 16 pixels; the original wireframe averages to muddy teal at that
+         size. Two sizes because 16px browsers downscale 32 cleanly, while the
+         48 is what Windows uses for pinned shortcuts. */
+    }
+    <!-- 16 and 32 are drawn by hand at those exact sizes, not reduced from the
+         master: at 16 px this monogram merges under any filter, so the small
+         sizes are a separate drawing. 48 is a clean downscale of the 512, which
+         works now that the master is the simplified ringless mark. -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    {
+      /* iOS does not read the web manifest for "Add to Home Screen" — without
+         this link Safari uses a screenshot of the page, which at icon size is an
+         unreadable grey rectangle. Full-bleed on purpose: Apple rounds the
+         corners itself and applies no mask, so the safe-area padding the
+         maskable icons need would only shrink the artwork here for nothing. */
+    }
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- JSON-LD Structured Data -->
+
+    <!-- One connected graph, not three disconnected copies of the same human.
+         Every node carries an @id and references the others by @id, so a search
+         engine resolves "Valerii Karpov", "VKVstudio" and this website to one
+         entity instead of guessing. The Organization node exists to state, in
+         machine-readable form, that there is a REGISTERED business behind the
+         site — the state registration number, taxpayer number and activity code
+         are public register data and are what separates a real company from a
+         personal page. Identity-document numbers are deliberately absent, and
+         the address is city-level: enough to establish jurisdiction, not enough
+         to locate a person. -->
+    <script
+      type="application/ld+json"
+      set:html={ldjson({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        name: 'VKVstudio',
+        url: `${SITE_URL}/`,
+        inLanguage: supportedLangs,
+        publisher: { '@id': `${SITE_URL}/#organization` },
+      })}
+    />
+
+    <script
+      type="application/ld+json"
+      set:html={ldjson({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: 'VKVstudio',
+        legalName: 'Karpov Valerii, Individual Entrepreneur',
+        alternateName: 'ԿԱՐՊՈՎ ՎԱԼԵՐԻ ԻՎԱՆԻ, Անհատ ձեռնարկատեր',
+        url: `${SITE_URL}/`,
+        email: CONTACT_EMAIL,
+        // Registered with the State Register of Legal Entities, Ministry of
+        // Justice of Armenia. The registration DATE is the credibility signal
+        // a reader actually uses; the registry NUMBERS are not published here.
+        // They were, alongside a `taxID` that in fact held the owner's ՀԾՀ —
+        // his personal social-security identifier, machine-readable, on every
+        // page. Nobody verifies a sole proprietor against the Armenian
+        // register from a portfolio site, so the numbers bought no trust while
+        // handing anyone the exact set of fields needed to impersonate the
+        // business. If an invoice or a partner form ever needs the ՀՎՀՀ, it
+        // belongs in that document, not in the site's structured data.
+        foundingDate: '2026-02-12',
+        // The emblem the site actually wears: browser tab, installed app icon,
+        // home screen. This pointed at vkv-logo.png, a 1024px mark superseded
+        // in August and referenced from nowhere else — so structured data was
+        // handing crawlers a logo no visitor had ever seen, and half a megabyte
+        // of it was uploaded on every deploy to serve that one line.
+        logo: `${SITE_URL}/icon-512.png`,
+        // NACE 62.01 / ISIC 6201 — computer programming activities.
+        isicV4: '6201',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Gyumri',
+          addressRegion: 'Shirak',
+          addressCountry: 'AM',
+        },
+        founder: { '@id': `${SITE_URL}/#person` },
+        knowsLanguage: ['en', 'ru'],
+        description:
+          'Registered sole proprietorship in Armenia building AI systems and web engineering — LLM fine-tuning, RAG, embeddings and self-hosted inference on an all-Google open-model stack.',
+      })}
+    />
+
+    <script
+      type="application/ld+json"
+      set:html={ldjson({
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        '@id': `${SITE_URL}/#person`,
+        name: 'Valerii Karpov',
+        givenName: 'Valerii',
+        familyName: 'Karpov',
+        url: `${SITE_URL}/`,
+        email: CONTACT_EMAIL,
+        jobTitle: 'AI Architect & Web Engineer',
+        worksFor: { '@id': `${SITE_URL}/#organization` },
+        // (url set below to the templated SITE_URL, matching WebSite/Organization)
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Gyumri',
+          addressCountry: 'AM',
+        },
+        // The topics this site actually demonstrates, not just the frameworks
+        // it is built with — an engine matching a question to an expert needs
+        // the subject matter, not the toolchain.
+        knowsAbout: [
+          'LLM fine-tuning',
+          'QLoRA',
+          'Retrieval-Augmented Generation',
+          'Text embeddings',
+          'Tokenization',
+          'Prompt engineering',
+          'MLOps',
+          'Self-hosted LLM inference',
+          'Gemma',
+          'Google Cloud AI',
+          'Astro',
+          'Svelte',
+          'GSAP',
+        ],
+        sameAs: [
+          'https://github.com/smartbulldog-pro',
+          'https://www.linkedin.com/in/smartbulldog',
+          'https://www.facebook.com/share/17uECE6UEA/',
+          'https://www.instagram.com/smart_bulldog',
+        ],
+        description:
+          'Full-stack engineer and AI architect with 20+ years of experience. From photography to pipelines.',
+      })}
+    />
+
+    <!-- Per-page WebPage node: ties THIS canonical URL + its language back to the
+         WebSite entity, so each page is a distinct node in the graph rather than
+         three identical sitewide nodes with nothing page-specific. -->
+    <script
+      type="application/ld+json"
+      set:html={ldjson({
+        '@context': 'https://schema.org',
+        '@type': pageType ?? 'WebPage',
+        '@id': `${canonicalUrl}#webpage`,
+        url: canonicalUrl,
+        name: pageTitle,
+        description: pageDescription,
+        inLanguage: lang,
+        isPartOf: { '@id': `${SITE_URL}/#website` },
+      })}
+    />
+
+    <!-- Per-page JSON-LD (SoftwareApplication for Lab tools, BreadcrumbList, ...) -->
+    {jsonLd.map((node) => <script type="application/ld+json" set:html={ldjson(node)} />)}
+  </head>
+  <body>
+    <!--email_off-->
+    <!--
+      Cloudflare's Email Address Obfuscation rewrites every address it finds into
+      `[email protected]` plus a /cdn-cgi/l/email-protection link, decoded by an
+      injected script. That is a reasonable trade for a page full of addresses
+      harvested by spambots. This site has exactly one, it is a business contact
+      that exists to be found, and the rewrite made it a placeholder for every
+      consumer that does not run JavaScript — crawlers, AI assistants reading the
+      page, and anyone viewing source. The site's only conversion path read as
+      broken to precisely the audiences it is trying to reach.
+
+      `email_off` is Cloudflare's own documented opt-out and it is scoped to what
+      it wraps, so this stays a markup decision in the repository rather than a
+      dashboard setting nobody remembers making.
+    -->
+    <a href="#main-content" class="skip-link">{t(lang, 'a11y.skipToContent')}</a>
+    <slot />
+    {
+      /*
+      Here rather than in each page, because when it was per-page only one page
+      imported it. Ten of twelve ended with no footer, no Privacy link and — the
+      part that actually stranded people — no language switcher, on a bilingual
+      site whose Lab pages are what strangers land on from search.
+    */
+    }
+    <Footer lang={lang} />
+    <CookieConsent
+      lang={lang}
+      message={t(lang, 'cookieConsent.message')}
+      learnMoreLabel={t(lang, 'cookieConsent.learnMore')}
+      acceptLabel={t(lang, 'cookieConsent.accept')}
+      ariaLabel={t(lang, 'cookieConsent.ariaLabel')}
+      client:idle
+    />
+    <!--/email_off-->
+  </body>
+</html>

@@ -1,0 +1,88 @@
+---
+/**
+ * InnerHeader — the slim navigation bar for every non-homepage page.
+ *
+ * Inner pages used to carry only an inline "← Home" back-link, which made
+ * every Lab page a dead end for a commercial visitor: no path to Services or
+ * Contact anywhere above the footer. This bar is the fix, and it is
+ * deliberately static (not fixed): fixed chrome on these pages would have to
+ * negotiate with the Synapse orb, the consent sheet and safe-area insets —
+ * a static row at the top of the flow has none of those problems.
+ *
+ * Left: the familiar back-link. Right: the two commercial destinations that
+ * must be reachable from anywhere (brief requirement).
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<nav class="inner-header" aria-label={t(lang, 'nav.siteNavigation')}>
+  <div class="container inner-header__row">
+    <a href={`/${lang}/`} class="inner-header__link"
+      ><span aria-hidden="true">←</span> {t(lang, 'nav.home')}</a
+    >
+    <div class="inner-header__right">
+      <a href={`/${lang}/services/`} class="inner-header__link">{t(lang, 'nav.services')}</a>
+      <a href={`/${lang}/contact/`} class="inner-header__link inner-header__link--accent">
+        {t(lang, 'nav.contact')}
+      </a>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .inner-header {
+    padding-top: var(--space-6);
+  }
+
+  .inner-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .inner-header__right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  .inner-header__link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    transition: var(--transition-colors);
+    /* WCAG 2.5.8 — same 24px minimum target trick as .back-link. */
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+
+  .inner-header__link:hover {
+    color: var(--accent-green-300);
+  }
+
+  .inner-header__link--accent {
+    color: var(--accent-green-400);
+  }
+
+  /* Touch targets: 24px clears WCAG 2.5.8 AA on pointer-precise desktops, but
+     mobile taps need the fuller 44px target — same trick as PricingCard's CTA. */
+  @media (max-width: 767px) {
+    .inner-header__link {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+</style>

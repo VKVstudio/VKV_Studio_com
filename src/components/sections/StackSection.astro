@@ -1,0 +1,509 @@
+---
+/**
+ * StackSection — Technology stack with "Neural Substrate" effect
+ *
+ * Two-layer cards: logo sits on the grid substrate, glassmorphism overlay
+ * with circular cutout moves on mouse, creating parallax peek effect.
+ * Neural connection lines pulse between cards.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const stack = [
+  // === Ряд 1: Core (самые важные) ===
+  { name: 'Python', categoryKey: 'backend', image: '/icons/stack-python.png' },
+  { name: 'TypeScript', categoryKey: 'language', image: '/icons/stack-typeScript.png' },
+  { name: 'Astro', categoryKey: 'framework', image: '/icons/stack-astro.png' },
+  { name: 'Svelte', categoryKey: 'ui', image: '/icons/stack-svelte.png' },
+  { name: 'FastAPI', categoryKey: 'apiServer', image: '/icons/stack-fastAPI.png' },
+  { name: 'Gemma 4', categoryKey: 'llm', image: '/icons/stack-gemma4.png' },
+  { name: 'HuggingFace', categoryKey: 'mlPlatform', image: '/icons/stack-huggingFace.png' },
+  // === Ряд 2: Infrastructure & Tools ===
+  { name: 'ONNX', categoryKey: 'mlRuntime', image: '/icons/stack-onnx.png' },
+  { name: 'Three.js', categoryKey: 'webgl3d', image: '/icons/stack-threejs.png' },
+  { name: 'GSAP', categoryKey: 'animation', image: '/icons/stack-gsap.png' },
+  { name: 'GCP', categoryKey: 'cloud', image: '/icons/stack-gcp.png' },
+  // Docker and Terraform were removed 2026-08-15. The heading above this grid
+  // reads "Carefully chosen. Obsessively optimized.", which invites it to be
+  // read as this project's stack — and neither was in it: no Dockerfile exists,
+  // and infra/terraform/ held one empty .gitkeep, published. A tile for a tool
+  // you do not use is the cheapest kind of claim to check and the worst kind to
+  // be caught on.
+  //
+  // WebGPU was REMOVED 2026-08-16 by the rule stated just above — a tile for a
+  // tool you no longer use is the worst kind to be caught on, and the on-device
+  // GPU path went away when embeddings moved server-side in July (grep confirms
+  // no WebGPU code remains). ONNX stays: ONNX Runtime Web really does ship to the
+  // browser — transformers.web pulls ORT in whenever a visitor picks Gemma 4,
+  // Llama, DeepSeek, Qwen, Mistral or GLM in the tokenizer.
+] as const;
+---
+
+<section class="stack-section" id="stack" aria-labelledby="stack-heading">
+  <div class="container">
+    {/* Header */}
+    <div class="stack__header js-stack-header">
+      <p class="text-mono stack__label">// tech stack</p>
+      <h2 id="stack-heading" class="stack__title">{t(lang, 'stack.title')}</h2>
+      <p class="stack__subtitle">{t(lang, 'stack.subtitle')}</p>
+    </div>
+
+    {/* Neural connection lines — drawn via JS */}
+    <div class="stack__grid-wrap">
+      <svg class="stack__neural-svg js-neural-svg" aria-hidden="true"></svg>
+
+      {/* Cards grid */}
+      <div class="stack__grid" role="list">
+        {
+          stack.map((tech, index) => {
+            const categoryLabel = t(lang, `stack.category.${tech.categoryKey}`);
+            return (
+              <div
+                class="stack__card js-stack-card"
+                style={`--card-index: ${index}`}
+                role="listitem"
+                aria-label={`${tech.name} — ${categoryLabel}`}
+                data-name={tech.name}
+              >
+                {/* Layer 1: Logo on substrate (static) */}
+                <div class="stack__card-logo">
+                  <picture>
+                    <source srcset={tech.image.replace('.png', '.avif')} type="image/avif" />
+                    <source srcset={tech.image.replace('.png', '.webp')} type="image/webp" />
+                    <img
+                      src={tech.image}
+                      alt={`${tech.name} logo`}
+                      class="stack__card-logo-img"
+                      loading="lazy"
+                    />
+                  </picture>
+                </div>
+
+                {/* Layer 1.5: Iris ring glow */}
+                <div class="stack__card-ring" aria-hidden="true" />
+
+                {/* Layer 2: Glass overlay — the iris the JS opens on hover. */}
+                <div class="stack__card-glass js-stack-glass" aria-hidden="true" />
+
+                {/* Layer 3: Label — OUTSIDE the masked glass on purpose. When the
+                    iris opens to 65% it engulfs the bottom of the glass, so a label
+                    nested inside would get masked out. Kept as its own top layer so
+                    the name stays readable on hover instead of vanishing. */}
+                <div class="stack__card-info">
+                  <span class="stack__card-name">{tech.name}</span>
+                  <span class="stack__card-category text-mono">{categoryLabel}</span>
+                </div>
+              </div>
+            );
+          })
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ── Section layout ────────────────────────────────────── */
+  .stack-section {
+    padding-block: var(--section-gap);
+    background: linear-gradient(to bottom, var(--bg-obsidian), var(--bg-graphite));
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grid background pattern — neural substrate */
+  .stack-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(hsla(155, 65%, 50%, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(155, 65%, 50%, 0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  /* ── Header ────────────────────────────────────────────── */
+  /* No resting opacity: 0 — section-animations.ts' fromTo() applies its own
+     "from" state immediately on init; a blocked/failed script must leave
+     this content visible, not permanently hidden (etalon rule). */
+  .stack__header {
+    margin-bottom: var(--space-16);
+  }
+
+  .stack__label {
+    margin-bottom: var(--space-4);
+  }
+
+  .stack__title {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .stack__subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    max-width: 48ch;
+  }
+
+  /* `<picture>` is inline by default — make it a transparent wrapper so the
+     flex-centered `<img>` inside lays out exactly as before. */
+  picture {
+    display: contents;
+  }
+
+  /* ── Grid wrapper (for neural SVG overlay) ──────────── */
+  .stack__grid-wrap {
+    position: relative;
+  }
+
+  .stack__neural-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Cards grid ────────────────────────────────────────── */
+  /* Flex-wrap and CENTERED, not a fixed N-column grid. The tile COUNT is what
+     keeps changing here — Docker/Terraform left 2026-08-15, WebGPU 2026-08-16 —
+     and a fixed grid leaves an orphaned, left-aligned last row whenever the
+     count is not a clean multiple of the columns (11 tiles at 6 cols = 6 + 5,
+     the gap the owner caught). Centering the wrap makes any partial last row
+     read as intentional, at every breakpoint and for whatever the count becomes
+     next. Cards take a per-breakpoint flex-basis so the rhythm still reads as
+     2 / 4 / 6 per row. (skill: breakpoint-consistency; no fixed grid to orphan.) */
+  .stack__grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-4);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 2 per row on mobile: two cards + one gap fill the row. */
+  .stack__card {
+    flex: 0 0 calc((100% - var(--space-4)) / 2);
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .stack__card {
+      /* 4 per row */
+      flex-basis: calc((100% - 3 * var(--space-4)) / 4);
+    }
+  }
+
+  @media (min-width: 960px) {
+    .stack__card {
+      /* 6 per row */
+      flex-basis: calc((100% - 5 * var(--space-4)) / 6);
+    }
+  }
+
+  /* ── Card container ─────────────────────────────────── */
+  .stack__card {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--radius-xl, 16px);
+    overflow: hidden;
+    cursor: default;
+    /* No static opacity/transform hidden-state — see .stack__header comment
+       above; the grid's own entrance tween covers the happy path via
+       immediateRender, so the resting CSS state must stay visible. */
+    /* Tap-to-open on touch: suppress Android's default tap-highlight flash so
+       our own open() feedback is the only response to a tap. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Layer 1: Logo on substrate (static) ────────────── */
+  .stack__card-logo {
+    position: absolute;
+    top: 8%;
+    left: 14%;
+    right: 14%;
+    bottom: 30%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  .stack__card-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-lg);
+    /* blur() FIRST, then drop-shadow — GSAP interpolates matched filter
+       chains, and open()/close() use the same order. Self-blur is what makes
+       the resting logo genuinely unreadable (backdrop blur alone cannot). */
+    filter: blur(7px) drop-shadow(0 0 12px hsla(155, 70%, 50%, 0.3));
+    /* NO transition here: GSAP owns `filter` and `scale` exclusively (open/
+       close in section-animations.ts). A CSS transition on a property GSAP is
+       actively tweening re-eases every per-frame write — a compounding
+       double-ease. The original had exactly this latent bug on the glass's
+       `transform`; each property now has exactly one animator. */
+  }
+
+  /* ── Layer 1.5: Iris ring glow ──────────────────────── */
+  .stack__card-ring {
+    position: absolute;
+    top: 5%;
+    left: 10%;
+    right: 10%;
+    bottom: 26%;
+    z-index: 1;
+    border-radius: var(--radius-lg);
+    border: 1.5px solid hsla(155, 65%, 50%, 0.08);
+    box-shadow:
+      0 0 8px hsla(155, 65%, 50%, 0.04),
+      inset 0 0 8px hsla(155, 65%, 50%, 0.03);
+    opacity: 0;
+    transform: scale(0.92);
+    transition:
+      opacity 0.5s var(--ease-out),
+      transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+      border-color 0.5s var(--ease-out),
+      box-shadow 0.5s var(--ease-out);
+    pointer-events: none;
+  }
+
+  /* `.is-open` is toggled by JS (mouse OR tap) — never raw :hover, which
+     sticks on mobile after a tap and has no reliable "leave". */
+  .stack__card.is-open .stack__card-ring {
+    opacity: 1;
+    transform: scale(1);
+    border-color: hsla(155, 65%, 50%, 0.35);
+    box-shadow:
+      0 0 16px hsla(155, 65%, 50%, 0.15),
+      inset 0 0 16px hsla(155, 65%, 50%, 0.08);
+  }
+
+  /* ── Layer 2: Glass overlay (mouse-tracked) ─────────── */
+  .stack__card-glass {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    /* Dense matte per the owner's eye: heavier veil + deeper blur so the logo
+       is a formless glow at rest and only EMERGES when the glass melts. */
+    background: hsla(220, 20%, 10%, 0.88);
+    /* 2026 glass, not 2017 blur: deep blur + saturation lift + slight dimming
+       reads as thick physical glass; the naked-blur look is exactly what the
+       owner rejected. */
+    backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    -webkit-backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    border: 1px solid var(--glass-border);
+    border-radius: inherit;
+    /* Edge catch-light — the top rim catching light is what sells "pane". */
+    box-shadow:
+      inset 0 1px 0 hsla(0, 0%, 100%, 0.07),
+      inset 0 0 0 1px hsla(0, 0%, 100%, 0.025);
+
+    /* Only border-color/box-shadow are CSS-owned (via .is-open) and get a
+       transition. Deliberately EXCLUDING transform, opacity and the iris vars:
+       GSAP drives those per-tick via inline writes — a CSS transition on the
+       same property would re-ease each already-eased frame (the original's
+       latent double-ease bug on `transform`, fixed here for good). */
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+
+    /* NO mask — BY DESIGN, and the geometry test enforces its absence.
+       History: the beloved pre-deploy interaction was, unknowingly, the
+       mask-FREE one (`circle N%` was invalid, the browser dropped the whole
+       gradient): a fully frosted pane hiding the logo, and hover MELTING the
+       glass (opacity tween) so the logo emerges with its glow. Every masked
+       revision since had the same problems the owner rejected on sight —
+       harsh cutout edges, invisible effect on dark-tile logos (HuggingFace,
+       ONNX), circles colliding at 2K / shifting per resolution, and two
+       silent geometry regressions. The frosted-fade has none of those: no
+       edges, uniform on every logo, resolution-independent, and nothing that
+       CAN silently break. The reveal itself lives in section-animations.ts
+       as a single glass-opacity tween (rest 1 → open, see
+       GLASS_OPEN_OPACITY). */
+  }
+
+  /* Specular sheen: one soft diagonal light streak across the pane. */
+  .stack__card-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      115deg,
+      transparent 22%,
+      hsla(0, 0%, 100%, 0.055) 38%,
+      hsla(0, 0%, 100%, 0.015) 46%,
+      transparent 62%
+    );
+    pointer-events: none;
+  }
+
+  /* Roughness: TWO scales of SVG turbulence grain riding ON the pane, so the
+     texture melts away together with the glass on hover. data: URI is allowed
+     by the CSP (img-src carries data:). */
+  .stack__card-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    background-size:
+      90px 90px,
+      260px 260px;
+    mix-blend-mode: overlay;
+    opacity: 0.34;
+    pointer-events: none;
+  }
+
+  .stack__card.is-open .stack__card-glass {
+    border-color: var(--accent-green-300);
+    box-shadow:
+      inset 0 0 30px hsla(155, 65%, 50%, 0.06),
+      0 0 20px hsla(155, 65%, 50%, 0.1);
+  }
+
+  /* ── Card info text ─────────────────────────────────── */
+  .stack__card-info {
+    /* Own top layer, NEVER nested inside the masked glass: no mask value can
+       ever touch this text, unconditionally — the guarantee is structural, not
+       arithmetic (this component's last two regressions were both "the math
+       happened to be wrong"). NEW: its own static frosted backdrop (same
+       recipe as the glass) so the label reads as one continuous frosted plinth
+       whatever the animated mask underneath is doing. */
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    min-height: 15%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+    padding: var(--space-2);
+    pointer-events: none;
+
+    background: hsla(220, 20%, 10%, 0.88);
+    backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    -webkit-backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Values are byte-identical to the base rules above — nothing about the tile
+     grid, opacity or blur amount changes here. Must stay AFTER both base rules:
+     equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .stack__card-glass {
+      backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    }
+
+    .stack__card-info {
+      backdrop-filter: blur(10px) saturate(150%) brightness(0.9);
+    }
+  }
+
+  /* Same grain as the glass so the plinth reads as the same rough pane —
+     z-index -1 keeps it under the text, above the background. */
+  .stack__card-info::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  /* Truncation safety: a longer future name/RU category can never grow the
+     plinth past its band — it ellipsizes instead. */
+  .stack__card-name,
+  .stack__card-category {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .stack__card-name {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  .stack__card.is-open .stack__card-name {
+    color: var(--accent-green-200);
+  }
+
+  .stack__card-category {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* ── Neural connection line style (SVG) ─────────────── */
+  .stack__neural-svg :global(line) {
+    stroke: var(--accent-green-500);
+    stroke-width: 1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .stack__neural-svg.is-visible :global(line) {
+    opacity: 1;
+    animation: neural-pulse 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes neural-pulse {
+    0% {
+      opacity: 0.12;
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      opacity: 0.12;
+    }
+  }
+
+  /* Reduced motion: a static state, never a running loop. */
+  @media (prefers-reduced-motion: reduce) {
+    .stack__neural-svg.is-visible :global(line) {
+      animation: none;
+    }
+
+    /* The ring's scale-in on .is-open is CSS-owned (unlike the glass/logo,
+       which section-animations.ts already zeroes via OPEN_*_DURATION) —
+       drop only the transform leg so the ring still appears, just without
+       tweening its own growth. */
+    .stack__card-ring {
+      transition:
+        opacity 0.5s var(--ease-out),
+        border-color 0.5s var(--ease-out),
+        box-shadow 0.5s var(--ease-out);
+    }
+  }
+</style>

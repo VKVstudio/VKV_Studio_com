@@ -1,0 +1,623 @@
+---
+import { getImage } from 'astro:assets';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import InnerHeader from '../../../components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import { t } from '../../../i18n/utils';
+import type { Lang } from '../../../i18n/utils';
+import { CONTACT_EMAIL } from '@/lib/site-config';
+import heroArt from '@/assets/privacy/privacy-hero.png';
+
+export function getStaticPaths() {
+  return [{ params: { lang: 'en' } }, { params: { lang: 'ru' } }];
+}
+
+const { lang } = Astro.params;
+const activeLang = (lang as Lang) || 'en';
+
+interface PolicySection {
+  id: string;
+  title: string;
+  paragraphs: string[];
+  list?: string[];
+}
+
+interface PolicyContent {
+  updated: string;
+  updatedISO: string;
+  intro: string;
+  sections: PolicySection[];
+}
+
+const content: Record<Lang, PolicyContent> = {
+  en: {
+    updated: 'Last updated: 6 September 2026',
+    updatedISO: '2026-09-06',
+    intro:
+      "This policy covers vkvstudio.com and every page and browser-based tool hosted on it — the marketing site, the Lab (Tokenizer Profiler, Prompt Architect, Embedding Space Explorer), and the Synapse AI assistant. It's written to describe exactly what the code on this site does today, not what a generic privacy-policy template assumes a website does. Where a feature isn't live in the current deployment, that's stated explicitly below.",
+    sections: [
+      {
+        id: 'what-we-collect',
+        title: 'What I collect, and why',
+        paragraphs: ['VKVstudio is built to need as little of your data as possible:'],
+        list: [
+          "Language preference — determined entirely by the page URL (/en/ or /ru/); it isn't stored in a cookie or any other persistent identifier.",
+          "Standard hosting logs — like effectively every website, requests to this site pass through Cloudflare's edge network, which records ordinary connection metadata (IP address, user agent, timestamp, requested URL) for security and performance purposes. This site doesn't read or process those logs directly — see 'Third-party processors' below.",
+          "Text you type into a Lab tool — handled as described in 'What stays on your device' and 'What may reach a server' below.",
+          "Conversation history with Synapse, the AI assistant — handled as described in 'What may reach a server' and 'Data retention' below. If the backend is ever offline, the site falls back to a static mock and no conversation is sent or stored.",
+        ],
+      },
+      {
+        id: 'cookies',
+        title: 'Cookies & local storage',
+        paragraphs: [
+          "This site itself sets no cookies at all — none for tracking, none for advertising or analytics, and currently none for any other purpose either. Your interface language is read from the page URL (/en/ or /ru/), not persisted anywhere. One scoped exception exists: if you open Google sign-in for Synapse, the Google Identity Services script it loads may set Google's own cookies (such as g_state) — that script is only loaded when you use sign-in, never on page load; see 'Third-party processors' below.",
+          "What the site does use is your browser's own local storage (localStorage and IndexedDB) — a different, non-cookie mechanism that isn't sent to any server automatically. It's used only for on-device functionality: remembering that you've dismissed the notice you may have seen, caching Lab-tool data and downloaded model weights on your device so they don't have to be re-fetched, and, when you use the Synapse assistant, keeping a local copy of your chat history. None of this is used for tracking or shared with anyone.",
+          "Because there's currently nothing non-essential here to opt out of, the notice you may have seen simply states this rather than offering a granular accept/reject choice. If that ever changes — for example, if cookie-based analytics is added — this policy and the notice will be updated to disclose it and, where required, to offer a real choice before any such cookie is set.",
+        ],
+      },
+      {
+        id: 'on-device',
+        title: 'What stays on your device',
+        paragraphs: [
+          'The Tokenizer Profiler and Prompt Architect run entirely in your browser in JavaScript. Text you type into them is tokenized or otherwise processed locally on your device and is never uploaded anywhere by default. (The Tokenizer\'s exact-count mode for a few models is the one exception — it sends that text to the inference backend, which relays it to the model provider\'s token-counting API; see "Third-party processors" below.)',
+          "The Embedding Space Explorer computes its vectors on the inference backend, not in your browser: the passages and search queries you embed are sent to the backend (running Google's EmbeddingGemma) and turned into vectors there. If that backend is ever offline, the Explorer simply doesn't work — this feature has no local fallback. The text is embedded on the fly and is not stored by the embedding endpoint.",
+          'If you use Synapse, the AI assistant, your conversation history is also cached locally in your browser using IndexedDB. How long it lasts depends on whether you sign in: signed out, it is deleted the next time this site loads in that browser once no tab has been active for about 90 seconds — not at the instant of closing, and not at all if the site is never opened there again. On a genuinely shared machine, clear the site data or use a private window rather than relying on that timer. Sign in and it is kept, and also copied to the server (below) so it follows you to another device.',
+        ],
+      },
+      {
+        id: 'may-reach-server',
+        title: 'What may reach a server',
+        paragraphs: ['A few features can, under specific conditions, send text off your device:'],
+        list: [
+          "Embedding Space Explorer — the passages and search queries you embed are sent to VKVstudio's own inference backend and turned into vectors by Google's EmbeddingGemma running there. They're embedded on the fly and are not stored by the embedding endpoint. If that backend is ever offline, the Explorer simply doesn't work — this feature has no local fallback.",
+          "Exact token counts in the Tokenizer Profiler — some proprietary models (Claude, Gemini) publish no client-side tokenizer, so an exact count needs an API call. Selecting one of those models is what starts it: from then on the text in the box is sent, as you type, to VKVstudio's own inference backend, which forwards it to Google's or Anthropic's API and returns just the number. There is no separate switch to agree to — the model you pick is the choice. Every other model in the list is counted entirely in your browser and nothing is sent anywhere. If the backend is unreachable, the tool falls back to a local approximation and labels the number as approximate rather than exact.",
+          "Synapse conversations — your message is sent to VKVstudio's own inference backend and answered by the self-hosted model running there, whether or not you are signed in. That is simply where the model lives; it is not in your browser. What signing in changes is storage: signed in, the conversation is also written to a server-side database keyed to your Google account's unique id — not your name, email, or IP address. Signed out, nothing about the conversation is written to that database and the transcript exists only in your browser. In both cases the server writes operational log lines per request; for voice requests those include the first 80 characters of the transcript and of the assistant's reply, while typed-chat requests are logged without message content.",
+          "Synapse voice input — if you use the mic button, your browser records audio and sends it to VKVstudio's own inference backend, which forwards it to Google Cloud Speech-to-Text for transcription. Google receives the audio of what you said; the transcript then goes to the assistant as if you had typed it. The recording is not stored: it is held in memory for the length of the request and discarded. The audio is used solely to transcribe your words — never to identify or authenticate you by your voice. The transcript itself is treated exactly like a typed message — see the Synapse conversations entry above. Nothing is recorded until you press the button, and the browser asks your permission first. This control was switched off between 13 and 15 August 2026, when transcription did not work; it was restored once it did.",
+          "Synapse spoken replies — when Synapse answers out loud, the text of its reply is sent from VKVstudio's backend to Google Cloud Text-to-Speech (Chirp 3 HD), which returns the audio. Google receives the assistant's words, which reflect what you asked it; it does not receive your microphone audio, your account, or anything else identifying you. Unlike the optional features above, this is on by default whenever the backend is running and a reply is spoken.",
+        ],
+      },
+      {
+        id: 'third-parties',
+        title: 'Third-party processors',
+        paragraphs: [],
+        list: [
+          "Hugging Face — hosts the tokenizer model/vocabulary files the Tokenizer Profiler downloads for some models (run locally in your browser). Your browser fetches these files directly from Hugging Face's CDN; the text you tokenize is never sent there. (The Embedding Space Explorer no longer downloads a model to your browser — it embeds on the inference backend instead; see “What stays on your device”.)",
+          "Anthropic / Google — reached only if you use exact tokenizer verification and the inference backend is live (see above); the specific text you asked to verify is sent to whichever provider's API matches the model you selected.",
+          'Google Cloud — two directions. Speech-to-Text transcribes Synapse voice input: the audio you record with the mic button is sent to Google for transcription. Text-to-Speech (Chirp 3 HD) synthesises the spoken replies, so the text of every reply that is read aloud is sent to Google; unlike the mic, this is not opt-in — it runs whenever the backend is up and Synapse speaks.',
+          "Microsoft (Edge Read-Aloud) — the automatic fallback voice: if a Chirp call fails or its monthly character budget runs out, the same reply text is synthesised by Microsoft's Edge TTS service instead, and Microsoft receives that text in place of Google.",
+          'Google Identity Services — the sign-in script (accounts.google.com), loaded only when you open Google sign-in for Synapse; Google handles the sign-in interaction and may set its own cookies (see Cookies above).',
+          'Cloudflare — hosts this site and, as with any site behind its network, processes standard request/connection metadata for routing, caching, and abuse protection.',
+        ],
+      },
+      {
+        id: 'no-sale',
+        title: 'No sale of data',
+        paragraphs: [
+          "I don't sell data, and I don't share it with anyone outside the processors listed above.",
+        ],
+      },
+      {
+        id: 'retention',
+        title: 'Data retention',
+        paragraphs: [],
+        list: [
+          "Notice-dismissal flag (localStorage) — persists until you clear your browser's local storage for this site.",
+          "Local IndexedDB conversation history (Synapse) — if you are signed in, it stays on your device until you clear your browser storage, delete conversations in the app, or sign out: signing out deletes this device's local copy immediately (the server copy is separate — above). If you are not signed in, it is deleted on the next visit after about 90 seconds of no activity, not at the moment the browser closes.",
+          'Server-side conversation history (Synapse, only if you sign in with Google) — retained until you delete the conversation, or automatically purged 30 days after it was last updated, whichever comes first.',
+          "Cloudflare request logs — retained per Cloudflare's own standard log-retention policy, outside my control; see Cloudflare's own privacy documentation.",
+        ],
+      },
+      {
+        id: 'your-rights',
+        title: 'Your rights',
+        paragraphs: [
+          'If you are in the Republic of Armenia, the Law of the Republic of Armenia "On Protection of Personal Data" (HO-49-N, 2015) gives you the right to:',
+        ],
+        list: [
+          'know what personal data concerning you is processed, and why;',
+          'access a copy of it;',
+          'request correction of inaccurate data;',
+          "request erasure of your data, where there's no legitimate ground for me to keep it;",
+          'object to, or request restriction of, processing;',
+          'lodge a complaint with the Personal Data Protection Agency of the Republic of Armenia, the state body supervising compliance with this law.',
+        ],
+      },
+      {
+        id: 'rights-practice',
+        title: 'Exercising these rights in practice',
+        paragraphs: [
+          'Because the site is visible internationally and used by an EN/RU audience beyond Armenia, I apply these same rights as a matter of practice to every visitor, regardless of location — in line with GDPR-style best practice.',
+          "In practice, exercising these rights is simple: clearing your browser's local storage/site data for this domain removes the notice-dismissal flag, any cached Lab-tool data, and any locally cached Synapse history immediately, and emailing me (see 'Contact' below) is enough to request access to, or deletion of, anything stored server-side. Armenian law sets the clock for erasure after a withdrawal of consent at 10 working days, and I hold myself to that same deadline for any deletion request.",
+        ],
+      },
+      {
+        id: 'international-transfer',
+        title: 'International data transfer (visitors to this site)',
+        paragraphs: [
+          'This section is about data this website collects from you as a visitor. It is not about data handled inside a client engagement — if you are evaluating me as a supplier, the answer you need is on the Trust & Process page, not here.',
+          "Data described above may be processed outside Armenia: Hugging Face's CDN and Cloudflare's network are both globally distributed, and the APIs this site reaches — Anthropic's and Google's for tokenizer verification, Google Cloud's for speech synthesis — run on infrastructure that isn't based in Armenia. I rely on these providers' own security and compliance programs for that processing; no additional data-transfer mechanism beyond what's described in this policy is currently in place. Under Armenia's data-protection law, these transfers rest on their necessity for the processing purposes stated in this policy (Article 27 of HO-49-N).",
+        ],
+      },
+      {
+        id: 'children',
+        title: "Children's privacy",
+        paragraphs: [
+          "This site isn't directed at children, and I don't knowingly collect data from them. If you believe a child has submitted data to the Synapse backend, contact me and I'll remove it.",
+        ],
+      },
+      {
+        id: 'changes',
+        title: 'Changes to this policy',
+        paragraphs: [
+          "This policy will be updated whenever what the site's code actually does changes — for example, if cookie-based analytics is ever added. The 'last updated' date at the top of this page reflects the most recent revision.",
+        ],
+      },
+      {
+        id: 'controller',
+        title: 'Data controller & contact',
+        paragraphs: [],
+        list: [
+          'Data controller: VKVstudio — Karpov Valerii, sole proprietorship (individual entrepreneur, Ա/Ձ).',
+          'Registered with the State Register of Legal Entities, Ministry of Justice of the Republic of Armenia, on 12 February 2026.',
+          'Registered activity: 62.01.0 — computer programming',
+          'Place of registration: Gyumri, Shirak Province, Republic of Armenia',
+          `${CONTACT_EMAIL} — contact for privacy requests, including access to or deletion of your data`,
+        ],
+      },
+    ],
+  },
+  ru: {
+    updated: 'Обновлено: 6 сентября 2026',
+    updatedISO: '2026-09-06',
+    intro:
+      'Эта политика распространяется на весь сайт vkvstudio.com и на все инструменты, работающие в браузере на этом домене: основной сайт, раздел «Лаборатория» (Профайлер токенизации, Prompt Architect, Пространство эмбеддингов) и AI-ассистента Synapse. Текст описывает именно то, что делает код сайта сегодня, а не то, что предполагает типовой шаблон политики конфиденциальности. Если какая-то функция ещё не работает в текущей публичной версии сайта, это прямо указано ниже.',
+    sections: [
+      {
+        id: 'what-we-collect',
+        title: 'Что я собираю и зачем',
+        paragraphs: ['VKVstudio спроектирован так, чтобы запрашивать как можно меньше данных:'],
+        list: [
+          'Языковые предпочтения — определяются исключительно URL страницы (/en/ или /ru/) и не сохраняются ни в cookie-файле, ни в каком-либо ином постоянном идентификаторе.',
+          'Стандартные логи хостинга — как и практически любой сайт, запросы к vkvstudio.com проходят через edge-сеть Cloudflare, которая фиксирует обычные метаданные соединения (IP-адрес, user agent, время запроса, запрошенный URL) в целях безопасности и производительности. Сам сайт не читает и не обрабатывает эти логи напрямую — подробнее в разделе «Сторонние обработчики» ниже.',
+          'Текст, который вы вводите в инструментах Лаборатории, — обрабатывается так, как описано в разделах «Что остаётся на вашем устройстве» и «Что может попасть на сервер» ниже.',
+          'История переписки с Synapse, AI-ассистентом, — обрабатывается так, как описано в разделах «Что может попасть на сервер» и «Хранение данных» ниже. Если серверная часть когда-либо окажется недоступна, сайт переходит на статический мок, и переписка никуда не отправляется и не сохраняется.',
+        ],
+      },
+      {
+        id: 'cookies',
+        title: 'Cookie-файлы и локальное хранилище',
+        paragraphs: [
+          'Сам сайт не устанавливает никаких cookie-файлов вообще — ни для отслеживания, ни для рекламы или аналитики, ни для чего-либо ещё на данный момент. Язык интерфейса определяется URL страницы (/en/ или /ru/) и нигде не сохраняется. Единственное узкое исключение: если вы открываете вход через Google для Synapse, загружаемый при этом скрипт Google Identity Services может ставить собственные cookie Google (например, g_state) — он загружается только при использовании входа, никогда при открытии страницы; см. «Сторонние обработчики» ниже.',
+          'Сайт использует собственное локальное хранилище вашего браузера (localStorage и IndexedDB) — это другой механизм, не cookie-файлы, и он не отправляется автоматически ни на какой сервер. Он нужен только для работы функций на устройстве: чтобы запомнить, что вы закрыли уведомление, которое могли увидеть, кэшировать данные инструментов Лаборатории и загруженные веса моделей на вашем устройстве, чтобы не загружать их заново, и — когда вы пользуетесь ассистентом Synapse — хранить локальную копию истории переписки. Ничто из этого не используется для отслеживания и никому не передаётся.',
+          'Поскольку сейчас здесь нет ни одного необязательного элемента, от которого можно было бы отказаться, уведомление, которое вы могли увидеть, просто сообщает об этом, а не предлагает детальный выбор «принять/отклонить». Если это изменится — например, появится аналитика на основе cookie-файлов — эта политика и уведомление будут обновлены, чтобы раскрыть это и, где это требуется, предложить реальный выбор до установки такого cookie-файла.',
+        ],
+      },
+      {
+        id: 'on-device',
+        title: 'Что остаётся на вашем устройстве',
+        paragraphs: [
+          'Профайлер токенизации и Prompt Architect работают полностью в вашем браузере на JavaScript. Текст, который вы вводите в них, токенизируется или иначе обрабатывается локально на вашем устройстве и по умолчанию никуда не отправляется. (Единственное исключение — режим точного подсчёта токенов для нескольких моделей: он отправляет этот текст на inference-бэкенд, который передаёт его в API подсчёта токенов провайдера модели; см. «Сторонние обработчики» ниже.)',
+          'Пространство эмбеддингов считает векторы на inference-бэкенде, а не в браузере: отрывки и поисковые запросы, которые вы эмбеддите, отправляются на бэкенд (там работает Google EmbeddingGemma) и превращаются в векторы на сервере. Если этот бэкенд когда-либо окажется недоступен, инструмент просто не работает — локального запасного варианта у этой функции нет. Текст эмбеддится на лету и не сохраняется эндпоинтом эмбеддингов.',
+          'Если вы пользуетесь Synapse, AI-ассистентом, история вашей переписки также кэшируется локально в браузере через IndexedDB. Сколько она живёт, зависит от того, вошли вы или нет: без входа она удаляется при следующей загрузке сайта в этом браузере, когда ни одна вкладка не была активна около 90 секунд — не в момент закрытия, и вовсе не удаляется, если сайт там больше не открывали. На действительно общем компьютере надёжнее очистить данные сайта или использовать приватное окно, чем полагаться на этот таймер. Если вы вошли — она сохраняется и копируется на сервер (см. ниже), поэтому доступна и с другого устройства.',
+        ],
+      },
+      {
+        id: 'may-reach-server',
+        title: 'Что может попасть на сервер',
+        paragraphs: [
+          'Несколько функций при определённых условиях могут отправлять текст за пределы вашего устройства:',
+        ],
+        list: [
+          'Пространство эмбеддингов — отрывки и поисковые запросы, которые вы эмбеддите, отправляются на собственный inference-бэкенд VKVstudio и превращаются в векторы моделью Google EmbeddingGemma, работающей там. Они эмбеддятся на лету и не сохраняются эндпоинтом эмбеддингов. Если этот бэкенд когда-либо окажется недоступен, инструмент просто не работает — локального запасного варианта у этой функции нет.',
+          'Точный подсчёт токенов в Профайлере токенизации — для некоторых проприетарных моделей (Claude, Gemini) клиентский токенизатор не публикуется, поэтому точное число требует обращения к API. Запускает это сам выбор такой модели: с этого момента текст из поля отправляется по мере набора на собственный inference-бэкенд VKVstudio, тот пересылает его в API Google или Anthropic и возвращает только число. Отдельного переключателя, который надо включить, нет — выбор модели и есть согласие. Все остальные модели в списке считаются целиком в вашем браузере, и никуда ничего не уходит. Если бэкенд недоступен, инструмент переходит на локальное приближение и помечает число как приблизительное, а не точное.',
+          'Переписка с Synapse — ваше сообщение отправляется на собственный inference-бэкенд VKVstudio и обрабатывается работающей там self-hosted моделью, независимо от того, вошли вы или нет. Просто модель живёт там, а не в вашем браузере. Вход меняет хранение: если вы вошли, переписка дополнительно записывается в серверную базу, привязанную к уникальному идентификатору вашего аккаунта Google — не к имени, email или IP-адресу. Если не вошли, в эту базу о переписке не записывается ничего, и она существует только в вашем браузере. В обоих случаях сервер пишет служебные строки лога на каждый запрос; для голосовых запросов они включают первые 80 символов расшифровки и ответа ассистента, а текстовая переписка логируется без содержимого сообщений.',
+          'Голосовой ввод Synapse — если вы пользуетесь кнопкой микрофона, браузер записывает звук и отправляет его на собственный inference-бэкенд VKVstudio, а тот пересылает запись в Google Cloud Speech-to-Text для распознавания. Google получает аудио того, что вы сказали; затем расшифровка уходит ассистенту так, как будто вы её набрали. Сама запись не сохраняется: она живёт в памяти на время запроса и удаляется. Аудио используется исключительно для расшифровки сказанного — никогда для идентификации или аутентификации вас по голосу. С расшифровкой дальше обращаются точно так же, как с набранным сообщением — см. пункт про переписку с Synapse выше. Ничего не записывается, пока вы не нажали кнопку, и браузер сначала спросит разрешение. Эта кнопка была выключена с 13 по 15 августа 2026 года, пока распознавание не работало, и вернулась, когда заработало.',
+          'Озвучка ответов Synapse — когда Synapse отвечает вслух, текст его ответа отправляется с бэкенда VKVstudio в Google Cloud Text-to-Speech (Chirp 3 HD), который возвращает аудио. Google получает слова ассистента, которые отражают то, о чём вы спросили; он не получает ни звук с вашего микрофона, ни ваш аккаунт, ни что-либо ещё, идентифицирующее вас. В отличие от перечисленных выше необязательных функций, это работает по умолчанию всегда, когда бэкенд запущен и ответ озвучивается.',
+        ],
+      },
+      {
+        id: 'third-parties',
+        title: 'Сторонние обработчики',
+        paragraphs: [],
+        list: [
+          'Hugging Face — хранит файлы моделей/словарей токенизатора, которые Профайлер токенизации загружает для некоторых моделей (работают локально в вашем браузере). Ваш браузер получает эти файлы напрямую с CDN Hugging Face; текст, который вы токенизируете, туда не отправляется. (Пространство эмбеддингов больше не загружает модель в браузер — оно считает эмбеддинги на inference-бэкенде; см. «Что остаётся на вашем устройстве».)',
+          'Anthropic / Google — задействуются, только если вы используете точную проверку токенизатора и inference-бэкенд запущен (см. выше); конкретный текст, который вы попросили проверить, отправляется в API того провайдера, который соответствует выбранной модели.',
+          'Google Cloud — два направления. Speech-to-Text распознаёт голосовой ввод Synapse: аудио, записанное кнопкой микрофона, отправляется в Google для расшифровки. Text-to-Speech (Chirp 3 HD) синтезирует озвучку ответов, поэтому текст каждого зачитанного вслух ответа отправляется в Google; в отличие от микрофона, это не опциональная функция — работает всегда, когда бэкенд запущен и Synapse говорит.',
+          'Microsoft (Edge Read-Aloud) — автоматический запасной голос: если вызов Chirp не удался или исчерпан его месячный лимит символов, тот же текст ответа синтезируется сервисом Edge TTS от Microsoft — и этот текст получает Microsoft вместо Google.',
+          'Google Identity Services — скрипт входа (accounts.google.com), загружается только когда вы открываете вход через Google для Synapse; Google обрабатывает сам вход и может ставить собственные cookie (см. «Cookie-файлы» выше).',
+          'Cloudflare — обеспечивает хостинг сайта и, как и в случае с любым сайтом за этой сетью, обрабатывает стандартные метаданные запросов/соединений для маршрутизации, кэширования и защиты от злоупотреблений.',
+        ],
+      },
+      {
+        id: 'no-sale',
+        title: 'Я не продаю данные',
+        paragraphs: [
+          'Я не продаю данные и не передаю их никому, кроме перечисленных выше обработчиков.',
+        ],
+      },
+      {
+        id: 'retention',
+        title: 'Хранение данных',
+        paragraphs: [],
+        list: [
+          'Флаг о закрытии уведомления (localStorage) — хранится до тех пор, пока вы не очистите локальное хранилище браузера для этого сайта.',
+          'Локальная история переписки Synapse в IndexedDB — если вы вошли, остаётся на вашем устройстве, пока вы не очистите хранилище браузера, не удалите переписку в приложении или не выйдете из аккаунта: выход немедленно удаляет локальную копию на этом устройстве (серверная копия — отдельно, выше). Если вы не вошли, она удаляется при следующем визите после ~90 секунд без активности, а не в момент закрытия браузера.',
+          'Серверная история переписки Synapse (только если вы вошли через Google) — хранится до тех пор, пока вы не удалите переписку, либо автоматически удаляется через 30 дней после последнего изменения, в зависимости от того, что наступит раньше.',
+          'Логи запросов Cloudflare — хранятся согласно собственной политике хранения логов Cloudflare, вне моего контроля; подробнее — в документации Cloudflare о конфиденциальности.',
+        ],
+      },
+      {
+        id: 'your-rights',
+        title: 'Ваши права',
+        paragraphs: [
+          'Если вы находитесь в Республике Армения, Закон Республики Армения «О защите персональных данных» (ՀՕ-49-Ն, 2015) даёт вам право:',
+        ],
+        list: [
+          'знать, какие персональные данные о вас обрабатываются и с какой целью;',
+          'получить копию этих данных;',
+          'потребовать исправления неточных данных;',
+          'потребовать удаления ваших данных, если у меня нет законного основания их хранить;',
+          'возражать против обработки или требовать её ограничения;',
+          'подать жалобу в Агентство по защите персональных данных Республики Армения — государственный орган, надзирающий за соблюдением этого закона.',
+        ],
+      },
+      {
+        id: 'rights-practice',
+        title: 'Как реализовать эти права на практике',
+        paragraphs: [
+          'Поскольку сайт открыт по всему миру и им пользуется русско- и англоязычная аудитория за пределами Армении, я применяю эти же права на практике ко всем посетителям независимо от местонахождения — в духе лучших практик GDPR.',
+          'На практике реализовать эти права просто: очистка локального хранилища браузера (site data) для этого домена немедленно удаляет флаг о закрытии уведомления, любые кэшированные данные инструментов Лаборатории и любую локально кэшированную историю Synapse, а письмо на мой адрес (см. «Контакты» ниже) — этого достаточно, чтобы запросить доступ к данным, хранящимся на сервере, или их удаление. Закон РА отводит на удаление после отзыва согласия 10 рабочих дней — этого же срока я придерживаюсь для любого запроса на удаление.',
+        ],
+      },
+      {
+        id: 'international-transfer',
+        title: 'Международная передача данных (для посетителей сайта)',
+        paragraphs: [
+          'Этот раздел — о данных, которые сайт собирает у вас как у посетителя. Он не о данных внутри работы с клиентом: если вы оцениваете меня как подрядчика, нужный вам ответ находится на странице «Доверие и процесс», а не здесь.',
+          'Описанные выше данные могут обрабатываться за пределами Армении: CDN Hugging Face и сеть Cloudflare распределены глобально, а API, к которым обращается сайт — Anthropic и Google для проверки токенизатора, Google Cloud для синтеза речи, — работают на инфраструктуре, не базирующейся в Армении. В отношении этой обработки я полагаюсь на собственные программы безопасности и соответствия этих провайдеров; каких-либо дополнительных механизмов передачи данных, помимо описанных в этой политике, на данный момент не предусмотрено. По закону РА о персональных данных основание этих передач — их необходимость для целей обработки, заявленных в этой политике (ст. 27 ՀՕ-49-Ն).',
+        ],
+      },
+      {
+        id: 'children',
+        title: 'Дети',
+        paragraphs: [
+          'Сайт не ориентирован на детей, и я сознательно не собираю данные о них. Если вы считаете, что ребёнок передал данные серверной части Synapse, свяжитесь со мной — я их удалю.',
+        ],
+      },
+      {
+        id: 'changes',
+        title: 'Изменения в этой политике',
+        paragraphs: [
+          'Эта политика будет обновляться каждый раз, когда меняется то, что реально делает код сайта, — например, если появится аналитика на основе cookie-файлов. Дата «обновлено» в начале страницы отражает последнюю редакцию.',
+        ],
+      },
+      {
+        id: 'controller',
+        title: 'Оператор данных и контакты',
+        paragraphs: [],
+        list: [
+          'Оператор данных: VKVstudio — Карпов Валерий, индивидуальный предприниматель (Ա/Ձ).',
+          'Зарегистрирован в Государственном регистре юридических лиц Министерства юстиции Республики Армения 12 февраля 2026 года.',
+          'Зарегистрированный вид деятельности: 62.01.0 — разработка программного обеспечения',
+          'Место регистрации: Гюмри, Ширакская область, Республика Армения',
+          `${CONTACT_EMAIL} — контакт по вопросам конфиденциальности, включая доступ к своим данным и их удаление`,
+        ],
+      },
+    ],
+  },
+};
+
+const page = content[activeLang] || content.en;
+const metaTitle = t(activeLang, 'privacy.metaTitle');
+const metaDescription = t(activeLang, 'privacy.metaDescription');
+
+const homeUrl = `https://vkvstudio.com/${activeLang}/`;
+const privacyUrl = `https://vkvstudio.com/${activeLang}/privacy/`;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t(activeLang, 'nav.home'), item: homeUrl },
+      { '@type': 'ListItem', position: 2, name: t(activeLang, 'privacy.h1'), item: privacyUrl },
+    ],
+  },
+];
+
+// The hero art is this page's LCP element, and PageHero cannot preload it for
+// us: an Astro slot does not travel from a nested component up to BaseLayout's
+// `head` slot (src/components/blocks/README.md — "What it does NOT do"). The
+// widths must stay identical to the ones the component asks for, or the
+// preload is a second download: the master is 1280 wide, so the component's
+// family resolves to exactly [768, 1280]; anything larger would clamp to the
+// master and emit a duplicate URL.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout title={metaTitle} description={metaDescription} lang={activeLang} jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={activeLang} />
+  <main id="main-content" class="privacy-page">
+    {
+      /* The shared inner-page hero (src/components/blocks/PageHero.astro).
+         The "last updated" line and the long disclosure paragraph still live
+         in the content section below, outside the hero: a hero states the
+         page's identity, it does not carry the fine print.
+
+         MINIMUM SUFFICIENT HERO FOR A LEGAL PAGE — what is here and, more to
+         the point, what is not:
+           · art + scrim + plate — kept. The complaint being answered is that
+             these heroes read as empty, and that is as true of a policy page
+             as of any other; the plate is what keeps a legal text legible
+             over a picture, and the component derives it from the art.
+           · scrim="center" — the cluster's light is dead centre, exactly
+             under the copy, so the centre-darkening (radial) scrim is the
+             one that protects the words here.
+           · NO plexus. Two reasons, and both are about this page. The
+             picture's whole statement is a cluster sealed inside a closed
+             boundary with nothing leaving it — a live network sprawling
+             across the frame and reaching for the cursor would contradict
+             the one thing the picture says. And this page carries no islands
+             at all today (see the script below); a policy is read, not
+             played with, so it keeps its zero-hydration budget.
+           · no video, no `align="top"`, no `under-lede` block — a legal page
+             has nothing to put under its lede but the policy itself, which
+             is one scroll-hint away. */
+    }
+    <PageHero
+      lang={activeLang}
+      eyebrow={t(activeLang, 'privacy.eyebrow')}
+      title={t(activeLang, 'privacy.h1')}
+      lede={t(activeLang, 'privacy.heroLede')}
+      image={heroArt}
+      scrim="center"
+      scrollTarget="#privacy-content"
+    />
+
+    <section class="privacy-content" id="privacy-content">
+      <div class="container container--narrow">
+        {
+          /* Quick index of policy sections — idiom copied from `.log-index`
+             (src/pages/[lang]/log/index.astro): a graphite panel holding a
+             plain list of anchors, one per section, landing on that
+             section's own `id`. Built entirely from `page.sections` (the
+             same `id`/`title` pairs the sections below render from) — no
+             new copy, no new i18n key. Two pieces of the log idiom are
+             deliberately not copied: the `<time>` column (privacy sections
+             carry no per-section date, unlike log entries) and the
+             `.log-index__label` caption — privacy sections need no visible
+             caption, the panel explains itself. The landmark still needs a
+             name (the page's header nav is labeled, and two unlabeled
+             `navigation` landmarks read identically in a rotor), so the
+             `aria-label` reuses the boilerplate `privacy.contents` key. */
+        }
+        <nav class="privacy-index" aria-label={t(activeLang, 'privacy.contents')}>
+          <ol class="privacy-index__list">
+            {
+              page.sections.map((section, i) => (
+                <li>
+                  <a href={`#${section.id}`} class="privacy-index__item">
+                    <span class="privacy-index__n text-mono">{String(i + 1).padStart(2, '0')}</span>
+                    <span class="privacy-index__title">{section.title}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+        </nav>
+        <p class="privacy-updated text-mono">
+          <time datetime={page.updatedISO}>{page.updated}</time>
+        </p>
+        <p class="text-secondary privacy-intro">{page.intro}</p>
+        {
+          page.sections.map((section) => (
+            <section class="privacy-section" id={section.id}>
+              <h2>{section.title}</h2>
+              {section.paragraphs.map((paragraph) => (
+                <p>{paragraph}</p>
+              ))}
+              {section.list && (
+                <ul>
+                  {section.list.map((item) => (
+                    <li>{item}</li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))
+        }
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage's scroll engine. Safe here: this page still carries no
+  // islands at all, so nothing competes with Lenis for wheel/scroll input.
+  //
+  // Lenis starts HERE, not inside the hero: it drives the whole page, and
+  // PageHero's scroll hint only borrows `window.lenisInstance` if something
+  // has already published it. The hint's click handler moved into the
+  // component. The hero's lede parallax did NOT move — it is gone: the
+  // component deliberately offers no such hook, reaching `.page-hero__lede`
+  // from a page script would rebuild exactly the coupling the component
+  // removes, and the measurement (.system/canon/92-hero-diff.md §3.3) classes
+  // that parallax as drift — present on nine pages, absent on seven,
+  // justified on none. On a legal page it is the wrong instinct anyway: text
+  // a reader may need to quote should hold still.
+  import { initLenis } from '@scripts/lenis-init';
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+    });
+  } else {
+    initLenis();
+  }
+</script>
+
+<style>
+  .privacy-page {
+    padding-top: var(--space-10);
+    padding-bottom: var(--space-24);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  /* No fixed header on this page (InnerHeader is static, not fixed) — a
+     desktop-sized top offset is just dead air on a phone. */
+  @media (max-width: 767px) {
+    .privacy-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* The hero's own rules (frame, plate, eyebrow, title, letters, lede,
+     entrance cascade, keyframes and the scroll hint — 228 lines) now live in
+     src/components/blocks/PageHero.astro. Nothing left on this page targets
+     a `.privacy-hero*` class, so every one of those rules was dead here. */
+
+  /* NOTE: this whole rule is redundant — the element already carries
+     `container container--narrow`, which is where the narrow measure comes
+     from (global.css), and the log page does exactly that with no override.
+     Removing a rule is a deletion, and deletions go through the owner, so it
+     stays; what changed is the one declaration that was actively wrong. The
+     flat 16px overwrote `.container`'s `max(padding, env(safe-area-inset-*))`,
+     which is what keeps text out from under the camera notch in landscape,
+     and capped the side air at 16px where the clamp gives up to 48px. */
+  .privacy-content .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding-left: max(var(--container-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right, 0px));
+  }
+
+  /* ── Index of sections ──────────────────────────────────────────
+     Idiom copied from `.log-index` (src/pages/[lang]/log/index.astro):
+     graphite panel, mono numerals, hover-tints the title green. See the
+     markup comment above for the two pieces of that idiom left out here
+     (the date column, the caption) and why. */
+  .privacy-index {
+    margin-bottom: var(--space-8);
+    padding: var(--space-6);
+    background: var(--bg-graphite);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+  }
+
+  .privacy-index__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .privacy-index__item {
+    display: flex;
+    gap: var(--space-3);
+    align-items: baseline;
+    padding: var(--space-2) 0;
+    text-decoration: none;
+  }
+
+  /* Same touch-target fix as the log idiom (ui-ux-pro-max CRITICAL): a
+     single-line item's padding alone does not clear 44px on a phone.
+     Mobile-scoped, same 767px breakpoint as `.log-index__item`. */
+  @media (max-width: 767px) {
+    .privacy-index__list {
+      gap: var(--space-2);
+    }
+
+    .privacy-index__item {
+      padding: var(--space-3) 0;
+      min-height: 44px;
+    }
+  }
+
+  .privacy-index__n {
+    flex-shrink: 0;
+    color: var(--accent-green-300);
+    font-size: var(--text-sm);
+  }
+
+  .privacy-index__title {
+    color: var(--text-secondary);
+    line-height: var(--leading-snug);
+    transition: var(--transition-colors);
+  }
+
+  .privacy-index__item:hover .privacy-index__title,
+  .privacy-index__item:focus-visible .privacy-index__title {
+    color: var(--accent-green-300);
+  }
+
+  .privacy-updated {
+    margin-bottom: var(--space-6);
+    color: var(--text-ghost);
+  }
+
+  .privacy-intro {
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-4);
+  }
+
+  .privacy-section {
+    /* Every section carries an id and the policy links to them by name, so
+       they are externally linkable; without this the heading lands flush
+       against the top edge of the window. Same value as the log's entries
+       and the three Lab pages. */
+    scroll-margin-top: var(--space-24);
+    padding-block: var(--space-8);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .privacy-section:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .privacy-section h2 {
+    font-size: var(--text-h4);
+    margin-bottom: var(--space-4);
+  }
+
+  .privacy-section p {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-3);
+  }
+
+  .privacy-section p:last-child {
+    margin-bottom: 0;
+  }
+
+  .privacy-section ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .privacy-section li {
+    position: relative;
+    padding-left: var(--space-5);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  .privacy-section li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.65em;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--accent-green-400);
+  }
+</style>

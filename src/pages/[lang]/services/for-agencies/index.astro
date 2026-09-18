@@ -1,0 +1,955 @@
+---
+/**
+ * /services/for-agencies/ — the white-label pitch. Highest-leverage channel
+ * on the site (an agency brings traffic, trust and case studies at once),
+ * and previously the thinnest page. Shared hero + full dramaturgy now:
+ * what an agency buys → how the engagement runs → what it costs → what I
+ * will not do → logistics → how to start → FAQ.
+ *
+ * The hero is the shared `PageHero` block (`src/components/blocks/`), not a
+ * hand-typed copy: plate, eyebrow pill, letter-split h1, scroll hint, the
+ * entrance cascade and the mobile scroll-hint fix all live there once. This
+ * page passes only what is genuinely its own — the copy, its ComfyUI still,
+ * the scrim direction, the plexus birth point, the scroll target. Three
+ * numeric drifts measured in `.system/gaps/gap-websites-agencies.md`
+ * (F10 h1 metric, F11 art breathing, F13 scrim stops) and two missing
+ * safeguards (F15 safe-area, the un-gated `will-change`) are answered by the
+ * move itself, because the component carries the canonical values.
+ *
+ * Standing rule (kept from the prior draft, still true): no EUR/GBP figures
+ * on this page — "the same fixed prices published on the service ladder" is
+ * the formula, so a reader always follows the link to the real numbers
+ * rather than reading a second, driftable price list here.
+ */
+import { getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import FaqSection from '@components/sections/FaqSection.astro';
+import ServiceCta from '@components/services/ServiceCta.astro';
+import heroArt from '@/assets/services/rung2-agencies.png';
+import { SITE_ORIGIN } from '@/data/services';
+import { faqPageNode, servicesBreadcrumb } from '@/lib/services-jsonld';
+import type { FaqItem } from '@/data/faq';
+import { supportedLangs } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+// This page's own mini-FAQ (no services-faq.ts entry for a non-rung page —
+// same pattern as contact/index.astro's inline CONTACT_FAQ, wired into
+// faqPageNode below so the visible text and the FAQPage markup match
+// verbatim).
+const AGENCY_FAQ: FaqItem[] = [
+  {
+    q: {
+      en: 'Will my client ever find out you were involved?',
+      ru: 'Узнает ли мой клиент о моём участии?',
+    },
+    a: {
+      en: 'Only if you decide to tell them. Every deliverable arrives unbranded — no watermark, no signature, formatted to drop into your own template — and I never contact your client on my own initiative, before, during or after the work.',
+      ru: 'Только если вы сами решите об этом сказать. Каждый результат приходит без брендинга — без водяного знака, без подписи, оформленный под ваш шаблон, — и я никогда не выхожу на связь с вашим клиентом по своей инициативе: ни до работы, ни во время, ни после.',
+    },
+  },
+  {
+    q: {
+      en: 'Is the pricing different from your public rates?',
+      ru: 'Цены отличаются от тех, что указаны на сайте?',
+    },
+    a: {
+      en: "No — the same published prices as the public service ladder, package for package: fixed where the ladder is fixed (the audit, the pilot), the same range or floor where it is one (the site build, the self-hosted deployment). I don't quote your client a competing number, because I never quote your client at all; the margin you add on top is entirely yours to set.",
+      ru: 'Нет — те же опубликованные цены, что и на открытой лестнице услуг, пакет за пакетом: фиксированные там, где фиксирована сама лестница (аудит, пилот), и тот же диапазон или порог там, где это диапазон или порог (сайт, self-hosted развёртывание). Я никогда не называю вашему клиенту цифру напрямую, потому что вообще не называю клиенту цифру, — наценку сверху вы устанавливаете сами.',
+    },
+  },
+  {
+    q: {
+      en: 'What if my client asks to speak with the engineer directly?',
+      ru: 'Что, если клиент попросит поговорить с инженером напрямую?',
+    },
+    a: {
+      en: 'That request goes through you, not around you. I join a call only if you invite me in, and I follow whatever introduction you give me — as your consultant, your engineer, or not named at all.',
+      ru: 'Такой запрос идёт через вас, а не в обход вас. Я подключаюсь к звонку только по вашему приглашению и следую той роли, в которой вы меня представите: как ваш консультант, ваш инженер — или вовсе без имени.',
+    },
+  },
+  {
+    q: {
+      en: 'What stops you from approaching my client later?',
+      ru: 'Что мешает вам выйти на моего клиента позже?',
+    },
+    a: {
+      en: 'The NDA runs both ways and survives the engagement, and it is simply not the business I am building: the studio grows through direct clients and other agencies, not by prospecting the accounts I reach through yours. Putting that in writing costs me nothing and gives you something to hold me to.',
+      ru: 'NDA действует в обе стороны и не заканчивается вместе с проектом, и это попросту не та модель, которую я строю: студия растёт за счёт прямых клиентов и других агентств, а не за счёт переманивания клиентов, с которыми меня познакомили вы. Написать это прямо мне ничего не стоит, а вам даёт документ, которым меня можно держать за слово.',
+    },
+  },
+];
+
+const copy = {
+  en: {
+    title: 'White-Label Engineering for Agencies | VKVstudio',
+    description:
+      "White-label GEO audits, Astro builds and RAG assistants delivered under your agency's brand — the same published prices as on the public service ladder, NDA both ways, and no contact with your client without your written go-ahead.",
+    eyebrow: '// for agencies',
+    h1: 'Your brand. My engineering.',
+    lede: "Four white-label offers — AI-visibility audits, Astro builds, RAG assistants, self-hosted AI deployments — delivered unbranded under your agency's name, at the same published prices as the public service ladder. I never contact your client on my own initiative, before, during or after the work; the relationship, the margin and the credit are yours end to end.",
+    buy: {
+      heading: 'What you are actually buying',
+      intro: 'Four deliverables, each already sold on this site under my own name:',
+      items: [
+        {
+          title: 'AI-visibility (GEO) audits',
+          body: 'Your account team presents the findings as its own work.',
+        },
+        {
+          title: 'Astro marketing sites',
+          body: 'Built to a contractual Lighthouse target.',
+        },
+        {
+          title: 'RAG assistants',
+          body: 'For clients who need their own documents grounding an assistant.',
+        },
+        {
+          title: 'Self-hosted AI deployments',
+          body: 'For clients whose compliance requirements rule out third-party SaaS.',
+        },
+      ],
+      outro:
+        'Every deliverable arrives unbranded — no watermark, no signature — formatted to drop straight into your own template.',
+    },
+    runs: {
+      heading: 'How the engagement runs',
+      body: 'You own the client relationship from first contact to last invoice; I never speak to your client without your written go-ahead, and even then only in the role you introduce me in. NDA both ways, signed before any brief moves.',
+      // The callout idiom carries a mono label (the etalon's .geo-callout,
+      // geo-audit/index.astro:447–452). Slashes are drawn in the markup, so
+      // the string itself stays plain text. PLACEHOLDER WORDING — the owner
+      // has the last word on the label copy.
+      quoteLabel: 'the promise',
+      quote: 'Your client never learns I exist — unless you choose to tell them.',
+      bodyEnd: 'You set the deadline you promised your client; I hit the deadline I promised you.',
+    },
+    costsHeading: 'What it costs',
+    costsIntroPre:
+      'There is no separate wholesale rate card and no invented agency discount: you pay the ',
+    costsLinkLabel: 'same published prices as the public service ladder',
+    costsIntroPost: ', package for package.',
+    costsFacts: [
+      { label: 'Fixed price', value: 'The audit, the pilot.' },
+      { label: 'Range or floor', value: 'The site build, the self-hosted deployment.' },
+    ],
+    costsOutro:
+      'I invoice you directly, never your client, on the same milestone schedule as every rung — typically 30/40/30; what and when you invoice your client stays entirely yours to decide. Your margin is whatever you add on top — I never quote a number to your client, and never see the number you quote them, so there is never a competing figure in the room.',
+    notDo: {
+      heading: 'What I will not do',
+      items: [
+        'I will not pitch your client on working with me directly — not during the engagement, and not after it ends.',
+        'I will not contact your client without your written go-ahead — not even to say hello.',
+        'I will not sign an exclusivity clause that shuts the studio to other agencies: I need a pipeline of my own between projects, and an exclusive that starves it helps neither of us.',
+      ],
+    },
+    logistics: {
+      heading: 'Logistics that actually matter',
+      facts: [
+        {
+          label: 'Timezone',
+          value:
+            'GMT+4 — my working afternoon is your morning across the EU and UK, a real overlap window every business day, before anything has to wait until tomorrow.',
+        },
+        {
+          label: 'Process',
+          value:
+            'Async-first — briefs and deliverables move as documents, replies land in writing within one business day, and calls happen when they earn a slot on the schedule.',
+        },
+        {
+          label: 'Paper',
+          value:
+            'Everything runs on a contract; invoices carry no VAT — you self-account for it under the reverse charge.',
+        },
+      ],
+    },
+    start: {
+      heading: 'How to start',
+      steps: [
+        {
+          num: '01',
+          title: 'Send a brief',
+          body: 'One current client brief — anonymized is fine.',
+        },
+        {
+          num: '02',
+          title: 'Get a quote',
+          body: 'A written reply within one business day, same as every other channel on this site; a fixed quote with a delivery date follows within two business days.',
+        },
+        {
+          num: '03',
+          title: 'Start small',
+          body: 'Keep the first project small on purpose: one audit, one build. Let the process prove itself before you standardize your agency on it.',
+        },
+      ],
+    },
+    linksPre: 'The full price list lives on ',
+    linksLadder: 'the service ladder',
+    linksMid: ', and the contract terms this page promises are spelled out in full on the ',
+    linksTrust: 'Trust & Process',
+    linksPost: ' page.',
+  },
+  ru: {
+    title: 'White-label инженерия для агентств | VKVstudio',
+    description:
+      'White-label аудиты ИИ-видимости, сайты на Astro и RAG-ассистенты под вашим брендом: те же открытые цены, NDA в обе стороны, никаких контактов с вашим клиентом без вашего письменного разрешения.',
+    eyebrow: '// для агентств',
+    h1: 'Ваш бренд. Моя инженерия.',
+    lede: 'Четыре white-label предложения — аудиты ИИ-видимости, сайты на Astro, RAG-ассистенты, self-hosted AI-развёртывания — сдаются без брендинга под именем вашего агентства, по тем же опубликованным ценам, что и на открытой лестнице услуг. Я никогда не выхожу на связь с вашим клиентом по своей инициативе — ни до работы, ни во время, ни после; отношения, наценка и авторство — целиком ваши.',
+    buy: {
+      heading: 'Что вы на самом деле покупаете',
+      intro:
+        'Четыре результата, каждый из которых уже продаётся на этом сайте под моим собственным именем:',
+      items: [
+        {
+          title: 'Аудиты ИИ-видимости (GEO)',
+          body: 'Ваша аккаунт-команда представляет находки как собственную работу.',
+        },
+        {
+          title: 'Маркетинговые сайты на Astro',
+          body: 'С закреплённым в договоре целевым баллом Lighthouse.',
+        },
+        {
+          title: 'RAG-ассистенты',
+          body: 'Для клиентов, которым нужен ассистент на собственных документах.',
+        },
+        {
+          title: 'Self-hosted AI-развёртывания',
+          body: 'Для клиентов, которым сторонний SaaS не подходит по комплаенсу.',
+        },
+      ],
+      outro:
+        'Каждый результат приходит без брендинга — без водяного знака, без подписи — оформленный под ваш собственный шаблон.',
+    },
+    runs: {
+      heading: 'Как устроено взаимодействие',
+      body: 'Отношения с клиентом — от первого контакта до последнего счёта — полностью ваши; я не выхожу на связь с вашим клиентом без вашего письменного разрешения, а если и выхожу — то только в той роли, в которой вы меня представите. NDA в обе стороны подписывается до того, как начнёт двигаться хоть один бриф.',
+      quoteLabel: 'обещание',
+      quote: 'Ваш клиент не узнает о моём существовании — если вы сами не решите это раскрыть.',
+      bodyEnd:
+        'Срок, который вы пообещали клиенту, устанавливаете вы; срок, который я пообещал вам, соблюдаю я.',
+    },
+    costsHeading: 'Сколько это стоит',
+    costsIntroPre:
+      'Отдельного оптового прайс-листа нет, как и придуманной агентской скидки: вы платите ',
+    costsLinkLabel: 'те же опубликованные цены, что и на открытой лестнице услуг',
+    costsIntroPost: ', пакет за пакетом.',
+    costsFacts: [
+      { label: 'Фиксированная цена', value: 'Аудит, пилот.' },
+      { label: 'Диапазон или порог', value: 'Сайт, self-hosted развёртывание.' },
+    ],
+    costsOutro:
+      'Я выставляю счёт напрямую вам, а не вашему клиенту, — по тому же графику оплаты по этапам, что и на каждой ступени лестницы, — обычно 30/40/30; что и когда вы выставляете своему клиенту — целиком ваше решение. Ваша наценка сверху — целиком ваш выбор: я никогда не называю вашему клиенту цифру и никогда не вижу цифру, которую называете вы, а значит, на переговорах никогда не появится конкурирующая цифра.',
+    notDo: {
+      heading: 'Чего я не буду делать',
+      items: [
+        'Я не буду предлагать вашему клиенту работать со мной напрямую — ни во время проекта, ни после его завершения.',
+        'Я не буду выходить на связь с вашим клиентом без вашего письменного разрешения — даже чтобы просто поздороваться.',
+        'Я не подпишу условие эксклюзивности, которое закроет студию для других агентств: между проектами мне нужен собственный поток заказов, а эксклюзив, который его перекрывает, не помогает никому из нас.',
+      ],
+    },
+    logistics: {
+      heading: 'Логистика, которая реально важна',
+      facts: [
+        {
+          label: 'Часовой пояс',
+          value:
+            'GMT+4 — вторая половина моего рабочего дня совпадает с вашим утром в ЕС и Великобритании: реальное окно пересечения каждый рабочий день, прежде чем что-либо приходится откладывать на завтра.',
+        },
+        {
+          label: 'Процесс',
+          value:
+            'Асинхронный — брифы и результаты работы передаются документами, ответ приходит письменно в течение одного рабочего дня, а звонки случаются, когда действительно заслуживают места в расписании.',
+        },
+        {
+          label: 'Бумага',
+          value:
+            'Всё оформляется договором; счета выставляются без VAT — вы самостоятельно учитываете его по механизму reverse charge.',
+        },
+      ],
+    },
+    start: {
+      heading: 'Как начать',
+      steps: [
+        {
+          num: '01',
+          title: 'Отправьте бриф',
+          body: 'Один текущий бриф клиента — можно обезличенный.',
+        },
+        {
+          num: '02',
+          title: 'Получите смету',
+          body: 'Письменный ответ в течение одного рабочего дня, как и на любой другой канал на этом сайте; фиксированная смета со сроком сдачи — в течение двух рабочих дней.',
+        },
+        {
+          num: '03',
+          title: 'Начните с малого',
+          body: 'Первый проект стоит намеренно сделать небольшим: один аудит, один сайт. Пусть процесс покажет себя в деле, прежде чем вы поставите его на поток в агентстве.',
+        },
+      ],
+    },
+    linksPre: 'Полный список цен — на странице ',
+    linksLadder: 'лестницы услуг',
+    linksMid: ', а условия договора, которые обещает эта страница, целиком расписаны на странице ',
+    linksTrust: '«Доверие и процесс»',
+    linksPost: '.',
+  },
+}[lang];
+
+// The hero art is this page's mobile LCP element (etalon pattern). The
+// master is a 1280px still, so the preload/srcset widths stop at 1280.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+const pageUrl = `${SITE_ORIGIN}/${lang}/services/for-agencies/`;
+const jsonLd = [servicesBreadcrumb(lang, copy.h1, pageUrl), faqPageNode(lang, AGENCY_FAQ)];
+---
+
+<BaseLayout
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  jsonLd={jsonLd}
+  ogImage="/og-for-agencies.jpg"
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="agency-page">
+    {
+      /* ── Hero: the shared block. Five page-specific values, nothing else.
+         Art generated in-house (ComfyUI): two overlapping picture frames, the
+         front one carrying a blank lit nameplate, the one behind it dimmed —
+         the work carries YOUR name; mine stays off the plate. `scrim="left"`
+         keeps the darkening on the side the old hand-written pair darkened,
+         now at the canonical stops. `plexus` is born at the nameplate, the
+         front frame's own light source, low-centre where a plaque reads;
+         the anchor pins it there through every crop `object-fit: cover`
+         performs, against the master's own 1280×720 frame. No hero video on
+         this page yet (ComfyUI production, owner's call), so the still simply
+         breathes. */
+    }
+    <PageHero
+      lang={lang}
+      eyebrow={copy.eyebrow}
+      title={copy.h1}
+      lede={copy.lede}
+      image={heroArt}
+      scrim="left"
+      plexus={{
+        originX: 0.5,
+        originY: 0.64,
+        anchor: { x: 0.5, y: 0.64, width: 1280, height: 720 },
+      }}
+      scrollTarget="#agency-body"
+    />
+
+    <section class="agency-body" id="agency-body">
+      <div class="container">
+        {
+          /* What you buy: the run-on sentence in the previous draft became a
+             numbered tile grid, one clause per tile, wording preserved —
+             this is the block the owner named as the clearest wall of text
+             on the page. */
+        }
+        <article class="agency-section agency-section--wide">
+          {
+            /* Reveal sits on the LINES, never on the article that also holds
+               the tile grid: a container tween multiplied into the tiles' own
+               tween made them fade twice and travel up to 64px (F1 of the gap
+               report). The etalon animates elements, never a container over
+               its own content (geo-audit:637–650). */
+          }
+          <h2 class="js-agency-reveal">{copy.buy.heading}</h2>
+          <p class="agency-section__intro js-agency-reveal">{copy.buy.intro}</p>
+          <ul class="agency-tiles" role="list">
+            {
+              copy.buy.items.map((item, i) => (
+                <li class="agency-tile js-agency-tile">
+                  <span class="agency-tile__num text-mono" aria-hidden="true">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 class="agency-tile__title">{item.title}</h3>
+                  <p class="agency-tile__body">{item.body}</p>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="agency-section__outro js-agency-reveal">{copy.buy.outro}</p>
+        </article>
+
+        {
+          /* How the engagement runs: the strongest single-sentence promise
+             ("your client never learns I exist") is pulled out as a
+             pull-quote — the etalon's own device for breaking up a
+             paragraph without cutting a fact. */
+        }
+        <article class="agency-section js-agency-reveal">
+          <h2>{copy.runs.heading}</h2>
+          <p>{copy.runs.body}</p>
+          <blockquote class="agency-quote">
+            <p class="agency-quote__label text-mono">
+              <span aria-hidden="true">// </span>{copy.runs.quoteLabel}
+            </p>
+            <p class="agency-quote__text">{copy.runs.quote}</p>
+          </blockquote>
+          <p>{copy.runs.bodyEnd}</p>
+        </article>
+
+        {
+          /* Costs: its own block, not folded into a generic loop, so the
+             ladder link sits right where the cost question is asked. Still
+             no EUR/GBP figure printed here (standing rule, see file
+             header): the link and the fixed/range distinction — now a
+             two-column fact pair — are the answer, not a second price
+             list. */
+        }
+        <article class="agency-section js-agency-reveal">
+          <h2>{copy.costsHeading}</h2>
+          <p>
+            {copy.costsIntroPre}<a href={`/${lang}/services/`}>{copy.costsLinkLabel}</a>{
+              copy.costsIntroPost
+            }
+          </p>
+          <dl class="agency-facts">
+            {
+              copy.costsFacts.map((f) => (
+                <div class="agency-facts__row">
+                  <dt>{f.label}</dt>
+                  <dd>{f.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+          <p>{copy.costsOutro}</p>
+        </article>
+
+        {
+          /* What I will not do: three promises, one per line — a dash list
+             reads as a set of guarantees, not a paragraph making excuses. */
+        }
+        <article class="agency-section js-agency-reveal">
+          <h2>{copy.notDo.heading}</h2>
+          {
+            /* role="list" for the same reason the buy grid carries it: the
+             global `list-style: none` reset drops list semantics in
+             Safari/VoiceOver. */
+          }
+          <ul class="agency-not-list" role="list">
+            {copy.notDo.items.map((item) => <li>{item}</li>)}
+          </ul>
+        </article>
+
+        {
+          /* Logistics: timezone / process / paper as a definition list —
+             the two-column facts idiom, same shape as the etalon's terms
+             windows and retainer cards. */
+        }
+        <article class="agency-section js-agency-reveal">
+          <h2>{copy.logistics.heading}</h2>
+          <dl class="agency-facts">
+            {
+              copy.logistics.facts.map((f) => (
+                <div class="agency-facts__row">
+                  <dt>{f.label}</dt>
+                  <dd>{f.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </article>
+
+        {
+          /* How to start: the geo-audit process-step idiom (num, title,
+             body), minus the scroll-driven connecting line — three steps
+             don't need one. */
+        }
+        <article class="agency-section agency-section--wide">
+          {
+            /* Same untangling as the buy grid: the heading reveals, the steps
+             ride their own grid tween. */
+          }
+          <h2 class="js-agency-reveal">{copy.start.heading}</h2>
+          <ol class="agency-steps" role="list">
+            {
+              copy.start.steps.map((s) => (
+                <li class="agency-step js-agency-tile">
+                  <span class="agency-step__num text-mono" aria-hidden="true">
+                    {s.num}
+                  </span>
+                  <h3 class="agency-step__title">{s.title}</h3>
+                  <p class="agency-step__body">{s.body}</p>
+                </li>
+              ))
+            }
+          </ol>
+        </article>
+
+        <p class="agency-links js-agency-reveal">
+          {copy.linksPre}<a href={`/${lang}/services/`}>{copy.linksLadder}</a>{copy.linksMid}<a
+            href={`/${lang}/trust/`}>{copy.linksTrust}</a
+          >{copy.linksPost}
+        </p>
+      </div>
+    </section>
+
+    <FaqSection lang={lang} items={AGENCY_FAQ} id="agency-faq" />
+
+    <ServiceCta lang={lang} />
+  </main>
+</BaseLayout>
+
+<script>
+  // The homepage's scroll engine + the etalon's motion grammar. Motion is an
+  // enhancement, never a gatekeeper: nothing on this page starts hidden in
+  // CSS, so a failed import or an old browser sees a complete page.
+  import { initLenis } from '@scripts/lenis-init';
+
+  async function initAgencyMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      document.querySelectorAll<HTMLElement>('.js-agency-reveal').forEach((el) => {
+        const tw = gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+        // A keyboard user tabbing in before the trigger fires must not land
+        // on an invisible link (the links row carries real ones).
+        el.addEventListener('focusin', () => tw.progress(1), { once: true });
+      });
+
+      // Tile/step grids: the canonical grid wave (geo-audit:700–714) —
+      // y 40 / scale 0.9 / 0.7s / stagger 0.08 / 'top 80%', one trigger per
+      // grid so each row cascades in as it actually enters. The buy grid and
+      // the how-to-start steps both use this class; neither sits inside a
+      // revealing container any more, so a tile fades exactly once.
+      const tileGrids = new Set<Element>();
+      document.querySelectorAll<HTMLElement>('.js-agency-tile').forEach((el) => {
+        const grid = el.parentElement;
+        if (grid) tileGrids.add(grid);
+      });
+      tileGrids.forEach((grid) => {
+        gsap.fromTo(
+          grid.querySelectorAll('.js-agency-tile'),
+          { opacity: 0, y: 40, scale: 0.9 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            stagger: 0.08,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: grid, start: 'top 80%' },
+          }
+        );
+      });
+    } catch (err) {
+      // No rescue pass needed — content was never hidden.
+      console.error('[for-agencies] motion failed to load:', err);
+    }
+  }
+
+  // The scroll hint and the hero's own manners moved into PageHero with the
+  // hero itself: the component owns the button, rides Lenis when this page has
+  // started it (it does, below), and falls back to an honest instant jump
+  // under reduced motion. The hand-written twins that used to live here are
+  // gone rather than left running against markup that no longer exists.
+  // The lede parallax went with them — PageHero deliberately has no knob for
+  // it (blocks/README.md, "What it does NOT do"); flagged for the owner.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initAgencyMotion();
+    });
+  } else {
+    initLenis();
+    void initAgencyMotion();
+  }
+</script>
+
+<style>
+  .agency-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .agency-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* ── Body ───────────────────────────────────────────── */
+  .agency-body {
+    margin-bottom: var(--space-8);
+  }
+
+  /* Left-railed on the wide container: the readability cap lives on this
+     text wrapper, same idiom as the etalon's .geo-callout / .geo-terms-window. */
+  .agency-section {
+    max-width: var(--container-narrow);
+    /* The family's section rhythm (.geo-section, geo-audit:1761–1763; the same
+       value on websites). --space-10 here was a page-local invention and made
+       the sections read as stuck together. */
+    margin-bottom: var(--space-16);
+  }
+
+  .agency-section h2 {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-6);
+  }
+
+  /* Direct children only. `.agency-section p` also reached the paragraphs
+     inside the tiles and the pull-quote, and at one class + one element it
+     outweighed their own single-class rules — which is how the tile body was
+     silently reading at 1.8 instead of its declared 1.7, and how a mono label
+     inside this section would have lost its green to --text-secondary. */
+  .agency-section > p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  .agency-section > p a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .agency-section > p a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* Two classes, so these beat the generic `.agency-section > p` above on
+     specificity rather than on source order: at one class each they lost
+     their margins to that rule's `margin: 0` (and the outro lost its muted
+     colour), which is why the intro used to sit flush against the grid. */
+  .agency-section > .agency-section__intro {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin: 0 0 var(--space-6);
+  }
+
+  .agency-section > .agency-section__outro {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: var(--space-6) 0 0;
+  }
+
+  /* One of the three sanctioned widths (container / container-narrow /
+     56rem prose cap, per house rule) — the tile and step grids get the
+     roomier 56rem so two columns have space to breathe; every other
+     section on this page stays at container-narrow. */
+  .agency-section--wide {
+    max-width: 56rem;
+  }
+
+  /* ── Buy grid: numbered tiles, one clause each ─────── */
+  .agency-tiles {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    /* Same gap as the step grid below and as the etalon's tile grid
+       (geo-audit:1822) — it was --space-4 here and --space-5 there. */
+    gap: var(--space-5);
+  }
+
+  /* One threshold for the whole page: the buy tiles used to fold at 639px
+     while the steps folded at 767px, so between those two widths one grid was
+     two-column and the other already single (F16). 767px is the family's
+     (geo-audit:1913–1917). */
+  @media (max-width: 767px) {
+    .agency-tiles {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── The card surface, once, for both grids ────────────
+     `.agency-tile` and `.agency-step` were byte-identical boxes under two
+     names: matte --bg-void, --border-subtle, and a hover built from two
+     colour literals that appear nowhere else in src/. The family's material
+     is glass (the Lab-card recipe the etalon's deliverable tiles use,
+     geo-audit:1844–1856), and the family's hover is accent border + the
+     double green halo, with the lift kept behind the motion gate the way
+     PricingCard.astro:101–114 keeps it. Merged here so the two grids cannot
+     drift apart again; the number colour is the only thing they differ in. */
+  .agency-tile,
+  .agency-step {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    box-sizing: border-box;
+    padding: var(--space-5) var(--space-6);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  /* The standard property restated where a minifier cannot prune it in favour
+     of the -webkit- alias alone (same reason as global.css:449–460 and
+     PageHero's eyebrow pill — verified in dist for .glass-panel). */
+  @supports (backdrop-filter: blur(1px)) {
+    .agency-tile,
+    .agency-step {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  /* The Lab card's tint film, as a pseudo-element over the panel. Token, not
+     the etalon's second hand-written gradient literal. */
+  .agency-tile::after,
+  .agency-step::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-card-hover);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .agency-tile:hover,
+  .agency-step:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .agency-tile:hover::after,
+  .agency-step:hover::after {
+    opacity: 1;
+  }
+
+  /* Motion is the lift and only the lift: a reduced-motion reader keeps the
+     identical resting card and the colour half of the hover, never a jump. */
+  @media (prefers-reduced-motion: no-preference) {
+    .agency-tile,
+    .agency-step {
+      transition:
+        border-color var(--duration-normal) var(--ease-out),
+        box-shadow var(--duration-normal) var(--ease-out),
+        transform var(--duration-normal) var(--ease-out);
+    }
+
+    .agency-tile:hover,
+    .agency-step:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* The tile's own children sit above the tint film. */
+  .agency-tile > *,
+  .agency-step > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .agency-tile__num {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-2);
+  }
+
+  .agency-tile__title {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-2);
+  }
+
+  .agency-tile__body {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* ── Pull-quote: the etalon's .geo-callout recipe, now whole ──
+     Geometry and the mono label were the two halves missing: the padding was
+     one step short on both axes and the label absent, which left the block a
+     half-idiom — green edge and italic recognisable, but not stitched to the
+     site's own language (geo-audit:2107–2126, ServiceRungLayout's twin). */
+  .agency-quote {
+    max-width: var(--container-narrow);
+    margin: var(--space-6) 0;
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .agency-quote .agency-quote__label {
+    margin-bottom: var(--space-3);
+  }
+
+  .agency-quote .agency-quote__text {
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    font-weight: var(--weight-medium);
+    margin: 0;
+  }
+
+  /* ── Two-column facts: costs + logistics ─────────────── */
+  .agency-facts {
+    max-width: var(--container-narrow);
+    margin: var(--space-6) 0;
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .agency-facts__row {
+    display: grid;
+    grid-template-columns: 10rem 1fr;
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .agency-facts__row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  /* Same single threshold as the two grids above (was 639px). */
+  @media (max-width: 767px) {
+    .agency-facts__row {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+  }
+
+  .agency-facts__row dt {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--accent-green-300);
+  }
+
+  .agency-facts__row dd {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  /* ── "What I will not do": the etalon's rung-list--muted idiom ── */
+  .agency-not-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: var(--container-narrow);
+  }
+
+  .agency-not-list li {
+    position: relative;
+    padding-left: var(--space-6);
+    color: var(--text-secondary);
+    line-height: 1.8;
+  }
+
+  .agency-not-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-ghost);
+  }
+
+  /* ── How-to-start: numbered step cards ───────────────── */
+  .agency-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+  }
+
+  @media (max-width: 767px) {
+    .agency-steps {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Surface, hover and lift are the shared card recipe above — the step card
+     was a symbol-for-symbol duplicate of the tile under a second name. Only
+     the number colour differs (green here, ghost on the buy tiles: a step is
+     an ordinal you follow, a tile number only counts the scope). */
+  .agency-step__num {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--accent-green-300);
+    margin-bottom: var(--space-2);
+  }
+
+  .agency-step__title {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-2);
+  }
+
+  .agency-step__body {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .agency-links {
+    max-width: var(--container-narrow);
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .agency-links a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .agency-links a:hover {
+    color: var(--accent-green-300);
+  }
+</style>

@@ -1,0 +1,383 @@
+---
+/**
+ * ServiceRungLayout — the full body of one service page, rendered from the
+ * data in services.ts. Four rung pages share this one layout instead of
+ * copying it: the page files themselves only assemble SEO strings and
+ * JSON-LD, so a copy change lands in services.ts and appears everywhere the
+ * rung is described.
+ *
+ * Section order is the buyer's reading order: what you get → what it costs →
+ * what's deliberately excluded → the guarantee → the monthly engine →
+ * proof → how engagements work → FAQ → CTA.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import type { FaqItem } from '@/data/faq';
+import { ENGAGEMENT_TERMS, type ServiceRung } from '@/data/services';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import FaqSection from '@components/sections/FaqSection.astro';
+import ServiceCta from '@components/services/ServiceCta.astro';
+
+interface Props {
+  lang: Lang;
+  rung: ServiceRung;
+  faqItems?: FaqItem[];
+  faqHeading?: string;
+  /**
+   * Some rungs (rag-pilot, on-prem-ai — the etalon hero treatment) bring
+   * their own full-viewport header, supplied via the `hero` named slot, so
+   * this component must not render a second InnerHeader/h1 underneath it.
+   * Defaults false: every other caller (websites, and any rung that has not
+   * been given a custom hero yet) is unaffected.
+   */
+  hideHeader?: boolean;
+}
+
+const { lang, rung, faqItems, faqHeading, hideHeader = false } = Astro.props;
+---
+
+<InnerHeader lang={lang} />
+<main id="main-content" class="rung-page">
+  {
+    hideHeader ? (
+      <slot name="hero" />
+    ) : (
+      <header class="rung-header">
+        <div class="container">
+          <div class="rung-header__plate hero-plate">
+            {/* Same split as the retainer and proof eyebrows below — this
+                one had been left printing the slashes as content. */}
+            <p class="rung-header__label text-mono">
+              <span aria-hidden="true">// </span>
+              {rung.monoLabel.replace(/^\/\/\s*/, '')}
+            </p>
+            <h1 class="text-h1 text-gradient">{rung.title[lang]}</h1>
+            <p class="rung-header__outcome">{rung.outcome[lang]}</p>
+          </div>
+          <p class="rung-header__meta text-mono">
+            <span class="rung-header__price">{rung.priceLine[lang]}</span>
+            <span aria-hidden="true">·</span>
+            <span>{rung.timeframe[lang]}</span>
+          </p>
+        </div>
+      </header>
+    )
+  }
+
+  <section class="rung-section">
+    <div class="container rung-columns">
+      <div class="rung-included">
+        <h2 class="rung-section__heading">{t(lang, 'services.includedLabel')}</h2>
+        <ul class="rung-list">
+          {rung.deliverables.map((d) => <li>{d[lang]}</li>)}
+        </ul>
+      </div>
+      <aside class="rung-excluded">
+        <h2 class="rung-section__heading rung-section__heading--muted">
+          {t(lang, 'services.notIncludedLabel')}
+        </h2>
+        <ul class="rung-list rung-list--muted">
+          {rung.notIncluded.map((d) => <li>{d[lang]}</li>)}
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  {
+    rung.riskReversal && (
+      <section class="rung-section">
+        <div class="container">
+          <div class="rung-guarantee">
+            <p class="rung-guarantee__label text-mono">
+              {t(lang, rung.riskLabelKey ?? 'services.guaranteeLabel')}
+            </p>
+            <p class="rung-guarantee__text">{rung.riskReversal[lang]}</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    rung.retainer && (
+      <section class="rung-section">
+        <div class="container">
+          <div class="rung-retainer">
+            <p class="rung-retainer__eyebrow text-mono">
+              <span aria-hidden="true">// </span>
+              {t(lang, 'services.retainerEyebrow').replace(/^\/\/\s*/, '')}
+            </p>
+            <h2 class="rung-retainer__title">
+              {rung.retainer.title[lang]}
+              <span class="rung-retainer__price text-mono">{rung.retainer.price[lang]}</span>
+            </h2>
+            <ul class="rung-list">
+              {rung.retainer.includes.map((d) => (
+                <li>{d[lang]}</li>
+              ))}
+            </ul>
+            <p class="rung-retainer__terms">{rung.retainer.terms[lang]}</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    rung.caseLabel && (
+      <section class="rung-section">
+        <div class="container">
+          <p class="rung-proof__eyebrow text-mono">
+            <span aria-hidden="true">// </span>
+            {t(lang, 'services.proofEyebrow').replace(/^\/\/\s*/, '')}
+          </p>
+          <p class="rung-proof__text">
+            {rung.caseHref ? (
+              <a href={`/${lang}${rung.caseHref}`}>{rung.caseLabel[lang]}</a>
+            ) : (
+              rung.caseLabel[lang]
+            )}
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="rung-section">
+    <div class="container">
+      <h2 class="rung-section__heading">{t(lang, 'services.termsHeading')}</h2>
+      <ul class="rung-list rung-list--terms">
+        {ENGAGEMENT_TERMS.map((term) => <li>{term[lang]}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <slot />
+
+  {
+    faqItems && (
+      <FaqSection lang={lang} items={faqItems} heading={faqHeading} id={`${rung.id}-faq`} />
+    )
+  }
+
+  <ServiceCta lang={lang} />
+</main>
+
+<style>
+  .rung-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  /* Same mobile head-room + consent-sheet pattern as the Lab pages. */
+  @media (max-width: 767px) {
+    .rung-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  .rung-header {
+    text-align: center;
+    margin-bottom: var(--space-12);
+  }
+
+  /* Hero copy sits on the shared glass plate (site-wide rule, global.css's
+     .hero-plate) — hugs the copy rather than the container, same as the
+     contact page's plate, so the wash reads as a surface under the words
+     instead of a band across the page. Do not restyle .hero-plate itself. */
+  .rung-header__plate {
+    max-width: 46rem;
+    margin-inline: auto;
+    margin-bottom: var(--space-5);
+  }
+
+  .rung-header__label {
+    margin-bottom: var(--space-3);
+  }
+
+  .rung-header h1 {
+    margin-bottom: var(--space-4);
+  }
+
+  .rung-header__outcome {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 62ch;
+    margin: 0 auto;
+  }
+
+  .rung-header__meta {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+
+  .rung-header__price {
+    color: var(--accent-green-300);
+  }
+
+  .rung-section {
+    margin-bottom: var(--space-12);
+  }
+
+  .rung-section__heading {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-6);
+  }
+
+  /* "Not included" is a side list next to the main deliverables, not a
+     section headline — kept at h2 scale (owner judgment call, task allows
+     it for small list-block titles), same base weight/tracking as above. */
+  .rung-section__heading--muted {
+    font-size: var(--text-h2);
+    color: var(--text-muted);
+  }
+
+  /* Left-railed on the wide container, not centered: the readability cap
+     lives on the actual text wrapper, same idiom as the etalon's
+     .geo-callout / .geo-terms-window. */
+  .rung-columns {
+    max-width: var(--container-narrow);
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: var(--space-10);
+  }
+
+  @media (max-width: 767px) {
+    .rung-columns {
+      grid-template-columns: 1fr;
+      gap: var(--space-8);
+    }
+  }
+
+  .rung-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .rung-list li {
+    position: relative;
+    padding-left: var(--space-6);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .rung-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent-green-400);
+  }
+
+  .rung-list--muted li {
+    color: var(--text-muted);
+  }
+
+  .rung-list--muted li::before {
+    content: '—';
+    color: var(--text-ghost);
+  }
+
+  .rung-list--terms {
+    max-width: var(--container-narrow);
+  }
+
+  .rung-list--terms li::before {
+    content: '§';
+    color: var(--text-ghost);
+  }
+
+  /* The etalon's .geo-callout recipe, verbatim: green edge, faint wash,
+     italic statement — replaces the old full-box border. */
+  .rung-guarantee {
+    max-width: var(--container-narrow);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .rung-guarantee__label {
+    margin-bottom: var(--space-3);
+  }
+
+  .rung-guarantee__text {
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    font-weight: var(--weight-medium);
+  }
+
+  .rung-retainer {
+    max-width: var(--container-narrow);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    background: var(--bg-void);
+  }
+
+  .rung-retainer__eyebrow {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-2);
+  }
+
+  .rung-retainer__title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-4);
+  }
+
+  .rung-retainer__price {
+    font-size: var(--text-sm);
+    color: var(--accent-green-300);
+  }
+
+  .rung-retainer__terms {
+    margin: var(--space-4) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .rung-proof__eyebrow {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-2);
+  }
+
+  .rung-proof__text {
+    max-width: var(--container-narrow);
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .rung-proof__text a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .rung-proof__text a:hover {
+    color: var(--accent-green-300);
+  }
+</style>

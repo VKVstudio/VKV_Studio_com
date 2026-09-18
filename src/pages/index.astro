@@ -1,0 +1,82 @@
+---
+/**
+ * Root URL fallback.
+ *
+ * In practice almost nobody sees this: `public/_redirects` answers `/` with a
+ * 302 to `/en/` at Cloudflare's edge, before any file is served. This document
+ * is what remains if that rule is ever removed, if the site is served from
+ * somewhere without `_redirects` support, or if a crawler fetches the file
+ * directly — so it has to be a valid page rather than a bare meta tag.
+ *
+ * It used to be a single `<meta http-equiv="refresh">` with no <html>, no
+ * <head> and no lang attribute: the only page on the site that failed that
+ * check. The refresh stays (it needs no JavaScript), but noscript-friendly
+ * links sit underneath it, because a redirect that silently fails should still
+ * leave a person somewhere they can click.
+ *
+ * `noindex` is deliberate: this URL must never compete with `/en/` and `/ru/`,
+ * which carry the real content, their own canonicals and the hreflang set.
+ * The 302 stays temporary rather than permanent — `/` is meant to resolve by
+ * detected locale, and a 301 would tell search engines it is permanently and
+ * only English.
+ */
+const LANGS = [
+  { code: 'en', href: '/en/', label: 'English' },
+  { code: 'ru', href: '/ru/', label: 'Русский' },
+] as const;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="0;url=/en/" />
+    <meta name="robots" content="noindex, follow" />
+    <title>VKVstudio</title>
+    <link rel="canonical" href="https://vkvstudio.com/en/" />
+    <link rel="alternate" hreflang="en" href="https://vkvstudio.com/en/" />
+    <link rel="alternate" hreflang="ru" href="https://vkvstudio.com/ru/" />
+    <link rel="alternate" hreflang="x-default" href="https://vkvstudio.com/en/" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        background: hsl(220, 18%, 6%);
+        color: hsl(210, 20%, 95%);
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        text-align: center;
+      }
+      a {
+        color: hsl(155, 65%, 50%);
+        /* 44px keeps these clear of the WCAG 2.2 minimum target size — this is
+           the one control on the page, so it should be hard to miss. */
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <p>VKVstudio</p>
+    <nav aria-label="Language">
+      {
+        LANGS.map((l) => (
+          <a href={l.href} hreflang={l.code} lang={l.code}>
+            {l.label}
+          </a>
+        ))
+      }
+    </nav>
+  </body>
+</html>

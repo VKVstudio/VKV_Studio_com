@@ -1,0 +1,711 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Prompt Architect — Styles (Phase 2.2.2)
+   All colors via CSS custom properties. NO hardcoded values.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Role color tokens ────────────────────────────────────────────────────── */
+.prompt {
+  --role-system: hsl(190, 80%, 50%); /* cyan */
+  --role-user: var(--accent-green-300); /* green */
+  --role-assistant: hsl(270, 70%, 65%); /* violet */
+  --role-context: hsl(35, 90%, 55%); /* orange */
+  --role-tools: hsl(280, 65%, 60%); /* magenta-violet, distinct from assistant's violet */
+
+  --role-system-glow: hsla(190, 80%, 50%, 0.12);
+  --role-user-glow: hsla(155, 70%, 50%, 0.12);
+  --role-assistant-glow: hsla(270, 70%, 65%, 0.12);
+  --role-context-glow: hsla(35, 90%, 55%, 0.12);
+  --role-tools-glow: hsla(280, 65%, 60%, 0.12);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HANDOFF NOTICE (cross-tool: tokenizer → Prompt Architect)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.prompt__handoff-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--accent-green-400);
+  border-radius: var(--radius-md);
+  background: var(--accent-glow);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.prompt__handoff-dismiss {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.prompt__handoff-dismiss:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER PANEL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.prompt__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--bg-graphite);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+@media (min-width: 768px) {
+  .prompt__header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.prompt__model-select {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition-all);
+}
+
+.prompt__model-select:focus {
+  border-color: var(--accent-green-300);
+}
+
+/* Roster verification stamp — small muted text under the model picker */
+.prompt__roster-stamp {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-ghost);
+  letter-spacing: var(--tracking-wide);
+}
+
+.prompt__stats {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.prompt__stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.prompt__stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* Says which tokenizer produced the count beside it. Quiet by default, because
+   an exact count is the expected case and does not need to shout; the approx
+   state is warned instead, because that is the one where the number — and the
+   dollar figure derived from it — should not be taken at face value. */
+.prompt__basis {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 0.35em;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.prompt__basis--approx {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.prompt__stat-value {
+  font-size: var(--text-base);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* Budget Progress Bar */
+.prompt__budget {
+  flex-grow: 1;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.prompt__budget-bar-bg {
+  height: 8px;
+  background: var(--bg-void);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.prompt__budget-bar-fill {
+  height: 100%;
+  background: var(--gradient-accent);
+  border-radius: var(--radius-full);
+  transition:
+    width var(--duration-normal) var(--ease-out),
+    background-color var(--duration-normal) var(--ease-out);
+}
+
+/* ─── Chat-overhead honesty-tier badge (item 3) ────────────────────────────── */
+.prompt__overhead-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  padding: 2px var(--space-2);
+  margin-top: var(--space-1);
+  border-radius: var(--radius-full);
+  cursor: help;
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.prompt__overhead-badge--native {
+  background: hsla(155, 70%, 50%, 0.1);
+  border: 1px solid hsla(155, 70%, 50%, 0.3);
+  color: var(--accent-green-300);
+}
+
+.prompt__overhead-badge--documented {
+  background: hsla(225, 65%, 55%, 0.12);
+  border: 1px solid hsla(225, 65%, 55%, 0.3);
+  color: var(--accent-blue-200, hsl(225, 65%, 70%));
+}
+
+.prompt__overhead-badge--estimated {
+  background: hsla(40, 90%, 55%, 0.1);
+  border: 1px solid hsla(40, 90%, 55%, 0.3);
+  color: hsl(40, 90%, 65%);
+}
+
+/* ─── Hidden-reasoning cost disclosure (item 7) ────────────────────────────── */
+.prompt__reasoning-notice {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-ghost);
+  line-height: var(--leading-normal);
+  max-width: 32ch;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CACHING COST PANEL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.prompt__caching {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-graphite);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.prompt__caching-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.prompt__caching-unsupported {
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.prompt__caching-stats {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.prompt__caching-value--cheap {
+  color: var(--accent-green-300);
+}
+
+.prompt__caching-savings {
+  color: var(--accent-green-300);
+}
+
+/* ─── Batch API toggle (item 4) ─────────────────────────────────────────── */
+.prompt__batch-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px; /* WCAG 2.5.8 target size */
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.prompt__batch-toggle input[type='checkbox'] {
+  accent-color: var(--accent-green-400);
+  cursor: pointer;
+}
+
+/* ─── Cache floor note / breakpoint warning (item 2) ────────────────────── */
+.prompt__caching-note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.prompt__caching-warning {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOCK LIST
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.prompt__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ─── Individual Block ──────────────────────────────────────────────────── */
+
+.prompt-block {
+  background: var(--bg-graphite);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+  will-change: transform;
+}
+
+.prompt-block:hover {
+  border-color: var(--border-default);
+}
+
+/* Role accent borders */
+.prompt-block--system {
+  border-left: 4px solid var(--role-system);
+}
+.prompt-block--user {
+  border-left: 4px solid var(--role-user);
+}
+.prompt-block--assistant {
+  border-left: 4px solid var(--role-assistant);
+}
+.prompt-block--context {
+  border-left: 4px solid var(--role-context);
+}
+.prompt-block--tools {
+  border-left: 4px solid var(--role-tools);
+}
+
+/* Role hover glows */
+.prompt-block--system:hover {
+  box-shadow:
+    0 0 20px var(--role-system-glow),
+    var(--shadow-md);
+}
+.prompt-block--user:hover {
+  box-shadow:
+    0 0 20px var(--role-user-glow),
+    var(--shadow-md);
+}
+.prompt-block--assistant:hover {
+  box-shadow:
+    0 0 20px var(--role-assistant-glow),
+    var(--shadow-md);
+}
+.prompt-block--context:hover {
+  box-shadow:
+    0 0 20px var(--role-context-glow),
+    var(--shadow-md);
+}
+.prompt-block--tools:hover {
+  box-shadow:
+    0 0 20px var(--role-tools-glow),
+    var(--shadow-md);
+}
+
+/* Drag ghost */
+.prompt-block[draggable='true']:active {
+  cursor: grabbing;
+}
+
+/* ─── Block Header ──────────────────────────────────────────────────────── */
+
+.prompt-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-slate);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-3);
+}
+
+.prompt-block__role-select {
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.prompt-block__role-select option {
+  background: var(--bg-slate);
+  color: var(--text-primary);
+}
+
+.prompt-block__system-label {
+  color: var(--role-system);
+}
+.prompt-block__user-label {
+  color: var(--role-user);
+}
+.prompt-block__assistant-label {
+  color: var(--role-assistant);
+}
+.prompt-block__context-label {
+  color: var(--role-context);
+}
+.prompt-block__tools-label {
+  color: var(--role-tools);
+}
+
+.prompt-block__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.prompt-block__tokens {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.prompt-block__btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-all);
+  font-size: var(--text-sm);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* WCAG 2.2 SC 2.5.8: 4px padding + a ~14px glyph at line-height 1 computed
+     to roughly 22px, under the 24px minimum — and these sit shoulder to
+     shoulder in the block header, so the spacing exception does not apply.
+     There are now five of them on every viewport (the move buttons stopped
+     being mobile-only, see PromptBlock.svelte), which makes an undersized,
+     tightly-packed row of controls worse, not better: the neighbour of
+     "duplicate" is "delete". */
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.prompt-block__btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.prompt-block__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.prompt-block__btn--delete:hover {
+  color: var(--color-error);
+  background: hsla(0, 70%, 55%, 0.08);
+}
+
+/* ─── Block Content (collapsible) ──────────────────────────────────────── */
+
+.prompt-block__content {
+  padding: var(--space-4);
+  display: flex;
+  position: relative;
+}
+
+.prompt-block__textarea {
+  width: 100%;
+  min-height: 80px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  resize: vertical;
+  outline: none;
+  position: relative;
+  z-index: 2;
+}
+
+.prompt-block__textarea:focus {
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACTIONS / ADD BLOCK
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.prompt__actions {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+
+.prompt__add-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--border-default);
+  color: var(--text-muted);
+  padding: var(--space-3) var(--space-8);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-all);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+}
+
+.prompt__add-btn:hover {
+  border-color: var(--accent-green-300);
+  color: var(--accent-green-300);
+  background: var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER / EXPORT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.prompt__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-graphite);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  align-items: center;
+}
+
+@media (min-width: 640px) {
+  .prompt__footer {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.prompt__export-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.prompt__export-btn {
+  background: var(--bg-void);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: var(--transition-all);
+}
+
+.prompt__export-btn:hover {
+  border-color: var(--accent-green-300);
+  color: var(--accent-green-300);
+}
+
+/* Selected format (drives what "Copy All" writes to the clipboard) */
+.prompt__export-btn.active {
+  background: hsla(155, 70%, 50%, 0.12);
+  border-color: var(--accent-green-400);
+  color: var(--accent-green-300);
+}
+
+/* Item 2: Anthropic assistant-first export warning — always its own full
+ * row (flex-basis: 100%) so it doesn't squeeze into the label/export-group
+ * row layout at >=640px. */
+.prompt__export-warning {
+  margin: 0;
+  flex-basis: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .prompt__export-warning {
+    text-align: left;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-block,
+  .prompt__budget-bar-fill,
+  .prompt-block__btn,
+  .prompt__add-btn,
+  .prompt__export-btn {
+    transition: none !important;
+  }
+}
+
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+.prompt__tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(20px);
+  width: fit-content;
+  margin: 0 auto var(--space-6);
+}
+
+/* The standard property, restated where the CSS minifier cannot rewrite it
+   away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+   alias alone, and Firefox (standard-only) then renders a flat fill. The
+   minifier does not merge across an @supports boundary, so this copy ships.
+   Must stay AFTER the base rule — equal specificity, last one wins.
+   Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+@supports (backdrop-filter: blur(1px)) {
+  .prompt__tabs {
+    backdrop-filter: blur(20px);
+  }
+}
+
+.prompt__tab {
+  padding: var(--space-2) var(--space-6);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+/* --accent-cyan-400 does not exist and never did — no such token is defined
+   anywhere. `background` fell back to the transparent value from the base rule
+   while `color` still resolved, so the ACTIVE tab was painted --bg-obsidian on
+   --bg-obsidian: contrast 1.00:1, invisible, and invisible specifically for
+   whichever tab you are currently on. The tool's accent is green everywhere
+   else in this file (22 uses), so this is the token it always meant. */
+.prompt__tab.active {
+  background: var(--accent-green-300);
+  color: var(--bg-obsidian);
+}
+.prompt__tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE — prevent iOS Safari auto-zoom-on-focus
+   Safari zooms the page in when a focused form control's computed font-size
+   is under 16px. .prompt__model-select and .prompt-block__role-select render
+   at var(--text-sm) (~12.8px); bump to 16px on mobile only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  .prompt__model-select,
+  .prompt-block__role-select {
+    font-size: 16px;
+  }
+
+  /* Same mobile padding trim the other two Lab tools already carry —
+     24px of chrome per side is desktop air at 375px. */
+  .prompt__header {
+    padding: var(--space-4);
+  }
+
+  /* MEASURED at 375px: this row holds seven items — the cache pill (96px),
+     the mini-bar (80px) and five 27px buttons with 8px gaps — which needs
+     360px inside a 332px header. With `nowrap` the last button rendered at
+     372..398, i.e. 23px PAST the right edge of a 375px viewport: a control
+     nobody could reach on a phone. The comment on .prompt-block__btn already
+     records why there are now five of them on every viewport rather than
+     three; wrapping is what makes that decision survive a narrow screen.
+     Wrap rather than scroll on purpose — a horizontally scrolling strip of
+     controls inside a page is a worse trap than a second line. */
+  .prompt-block__controls {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

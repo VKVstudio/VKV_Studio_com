@@ -1,0 +1,268 @@
+---
+/**
+ * PricingCard — one ladder rung as a compact card.
+ *
+ * Used twice: the homepage ServicesTeaser and the /services/ index. The card
+ * carries exactly what a buyer needs to self-qualify — outcome, price,
+ * timeframe — and links to the rung page for the itemized scope. Prices are
+ * shown on purpose: for sub-$10k fixed packages, hidden prices measurably
+ * cost conversions, and the whole ladder is built on "evaluate without a
+ * sales call".
+ */
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import type { ServiceRung } from '@/data/services';
+
+interface Props {
+  lang: Lang;
+  rung: ServiceRung;
+  /** The teaser sits on the homepage h-hierarchy; the index page differs. */
+  headingTag?: 'h3' | 'h2';
+  /**
+   * Optional in-house emblem (Lab-card treatment: 16/10 window, bottom fade
+   * into the glass, gentle zoom on hover). Cards without art render exactly
+   * as before — the homepage teaser stays untouched until it passes art in.
+   */
+  art?: ImageMetadata;
+}
+
+const { lang, rung, headingTag = 'h3', art } = Astro.props;
+const Heading = headingTag;
+const href = `/${lang}/services/${rung.id}/`;
+---
+
+<article class:list={['pricing-card', art && 'pricing-card--media']}>
+  {
+    art && (
+      <div class="pricing-card__visual" aria-hidden="true">
+        <Picture
+          src={art}
+          formats={['avif', 'webp']}
+          widths={[360, 520]}
+          sizes="(max-width: 639px) 7rem, 11rem"
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    )
+  }
+  <div class="pricing-card__body">
+    {
+      /* The `// ` is decoration, not content: read aloud it becomes "slash
+        slash" before every card title. House idiom — same split as
+        ServiceRungLayout, PageHero and geo-audit. */
+    }
+    <p class="pricing-card__label text-mono">
+      <span aria-hidden="true">// </span>{rung.monoLabel.replace(/^\/\/\s*/, '')}
+    </p>
+    <Heading class="pricing-card__title">
+      <a href={href}>{rung.title[lang]}</a>
+    </Heading>
+    <p class="pricing-card__outcome">{rung.outcome[lang]}</p>
+    <p class="pricing-card__meta text-mono">
+      <span class="pricing-card__price">{rung.priceLine[lang]}</span>
+      <span class="pricing-card__time">{rung.timeframe[lang]}</span>
+    </p>
+    <p class="pricing-card__teaser">{rung.teaser[lang]}</p>
+    <a
+      href={href}
+      class="pricing-card__cta"
+      aria-label={`${t(lang, 'services.detailsCta')}: ${rung.title[lang]}`}
+    >
+      {t(lang, 'services.detailsCta')}
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+</article>
+
+<style>
+  /* Matte-glass idiom shared with StackSection's cards: hsla veil + backdrop
+     blur/saturate + a hairline white border + an inset top catch-light, so
+     the ladder reads as one visual family with the rest of the homepage
+     instead of a flat bordered box. No grain — that texture stays Stack's. */
+  .pricing-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid hsla(0, 0%, 100%, 0.06);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    background: hsla(220, 20%, 12%, 0.5);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, 0.05);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .pricing-card {
+      backdrop-filter: blur(16px) saturate(140%);
+    }
+  }
+
+  .pricing-card:hover {
+    border-color: var(--accent-green-400);
+    box-shadow:
+      inset 0 1px 0 hsla(0, 0%, 100%, 0.05),
+      var(--glow-green);
+  }
+
+  /* Hover lift is motion, not just a color shift — kept fully behind
+     reduced-motion so those users get an identical resting card with a
+     color-only hover, never a forced translate. */
+  @media (prefers-reduced-motion: no-preference) {
+    .pricing-card {
+      transition:
+        border-color var(--duration-normal) var(--ease-out),
+        box-shadow var(--duration-normal) var(--ease-out),
+        transform var(--duration-normal) var(--ease-out);
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* With an emblem the card becomes a media row: a square window on the
+     left (1:1 art in a 1:1 frame — nothing gets cropped), content right.
+     Cards without art keep the original vertical layout untouched. */
+  .pricing-card--media {
+    display: grid;
+    grid-template-columns: 11rem 1fr;
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  @media (max-width: 639px) {
+    .pricing-card--media {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+
+    .pricing-card__visual {
+      width: 7rem;
+    }
+  }
+
+  .pricing-card__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .pricing-card__visual {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid hsla(155, 65%, 50%, 0.12);
+    box-shadow: inset 0 0 20px hsla(155, 65%, 50%, 0.05);
+  }
+
+  .pricing-card__visual :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pricing-card__visual :global(img) {
+      transition: transform var(--duration-slow) var(--ease-out);
+    }
+
+    .pricing-card:hover .pricing-card__visual :global(img) {
+      transform: scale(1.06);
+    }
+  }
+
+  .pricing-card__label {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-3);
+  }
+
+  .pricing-card__title {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-2);
+  }
+
+  .pricing-card__title a {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition-colors);
+  }
+
+  .pricing-card__title a:hover {
+    color: var(--accent-green-300);
+  }
+
+  .pricing-card__outcome {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-4);
+  }
+
+  .pricing-card__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    font-size: var(--text-xs);
+    border-block: 1px solid var(--border-subtle);
+    padding-block: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .pricing-card__price {
+    color: var(--accent-green-300);
+  }
+
+  .pricing-card__time {
+    color: var(--text-muted);
+  }
+
+  .pricing-card__teaser {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    flex-grow: 1;
+    margin-bottom: var(--space-4);
+  }
+
+  .pricing-card__cta {
+    align-self: flex-start;
+    color: var(--accent-green-400);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    text-decoration: none;
+    transition: var(--transition-colors);
+    /* WCAG 2.5.8 minimum target */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .pricing-card__cta:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* Small phones: the card sits inside the ladder rail, so its own padding is
+     the last thing standing between the copy and a 216px line. */
+  @media (max-width: 480px) {
+    .pricing-card {
+      padding: var(--space-5) var(--space-4);
+    }
+  }
+</style>

@@ -1,0 +1,731 @@
+---
+/**
+ * /cases/vkvstudio-site/ — the case study behind the websites rung: this
+ * site itself. The one project every visitor has already experienced by the
+ * time they read about it. Problem → constraint → decisions → what each
+ * decision cost and bought → measured reality → what is deliberately absent
+ * → bridge to the websites service and the Trust & Process page.
+ *
+ * The hero is the shared `PageHero` block (`src/components/blocks/`), not a
+ * fourteenth hand-typed copy: the whole recipe — plate, eyebrow, letter-split
+ * h1, scroll hint, entrance cascade, mobile scroll-hint fix — lives there
+ * once. This page passes only what is genuinely its own: the copy, the
+ * ComfyUI still generated for it, the direction the scrim darkens, the point
+ * the plexus is born from, and where the scroll hint rides to.
+ *
+ * The still (`src/assets/cases/vkvstudio-site-hero.png`) landed after the
+ * first version of this page was written, which is why the file used to say
+ * no photograph existed and rode on `--gradient-hero` instead.
+ *
+ * The six sections below ARE a narrative arc (problem → constraint →
+ * decisions → cost/benefit → measured reality → deliberate omissions), so
+ * they render as the etalon's numbered timeline (Career Arc mechanic)
+ * instead of six stacked headings — medallions carry the step number since
+ * no per-stage icon set exists for this page.
+ */
+import { getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import ServiceCta from '@components/services/ServiceCta.astro';
+import heroArt from '@/assets/cases/vkvstudio-site-hero.png';
+import { SITE_ORIGIN } from '@/data/services';
+import { breadcrumbNode } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const copy = {
+  en: {
+    title: 'Case: This Site — 99 on Desktop With a Video Hero | VKVstudio',
+    description:
+      'vkvstudio.com scores 99 on desktop Lighthouse with a scroll-driven video hero — and 100 on the pages without it. Check both numbers yourself.',
+    eyebrow: 'case study',
+    h1: 'This site: 99 on desktop, and the missing point is on purpose',
+    lede: 'The site you are reading is the case study. It carries a scroll-scrubbed video hero, WebGL tools and an animated navigation — the exact features performance advice tells you to avoid — and still scores 99 on desktop Lighthouse. The pages without the video hero score 100. The one point is what the video costs, and it was worth paying. Verify every number from your own browser.',
+    stats: [
+      { label: 'Lighthouse, desktop', value: '99, with the video hero running' },
+      { label: 'Lighthouse agentic browsing', value: '3/3 checks passed' },
+      { label: 'Design tokens', value: '~80 custom properties, no framework' },
+    ],
+    sections: [
+      {
+        heading: 'The problem',
+        body: 'Marketing sites die of accumulation: a framework here, a tracker there, a carousel library — until the median business homepage takes seconds to become usable and gets quietly punished for it in search. The usual "fix" is a beautiful site that is slow, or a fast site that looks like a README.',
+      },
+      {
+        heading: 'The constraint',
+        body: "One engineer, one deadline, and a brief that refuses to trade away either half: the site had to look distinctive — a scroll-driven video hero, WebGL in the Lab, animated navigation — and still hit a Lighthouse floor most agencies only promise on an empty template. No performance team, no separate accessibility pass, no budget for a licensed video library: every constraint a real client brings, applied to the studio's own front door first.",
+      },
+      {
+        heading: 'The decisions',
+        body: "Astro renders everything to static HTML; JavaScript ships only for islands that are genuinely interactive, and loads only once they scroll into view. CSS is vanilla and built on design tokens, not a framework — around eighty custom properties drive color, spacing, type and motion sitewide. The heavy things are engineered around the metrics, not despite them: the hero video is scrubbed by scroll rather than autoplayed, composited from footage generated in-house rather than licensed stock; 3D loads lazily on its own route; every animation sits behind prefers-reduced-motion, which is not decoration — a visitor who asks for reduced motion never fetches the hero video's bytes at all.",
+      },
+      {
+        heading: 'What each decision cost and bought',
+        body: 'Vanilla CSS instead of a utility framework cost more time upfront — eighty tokens had to be designed and named before the first component existed — and bought a site that gets re-skinned by touching a handful of variables instead of hunting through markup. A hand-built scroll-driven video engine instead of a plugin cost more implementation time and bought a hero with zero third-party runtime weight and full control over what reduced-motion visitors never download. Hero loops generated in-house cost production time on a local GPU instead of a licensing fee, and bought motion tuned to this exact page rather than stretched to fit it.',
+      },
+      {
+        heading: 'Measured reality',
+        body: "Desktop Lighthouse performance: 99, with the video hero running — not a stripped test build and not an empty template; the pages without the video hero measure 100 on the same run. Lighthouse's agentic-browsing audit — Google's own experimental check for how well a site reads to an AI agent — passes all three of its checks here: a well-formed accessibility tree, zero layout shift, and a valid llms.txt; check it yourself in PageSpeed Insights, or in Chrome DevTools if your Chrome is new enough — it takes a minute. The whole site ships in two full locales with correct hreflang. Mobile pays more for that hero: a scroll-scrubbed video is heavier on a phone's radio and CPU than a static one, and this design accepts a lower mobile number rather than trim the desktop experience — a trade named here, not hidden. Every number on this page was measured with Lighthouse; run it yourself and hold me to it.",
+      },
+      {
+        heading: 'What is deliberately absent',
+        body: 'No CMS. Copy lives in code, so a wording change is a small pull request, not a dashboard edit — the trade a static-first, framework-free site makes, and one worth knowing before you buy it. No analytics suite loads ahead of the first paragraph; if a client needs numbers, they come from server logs or a script that does not cost Largest Contentful Paint. And no chasing the last few mobile Lighthouse points against a video hero — that fight was declined on purpose, not lost by accident.',
+      },
+    ],
+    closingHeading: 'What this proves for your project',
+    closingPre: "That 'fast' and 'distinctive' is an engineering choice, not a budget tier. The ",
+    closingLink1: 'websites package',
+    closingMid1:
+      ' writes this same performance target into the contract because this site demonstrates it is deliverable, and the AI-search readiness clients buy separately as an audit — schema, llms.txt, crawler access — is built into every build from the first commit. How the contract, milestones and warranty actually work is on the ',
+    closingLink2: 'Trust & Process',
+    closingMid2: ' page, and where this rung sits is on the ',
+    closingLink3: 'full price ladder',
+    closingPost: '.',
+  },
+  ru: {
+    title: 'Кейс: этот сайт — 99 на десктопе с видео в hero | VKVstudio',
+    description:
+      'vkvstudio.com держит 99 баллов Lighthouse на десктопе — с работающим видео в hero; на страницах без видео 100. Проверьте оба числа сами.',
+    eyebrow: 'кейс',
+    h1: 'Этот сайт: 99 на десктопе, и недостающий балл отдан сознательно',
+    lede: 'Сайт, который вы читаете, и есть кейс. В нём видео в hero на прокрутке, WebGL-инструменты и анимированная навигация — ровно то, чего советуют избегать ради скорости, — и при этом 99 баллов Lighthouse на десктопе. Страницы без видео дают 100. Этот один балл — цена видео, и она того стоила. Проверьте любое число здесь сами, в своём браузере.',
+    stats: [
+      { label: 'Lighthouse, десктоп', value: '99, с работающим видео в hero' },
+      { label: 'Агентный просмотр в Lighthouse', value: '3/3 — все проверки пройдены' },
+      { label: 'Дизайн-токены', value: '≈80 кастомных свойств, без фреймворка' },
+    ],
+    sections: [
+      {
+        heading: 'Задача',
+        body: 'Маркетинговые сайты умирают от накопления: фреймворк здесь, трекер там, библиотека каруселей — пока медианная главная бизнеса не начинает открываться секундами и тихо наказываться за это в поиске. Обычное «решение» — красивый сайт, который тормозит, или быстрый сайт, который выглядит как README.',
+      },
+      {
+        heading: 'Ограничение',
+        body: 'Один инженер, один дедлайн и бриф, который отказывается разменивать одно на другое: сайт обязан выглядеть незаурядно — видео в hero на прокрутке, WebGL в лаборатории, анимированная навигация — и всё равно держать планку Lighthouse, которую большинство агентств обещают только на пустом шаблоне. Ни команды по производительности, ни отдельного прохода по доступности, ни бюджета на лицензионную видеотеку — все ограничения реального клиента, применённые сперва к собственной витрине студии.',
+      },
+      {
+        heading: 'Решения',
+        body: 'Astro рендерит всё в статический HTML; JavaScript едет только для островов, которые действительно интерактивны, и грузится только когда они появляются на экране. CSS — чистый, на дизайн-токенах, а не на фреймворке: около восьмидесяти кастомных свойств управляют цветом, отступами, шрифтом и движением по всему сайту. Тяжёлое спроектировано вокруг метрик, а не вопреки им: видео в hero перематывается прокруткой, а не проигрывается само, и собрано из материала, сделанного своими силами, а не из лицензионного стока; 3D грузится лениво на своём роуте; каждая анимация стоит за prefers-reduced-motion — и это не декорация: посетитель, попросивший меньше движения, вообще не скачивает байты видео.',
+      },
+      {
+        heading: 'Что стоило и что купило каждое решение',
+        body: 'Чистый CSS вместо utility-фреймворка стоил больше времени на старте — восемьдесят токенов пришлось спроектировать и назвать до того, как появился первый компонент, — и купил сайт, который перекрашивается через горстку переменных, а не через раскопки по разметке. Собственный движок видео на прокрутке вместо готового плагина стоил больше времени на реализацию и купил hero без веса стороннего рантайма и полный контроль над тем, что посетители с reduced-motion никогда не скачают. Зацикленные ролики для hero, сгенерированные своими силами, стоили времени на локальной GPU вместо лицензионного платежа и купили движение, подогнанное именно под эту страницу, а не растянутое под неё.',
+      },
+      {
+        heading: 'Измеренная реальность',
+        body: 'Производительность в Lighthouse на десктопе: 99, с работающим видео в hero — не на урезанной тестовой сборке и не на пустом шаблоне; страницы без видео в том же прогоне дают 100. Агентный аудит Lighthouse — собственная экспериментальная проверка Google на то, насколько сайт читается ИИ-агентом, — проходит здесь все три проверки: корректное дерево доступности, нулевой сдвиг вёрстки и валидный llms.txt; убедитесь сами в PageSpeed Insights или в Chrome DevTools, если у вас свежий Chrome, — это минута. Весь сайт живёт в двух полных локалях с корректным hreflang. Мобильный платит за этот hero больше: видео на прокрутке нагружает радиомодуль и процессор телефона сильнее статичной картинки, и дизайн сознательно принимает более низкий мобильный балл, лишь бы не резать десктопное впечатление, — размен назван здесь, а не спрятан. Все числа на этой странице получены прогоном Lighthouse; прогоните сами и спросите с меня.',
+      },
+      {
+        heading: 'Чего здесь сознательно нет',
+        body: 'Нет CMS. Текст живёт в коде, так что правка формулировки — это небольшой pull request, а не правка в панели, — размен, на который идёт статичный, свободный от фреймворков сайт, и о нём стоит знать до покупки. Ни один аналитический скрипт не грузится раньше первого абзаца; если клиенту нужны цифры, они берутся из серверных логов или из скрипта, который не стоит Largest Contentful Paint. И никакой охоты за последними мобильными баллами Lighthouse против видео в hero — от этой борьбы отказались сознательно, а не проиграли её случайно.',
+      },
+    ],
+    closingHeading: 'Что это доказывает для вашего проекта',
+    closingPre: '«Быстро» и «незаурядно» — это инженерный выбор, а не ценовая категория. ',
+    closingLink1: 'Пакет сайтов',
+    closingMid1:
+      ' прописывает этот же целевой балл в договор именно потому, что этот сайт доказывает его достижимость, а готовность к ИИ-поиску, которую клиенты покупают отдельным аудитом, — schema, llms.txt, доступ краулеров — здесь встроена в каждую сборку с первого коммита. Как устроены договор, этапы оплаты и гарантия — на странице ',
+    closingLink2: 'Доверие и процесс',
+    closingMid2: ', а где стоит эта ступень — на ',
+    closingLink3: 'полной лестнице цен',
+    closingPost: '.',
+  },
+}[lang];
+
+const pageUrl = `${SITE_ORIGIN}/${lang}/cases/vkvstudio-site/`;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: copy.h1,
+    description: copy.description,
+    url: pageUrl,
+    mainEntityOfPage: pageUrl,
+    image: `${SITE_ORIGIN}/og-cover${lang === 'ru' ? '-ru' : ''}.jpg`,
+    inLanguage: lang,
+    author: { '@id': `${SITE_ORIGIN}/#person` },
+    publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+    datePublished: '2026-08-20',
+    dateModified: '2026-08-22',
+  },
+  breadcrumbNode(lang, [
+    { name: t(lang, 'nav.home'), item: `${SITE_ORIGIN}/${lang}/` },
+    { name: copy.h1, item: pageUrl },
+  ]),
+];
+
+// The hero art is this page's LCP element, and PageHero cannot preload it for
+// us: an Astro slot does not travel from a nested component up to BaseLayout's
+// `head` slot (README, "What it does NOT do"). Widths must match the ones the
+// component requests — master is 1280 wide, so [768, 1280] exactly; asking for
+// more would clamp, duplicate a URL and buy a second download.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  ogType="article"
+  articlePublished="2026-08-20"
+  articleModified="2026-08-22"
+  jsonLd={jsonLd}
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="case-page">
+    {
+      /* ── Hero: the shared block. Five page-specific values and nothing else.
+         `scrim="center"`: the still is one lit axon running lower-left to
+         upper-right straight through the middle of the frame, so the copy
+         needs a radial darkening around its own centre — `left` would dim the
+         corner that is already black and leave the beam under the words.
+         `plexus`: the network is born from the brightest soma on that axon.
+         The old artless hero used 0.78 / 0.32, picked when there was no
+         picture; measured on the new master the node sits at ~0.80 / 0.23,
+         and 0.32 lands just below the beam in the dark. The anchor pins the
+         point to the frame through every crop `object-fit: cover` performs.
+         Frame is the master's own 1280×720. */
+    }
+    <PageHero
+      lang={lang}
+      eyebrow={copy.eyebrow}
+      title={copy.h1}
+      lede={copy.lede}
+      image={heroArt}
+      scrim="center"
+      plexus={{
+        originX: 0.8,
+        originY: 0.23,
+        anchor: { x: 0.8, y: 0.23, width: 1280, height: 720 },
+      }}
+      scrollTarget="#case-body"
+    />
+
+    {/* ── At a glance: the three hard numbers, pulled from the copy below ── */}
+    <section class="case-stats-section" id="case-body">
+      <div class="container">
+        <ul class="case-stats" role="list">
+          {
+            copy.stats.map((s) => (
+              <li class="case-stat js-case-stat">
+                <span class="case-stat__label text-mono">{s.label}</span>
+                <span class="case-stat__value">{s.value}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    {/* ── The arc: problem → constraint → decisions → cost/benefit → result → omissions ── */}
+    <section class="case-body">
+      <div class="container">
+        <div class="case-steps-wrap js-case-steps">
+          <div class="case-steps__line js-case-steps-line" aria-hidden="true"></div>
+          <ol class="case-steps">
+            {
+              copy.sections.map((s, i) => (
+                <li class="case-steps__item js-case-step">
+                  <span class="case-steps__dot js-case-step-dot" aria-hidden="true">
+                    <span class="text-mono">{String(i + 1).padStart(2, '0')}</span>
+                  </span>
+                  <div class="case-steps__card js-case-step-card">
+                    <h2>{s.heading}</h2>
+                    <p>{s.body}</p>
+                  </div>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+
+        <article class="case-closing js-case-reveal">
+          <h2>{copy.closingHeading}</h2>
+          <p>
+            {copy.closingPre}<a href={`/${lang}/services/websites/`}>{copy.closingLink1}</a>
+            {copy.closingMid1}<a href={`/${lang}/trust/`}>{copy.closingLink2}</a>
+            {copy.closingMid2}<a href={`/${lang}/services/`}>{copy.closingLink3}</a>
+            {copy.closingPost}
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <ServiceCta lang={lang} />
+  </main>
+</BaseLayout>
+
+<script>
+  // Homepage manners on this page too (owner: they are the site norm) —
+  // Lenis smooths the wheel; under reduced motion initLenis() is a no-op.
+  import { initLenis } from '@scripts/lenis-init';
+
+  // Motion is an enhancement, never a gatekeeper: nothing here starts hidden
+  // in CSS, so a failed import or an old browser sees a complete page.
+  // gsap.from() does the hide-then-reveal itself, clearProps hands each
+  // element back to the stylesheet once its tween lands.
+  async function initCaseMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // Cursor parallax on the hero lede — the initGeoHeroManners recipe from
+    // services/geo-audit/index.astro, same coefficients as HeroOverlay
+    // (nx * -3 / ny * -2). It needs no GSAP, so it lives BEFORE the dynamic
+    // import: a failed gsap chunk must not take down a feature that never
+    // depended on it. This page's hero is the shared PageHero block, so it
+    // targets that markup (`.page-hero` / `.page-hero__lede`). The
+    // reduced-motion gate is the early return above; the hover/pointer gate
+    // below is the recipe's own second gate — a touch device has no cursor.
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const hero = document.querySelector<HTMLElement>('.page-hero');
+      const lede = document.querySelector<HTMLElement>('.page-hero__lede');
+      if (hero && lede) {
+        hero.addEventListener(
+          'mousemove',
+          (e) => {
+            const r = hero.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width;
+            const y = (e.clientY - r.top) / r.height;
+            lede.style.transform = `translate(${(x - 0.5) * -3}px, ${(y - 0.5) * -2}px)`;
+          },
+          { passive: true }
+        );
+
+        hero.addEventListener('mouseleave', () => {
+          lede.style.transform = '';
+        });
+      }
+    }
+
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      // One row of identical tiles is ONE wave, not three independent ones:
+      // the trigger sits on the container and `stagger` deals the cards out.
+      // Values are the site's own "tile appears" recipe (geo-audit's
+      // js-geo-tile / section-animations.ts), not a local invention.
+      const statTiles = Array.from(document.querySelectorAll<HTMLElement>('.js-case-stat'));
+      if (statTiles.length) {
+        gsap.fromTo(
+          statTiles,
+          { opacity: 0, y: 50, scale: 0.92 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            ease: 'expo.out',
+            stagger: 0.08,
+            clearProps: 'all',
+            scrollTrigger: { trigger: '.case-stats', start: 'top 80%' },
+          }
+        );
+      }
+
+      document.querySelectorAll<HTMLElement>('.js-case-reveal').forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+      });
+
+      // The arc: the Career Arc's own "neural signal propagation" mechanic,
+      // verbatim from initAboutAnimations / the geo-audit process timeline.
+      // The line's real span is baked in as inline top/height (first-dot-
+      // center → last-dot-center), then its scaleY is scrubbed; each step
+      // springs its numbered medallion and slides its card out of a blur.
+      const stepsWrap = document.querySelector<HTMLElement>('.js-case-steps');
+      if (stepsWrap) {
+        const line = stepsWrap.querySelector<HTMLElement>('.js-case-steps-line');
+        const dots = stepsWrap.querySelectorAll<HTMLElement>('.js-case-step-dot');
+        const firstDot = dots[0];
+        const lastDot = dots[dots.length - 1];
+
+        if (line && firstDot && lastDot && dots.length >= 2) {
+          const wrapRect = stepsWrap.getBoundingClientRect();
+          const firstRect = firstDot.getBoundingClientRect();
+          const lastRect = lastDot.getBoundingClientRect();
+          const lineTop = firstRect.top - wrapRect.top + firstRect.height / 2;
+          const lineHeight = lastRect.top - wrapRect.top + lastRect.height / 2 - lineTop;
+          line.style.top = `${lineTop}px`;
+          line.style.height = `${lineHeight}px`;
+          line.style.bottom = 'auto';
+
+          gsap.fromTo(
+            line,
+            { scaleY: 0 },
+            {
+              scaleY: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: stepsWrap,
+                start: 'top 75%',
+                end: 'bottom 40%',
+                scrub: 0.8,
+              },
+            }
+          );
+        }
+
+        stepsWrap.querySelectorAll<HTMLElement>('.js-case-step').forEach((item) => {
+          const dot = item.querySelector<HTMLElement>('.js-case-step-dot');
+          const card = item.querySelector<HTMLElement>('.js-case-step-card');
+
+          const itemTl = gsap.timeline({
+            scrollTrigger: {
+              trigger: item,
+              start: 'top 78%',
+              toggleActions: 'play none none none',
+            },
+          });
+
+          if (dot) {
+            itemTl.fromTo(
+              dot,
+              { scale: 0, boxShadow: '0 0 0px transparent' },
+              {
+                scale: 1,
+                boxShadow: '0 0 20px hsla(155, 70%, 50%, 0.4)',
+                duration: 0.6,
+                ease: 'back.out(2.5)',
+                onComplete: () => {
+                  dot.classList.add('is-active');
+                },
+              },
+              0
+            );
+          }
+
+          if (card) {
+            itemTl.fromTo(
+              card,
+              { opacity: 0, x: -30, filter: 'blur(6px)' },
+              { opacity: 1, x: 0, filter: 'blur(0px)', duration: 0.7, ease: 'expo.out' },
+              // 0.25, not 0.15: the site's step rhythm is dot 0 → icon 0.15 →
+              // card 0.25. This page has no icon, but dropping its slot moved
+              // the card a beat early against every other timeline.
+              0.25
+            );
+          }
+        });
+      }
+    } catch (err) {
+      // No rescue pass needed — content was never hidden.
+      console.error('[case-vkvstudio-site] motion failed to load:', err);
+    }
+  }
+
+  // The scroll hint is PageHero's own behaviour now (it reads the same
+  // window.lenisInstance initLenis() publishes below), so nothing about it is
+  // wired here any more.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initCaseMotion();
+    });
+  } else {
+    initLenis();
+    void initCaseMotion();
+  }
+</script>
+
+<style>
+  .case-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .case-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* The hero's own rules used to live here — the whole `.case-hero*` family,
+     its six keyframe sets and the mobile scroll-hint fix. They moved into
+     `src/components/blocks/PageHero.astro` unchanged in intent; nothing on
+     this page references those class names any more. */
+
+  /* ── At-a-glance stat strip — the Lab card recipe, three hard numbers
+     pulled verbatim from the arc below, read in five seconds. ─────────── */
+  .case-stats-section {
+    padding-block: var(--space-10) var(--space-4);
+  }
+
+  .case-stats {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-5);
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  .case-stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-5);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    text-align: center;
+    /* Named properties, never `all`: GSAP tweens opacity/y/scale on this very
+       element, and a blanket 250ms transition would re-ease every frame of the
+       entrance tween. One element, one animator. */
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .case-stat {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .case-stat:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  /* The lift is motion, not a colour shift — so it lives entirely behind
+     reduced-motion, exactly as on PricingCard: those visitors get the same
+     card with a colour-only hover, never a forced translate. */
+  @media (prefers-reduced-motion: no-preference) {
+    .case-stat {
+      transition:
+        border-color var(--duration-normal) var(--ease-out),
+        box-shadow var(--duration-normal) var(--ease-out),
+        transform var(--duration-normal) var(--ease-out);
+    }
+
+    .case-stat:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  .case-stat__label {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent-green-400);
+    text-transform: uppercase;
+  }
+
+  .case-stat__value {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    line-height: 1.4;
+  }
+
+  .case-body {
+    margin-bottom: var(--space-8);
+  }
+
+  /* ── The arc — the Career Arc mechanic verbatim, medallions carrying a
+     step number instead of an icon (no per-stage icon set for this page). */
+  .case-steps-wrap {
+    position: relative;
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+  }
+
+  .case-steps__line {
+    position: absolute;
+    left: 19px;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      var(--accent-green-300),
+      var(--accent-green-500) 50%,
+      var(--accent-green-300)
+    );
+    transform-origin: top center;
+    z-index: 0;
+  }
+
+  @media (min-width: 768px) {
+    .case-steps__line {
+      left: 23px;
+    }
+  }
+
+  .case-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .case-steps__item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-6);
+    padding-bottom: var(--space-10);
+  }
+
+  @media (min-width: 768px) {
+    .case-steps__item {
+      gap: var(--space-8);
+    }
+  }
+
+  .case-steps__item:last-child {
+    padding-bottom: 0;
+  }
+
+  .case-steps__dot {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-graphite);
+    border: 1.5px solid var(--accent-green-300);
+    border-radius: var(--radius-full);
+    color: var(--accent-green-200);
+    box-shadow: 0 0 0 transparent;
+    z-index: 2;
+    margin-top: var(--space-1);
+  }
+
+  @media (min-width: 768px) {
+    .case-steps__dot {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .case-steps__dot.is-active {
+    animation: case-dot-pulse 2.5s ease-in-out 0.6s infinite;
+  }
+
+  @keyframes case-dot-pulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 12px var(--accent-glow),
+        0 0 0 0 hsla(155, 70%, 50%, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 0 8px hsla(155, 70%, 50%, 0);
+    }
+  }
+
+  .case-steps__card {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-6) var(--space-8);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .case-steps__card {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .case-steps__card:hover {
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .case-steps__card h2 {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .case-steps__card p {
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal, 1.7);
+    margin: 0;
+  }
+
+  /* ── Closing bridge — the callout idiom, so the last argument reads as a
+     destination, not a seventh identical block. ───────────────────────── */
+  .case-closing {
+    max-width: var(--container-narrow);
+    margin: var(--space-12) auto 0;
+    padding: var(--space-6) var(--space-6) var(--space-6) var(--space-8);
+    border-left: 2px solid var(--accent-green-300);
+    background: var(--glass-bg);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+
+  .case-closing h2 {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  .case-closing p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  /* Bridge links — underlined, not color-only, matching ServiceCta's own
+     inline-link recipe. */
+  .case-closing p a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .case-closing p a:hover {
+    color: var(--accent-green-300);
+  }
+</style>

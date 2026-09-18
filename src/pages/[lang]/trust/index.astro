@@ -1,0 +1,1327 @@
+---
+/**
+ * /trust/ — Trust & Process. The page that answers procurement before
+ * procurement asks: paper, money, data, continuity, liability, identity.
+ * For a solo studio selling cross-border, an unanswered diligence question
+ * doesn't generate an email — it generates a closed tab. This page exists so
+ * every question a buyer's lawyer, DPO or finance team would raise already
+ * has its answer in writing.
+ *
+ * Standing rule enforced by tests: no registry numbers on this page or
+ * anywhere — "full details in every contract and invoice" is the formula.
+ */
+import { Image, Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import MagneticCard from '@components/ui/MagneticCard.svelte';
+import ServiceCta from '@components/services/ServiceCta.astro';
+import portrait from '@/assets/people/valerii-lens.png';
+import heroArt from '@/assets/trust/trust-hero.png';
+// The emblem family rendered for these tiles (commit 54e1d44: "a sealed
+// contract page, coins stepping upward, a vault door with a lit seam, a
+// runbook with a key, a level at rest, a blank nameplate"). Six emblems,
+// nine tiles — three questions were added after the render, so the emblem
+// is an optional per-tile field, never an index lookup.
+import emPaper from '@/assets/trust/tr-paper.png';
+import emMoney from '@/assets/trust/tr-money.png';
+import emData from '@/assets/trust/tr-data.png';
+import emHandover from '@/assets/trust/tr-handover.png';
+import emLiability from '@/assets/trust/tr-liability.png';
+import emIdentity from '@/assets/trust/tr-identity.png';
+import { SITE_ORIGIN } from '@/data/services';
+import { breadcrumbNode } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths, ImageMetadata } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+interface TrustSection {
+  heading: string;
+  body: string;
+  /** Extra paragraphs, for the one answer that cannot be one paragraph. */
+  bodyMore?: string[];
+  link?: { text: string; href: string };
+  emblem?: ImageMetadata;
+}
+
+interface TrustCopy {
+  title: string;
+  description: string;
+  heroEyebrow: string;
+  h1: string;
+  lede: string;
+  faceLabel: string;
+  faceName: string;
+  faceLine: string;
+  faceAlt: string;
+  gridEyebrow: string;
+  gridHeading: string;
+  sections: TrustSection[];
+}
+
+// Typed as a Record rather than inferred: with a bare object literal the
+// per-locale `sections` arrays infer as unions of their element literals,
+// and reading an optional field (`link`, `emblem`) off a union whose other
+// members lack it is exactly the shape strict TS refuses.
+const COPY: Record<Lang, TrustCopy> = {
+  en: {
+    title: 'Trust & Process — Contract, NDA, GDPR | VKVstudio',
+    // "GDPR-safe by architecture" stood here until 2026-08-24. The term
+    // appears in neither the GDPR nor any EDPB guideline, and it is a legal
+    // conclusion a vendor is not the one who gets to draw. Replaced with the
+    // fact underneath it, which sells just as well and survives a DPO.
+    description:
+      'Contract and NDA before any work beyond the audit, milestone payments, typically 30/40/30, your data stays on your infrastructure, a 30-day warranty and a written liability cap.',
+    heroEyebrow: 'trust',
+    h1: 'Trust & Process',
+    lede: 'Contract and NDA before any work beyond the audit, milestone payments, typically 30/40/30, your data stays on your infrastructure, a 30-day post-launch warranty, liability capped at fees paid — all in writing, before the first call. If an answer is missing, ask — it gets added to this page.',
+    faceLabel: '// who answers for these words',
+    faceName: 'Valerii Karpov',
+    faceLine:
+      'The engineer on every page of this site — and on the other end of every email. Registered sole proprietor in Armenia, working EU hours from GMT+4. The lens is not a prop: looking closely is the actual job.',
+    faceAlt: 'Valerii Karpov, the engineer behind VKVstudio, holding a lens to his eye',
+    gridEyebrow: '// the answers, pre-written',
+    gridHeading: 'Paper, money, data, continuity',
+    sections: [
+      {
+        heading: 'One person, on purpose',
+        body: "The engineer you talk to is the engineer who does the work — no account managers, no handoffs, no game of telephone. The honest cost of that is key-person risk, so every system I ship is built to outlive my involvement: documented, with a runbook, standard open components, handover included. Another engineer could take it over tomorrow. My own engineering rule for ten years has been: will this still work when I can't be there?",
+      },
+      {
+        heading: 'What gets signed before work starts?',
+        emblem: emPaper,
+        body: 'A signed contract and NDA precede any work beyond the audit — yours or mine, whichever your process prefers. The audit itself needs no NDA: it reads only public sources. Contracts under English law are available; so is your own jurisdiction if your legal team requires it. Intellectual property transfers to you in full on final payment.',
+      },
+      {
+        heading: 'How is payment structured?',
+        emblem: emMoney,
+        body: "Fixed prices, paid in three milestones — typically 30/40/30. If a deliverable fails the written acceptance test we agreed before work started, the final milestone is not due until it's fixed; the engagement can also be closed out against what was actually delivered, rather than left open-ended. Payment by bank transfer against an invoice — the account details and the currency are on the invoice. Invoices carry no VAT: EU and UK clients self-account for it under the reverse charge, other jurisdictions owe none — a sample invoice is available on request. And stated plainly, because a procurement reviewer will ask: this page and the published price list are an invitation to do business, not a public offer — a binding engagement arises when a contract is signed or an invoice is accepted, not from reading this site.",
+      },
+      {
+        heading: 'What happens to our data?',
+        emblem: emData,
+        link: { text: 'Read the privacy policy', href: `/${lang}/privacy/` },
+        // Was: "the architecture is the privacy policy … so there is no
+        // transfer out of your environment to assess". Both halves were legal
+        // conclusions; the second one is contradicted by published regulator
+        // guidance, which makes it a ready-made quote for a refusal. What is
+        // left is the fact — where the data lives — plus a pointer to the
+        // tile that answers the access question head-on.
+        body: "For AI and RAG projects the answer starts with where things live: the system runs on your infrastructure — or, if you choose the pilot's hybrid option, sensitive workloads stay local while heavy reasoning goes to an EU-hosted API under a DPA, with that boundary written into the contract. Either way I work inside your controlled environment through access you grant and can revoke, and your documents are never copied to my systems. That is true of storage, and it is not the whole answer — my access crosses a border, and that question gets a tile of its own below. Where I work with personal data inside your environment, that is covered by a data-processing agreement under Article 28 GDPR, yours or mine.",
+      },
+      {
+        heading: 'What do we keep after launch?',
+        emblem: emHandover,
+        link: { text: 'See the monthly retainers and their prices', href: `/${lang}/services/` },
+        body: 'Every project ends with a handover pack: documentation, a runbook, credentials rotated into your vault, and a walkthrough for your team. A 30-day post-launch warranty is included: a defect is behaviour that differs from the accepted specification, fixed free during those 30 days, with the same next-business-day reply as everywhere else on this page. New requests, content edits and third-party service changes are quoted as normal work, not covered by the warranty. Ongoing maintenance is an optional monthly retainer, cancellable any month. The handover pack is built so your own IT team can take the system over at any point — with me or without me.',
+      },
+      {
+        // Added 2026-08-24. Until then the site said nothing at all about
+        // personal data in CLIENT work — a DPO looking for it landed on the
+        // privacy policy's CDN paragraph and read that as the answer.
+        // Position is deliberate: fifth of nine puts it after the positive
+        // answers, and fifth in a two-column flow means the full-width row
+        // it needs starts cleanly instead of leaving a hole beside it.
+        heading: 'You are in Armenia. What does that mean for personal data?',
+        body: "Your documents and databases stay on infrastructure registered to you; nothing is copied to my systems and nothing trains a model. What crosses a border is my access — I work from Armenia, which is not on the European Commission's adequacy list, and the EDPB's Guidelines 05/2021 (v2.0, 14 February 2023, section 2.2, page 8) treat remote access from a third country as a transfer even when the data itself never moves. I put that on the table before your DPO has to.",
+        bodyMore: [
+          "Then the choice is yours, before signing. Either the engagement runs with no access to production data on my side — build, tuning and the acceptance test on a synthetic or anonymised corpus, with your own people running anything that touches live records — or you grant named, time-boxed, revocable access and we paper it: an Article 28 data-processing agreement plus the Commission's Standard Contractual Clauses, Module Two, with completed annexes. For UK data, the corresponding UK instrument.",
+          'On request, before any contract and under NDA if you prefer, within two business days: the DPA, the SCC annexes, a written description of the Article 32 measures, the sub-processor list, the incident-notification procedure with its timings, and an importer information pack — the factual material on the Armenian legal regime and a log of government access requests. Annexes filled in for your specific engagement follow a scoping call.',
+          'What I do not have, plainly: no ISO 27001 or SOC 2 certification, no professional indemnity insurance as standard, no EU establishment. If one of those is a hard requirement in your procurement, say so in your first message and we both save a month. Your DPO classifies the arrangement; my job is to hand over everything they need to finish that in an afternoon.',
+        ],
+      },
+      {
+        heading: 'What is the liability cap?',
+        emblem: emLiability,
+        // The insurance half used to promise "we will address it before
+        // signing" — a commitment made before a single quote had been asked
+        // for. States the position instead; the promise can come back when
+        // there is a quote behind it.
+        body: 'Contractual liability is capped at the fees you have paid — stated here so nobody discovers it in clause 14. Professional indemnity insurance is not carried as standard; if your engagement requires it, raise it before signing so we can find out together whether it can be arranged.',
+      },
+      {
+        heading: 'What happens if you become unavailable mid-project?',
+        body: "The milestone structure is the safeguard: the first payment (30%) is the only one ever paid ahead of work you haven't seen; the two that follow are billed only after a stage is already delivered and accepted. What happens next — to the engagement, the code and the fee already paid — is written into the contract before work starts, not improvised afterward. There is no named backup engineer or escrow arrangement today; if your engagement specifically needs one, raise it before signing and it becomes part of what we agree.",
+      },
+      {
+        heading: 'How is access to our systems secured?',
+        // Two claims left this tile on 2026-08-24. "Nothing is subcontracted"
+        // does not survive the first question about mail, code hosting or
+        // backups — the honest version names them and points at the written
+        // list. And "a formal security policy is on the list, not yet
+        // written" is a quotable answer to the "sufficient guarantees"
+        // question, in the buyer's favour. It is NOT replaced by a list of
+        // measures here: the measures belong in the Article 32 document, and
+        // that document has to exist before the site describes its contents.
+        body: "Access to your systems is granted by you and revocable by you — I never hold standing credentials you didn't issue. No second engineer works on your environment: the engineer you talk to is the only person who touches it, and the third-party services my own practice runs on — mail, code hosting, backups — are named in the written sub-processor list that comes with the contract. At handover, every credential is rotated and moved into your own secrets store, not mine. A written description of the technical and organisational measures under Article 32 is available on request.",
+      },
+      {
+        heading: 'Who are we contracting with?',
+        emblem: emIdentity,
+        body: 'Valerii Karpov — VKV Studio, a registered sole proprietorship in Armenia since February 2026. Full registration and tax details appear in every contract and invoice — in your hands before any money moves. Want to confirm the entity exists before you send anything confidential? Ask, and the registration certificate and a matching ID come back the same business day, under NDA if you prefer. Timezone GMT+4: my working afternoon overlaps EU and UK business hours every day, and you can expect a reply by the next business day at the latest. Communication is written by default, so every decision leaves a paper trail.',
+      },
+    ],
+  },
+  ru: {
+    title: 'Доверие и процесс — договор, NDA, GDPR | VKVstudio',
+    description:
+      'Договор и NDA до начала работ, кроме аудита, оплата по этапам, обычно 30/40/30, ваши данные остаются на вашей инфраструктуре, 30 дней гарантии и письменный предел ответственности.',
+    heroEyebrow: 'доверие',
+    h1: 'Доверие и процесс',
+    lede: 'Договор и NDA — до начала работ, кроме аудита, оплата по этапам, обычно 30/40/30, ваши данные не покидают вашу инфраструктуру, 30 дней гарантии после запуска, ответственность ограничена суммой, которую вы заплатили, — всё письменно, до первого звонка. Если какого-то ответа здесь нет — спросите, и он появится на этой странице.',
+    faceLabel: '// кто отвечает за эти слова',
+    faceName: 'Валерий Карпов',
+    faceLine:
+      'Инженер с каждой страницы этого сайта — и на другом конце каждого письма. Зарегистрированный ИП в Армении, работаю в часы ЕС из GMT+4. Лупа — не реквизит: смотреть внимательно — это и есть работа.',
+    faceAlt: 'Валерий Карпов, инженер VKVstudio, с лупой у глаза',
+    gridEyebrow: '// ответы, написанные заранее',
+    gridHeading: 'Бумаги, деньги, данные, непрерывность',
+    sections: [
+      {
+        heading: 'Один человек — осознанно',
+        body: 'Инженер, с которым вы разговариваете, — тот же инженер, который делает работу: без менеджеров, передачи дел из рук в руки и испорченного телефона. Честная цена этого — зависимость от одного человека, поэтому каждая система, которую я сдаю, построена так, чтобы пережить моё участие: документация, runbook, стандартные открытые компоненты, handover включён. Другой инженер сможет подхватить её уже завтра. Моё инженерное правило уже десять лет: будет ли это работать, когда меня не будет рядом?',
+      },
+      {
+        heading: 'Что подписываем до начала работ?',
+        emblem: emPaper,
+        body: 'Подписанный договор и NDA — до начала любых работ, кроме аудита; ваши или мои, как принято у вас. Самому аудиту NDA не нужен: он читает только публичные источники. Доступны договоры по английскому праву; возможна и ваша юрисдикция, если этого требуют ваши юристы. Интеллектуальная собственность полностью переходит к вам с финальным платежом.',
+      },
+      {
+        heading: 'Как устроена оплата?',
+        emblem: emMoney,
+        body: 'Фиксированные цены, оплата по этапам — обычно 30/40/30. Если результат не проходит письменный приёмочный тест, о котором мы договорились до начала работ, финальный этап не оплачивается, пока дефект не исправлен; проект также можно закрыть по факту того, что реально сделано, а не оставлять в подвешенном состоянии. Оплата банковским переводом по выставленному счёту — реквизиты и валюта указаны в нём. Счета выставляются без VAT: клиенты из ЕС и Великобритании самостоятельно учитывают его по механизму reverse charge, для остальных юрисдикций VAT не применяется вовсе — образец счёта предоставляется по запросу. И прямо, потому что отдел закупок спросит: эта страница и опубликованный прайс — приглашение к сотрудничеству, а не публичная оферта; обязательства возникают с подписанием договора или принятием счёта, а не с чтения сайта.',
+      },
+      {
+        heading: 'Что происходит с нашими данными?',
+        emblem: emData,
+        link: { text: 'Политика конфиденциальности', href: `/${lang}/privacy/` },
+        body: 'Для AI- и RAG-проектов ответ начинается с того, где всё лежит: система работает на вашей инфраструктуре — либо, если вы выбираете гибридный вариант пилота, чувствительные нагрузки остаются локально, а тяжёлые запросы идут в EU-hosted API под DPA, и эта граница фиксируется в договоре. В любом случае я работаю внутри вашего контролируемого контура через доступ, который вы выдаёте и можете отозвать, а ваши документы никогда не копируются в мои системы. Это правда про хранение — и это не весь ответ: мой доступ пересекает границу, и у этого вопроса ниже есть отдельная плитка. Там, где я работаю с персональными данными внутри вашего контура, это покрывается соглашением об обработке данных (DPA) по статье 28 GDPR — вашим или моим.',
+      },
+      {
+        heading: 'Что остаётся после запуска?',
+        emblem: emHandover,
+        link: { text: 'Месячные ретейнеры и цены', href: `/${lang}/services/` },
+        body: 'Каждый проект заканчивается handover-пакетом: документация, runbook, учётные данные перевыпущены и переданы в ваше хранилище секретов, разбор для вашей команды. 30 дней гарантии после запуска включены: дефект — это поведение, которое отличается от согласованной спецификации; в течение этих 30 дней он чинится бесплатно, с тем же ответом не позднее следующего рабочего дня, что и везде на этой странице. Новые запросы, правки контента и изменения сторонних сервисов оцениваются как обычная работа и гарантией не покрываются. Дальнейшее сопровождение — необязательный месячный ретейнер, отменить можно в любой месяц. Handover-пакет собран так, чтобы ваши инженеры могли забрать систему в любой момент — со мной или без меня.',
+      },
+      {
+        heading: 'Вы в Армении. Что это значит для персональных данных?',
+        body: 'Ваши документы и базы остаются на инфраструктуре, оформленной на вас: копий в моих системах нет, на обучение моделей ничего не уходит. Границу пересекает другое — мой доступ. Я работаю из Армении, которой нет в списке стран с решением Еврокомиссии об адекватности, а Руководящие указания EDPB 05/2021 (версия 2.0 от 14 февраля 2023, раздел 2.2, стр. 8) рассматривают удалённый доступ из третьей страны как передачу — даже когда сами данные никуда не перемещаются. Я выкладываю это на стол раньше, чем спросит ваш DPO.',
+        bodyMore: [
+          'Дальше выбор за вами, до подписания. Либо проект идёт без моего доступа к продуктивным данным — сборка, дообучение и приёмочный тест на синтетическом или обезличенном корпусе, а всё, что касается живых записей, запускают ваши сотрудники. Либо вы выдаёте именной, ограниченный по времени и отзываемый доступ, и мы оформляем его документами: соглашение об обработке по статье 28 GDPR плюс Стандартные договорные условия Еврокомиссии, Модуль 2, с заполненными приложениями. Для британских данных — соответствующий британский инструмент.',
+          'По запросу, до всякого договора и под NDA, если так удобнее, в течение двух рабочих дней: DPA, приложения к SCC, письменное описание мер по статье 32, список субобработчиков, порядок уведомления об инцидентах со сроками и информационный пакет импортёра — фактические материалы по армянскому правовому режиму и журнал запросов государственных органов на доступ. Приложения, заполненные под вашу конкретную сделку, — после звонка о согласовании объёма.',
+          'Чего у меня нет — говорю прямо: нет сертификации ISO 27001 или SOC 2, нет страхования профессиональной ответственности по умолчанию, нет представительства в ЕС. Если что-то из этого — жёсткое требование вашего отдела закупок, скажите об этом в первом письме, и мы оба сэкономим месяц. Квалификацию схемы определяет ваш DPO; моя задача — передать ему всё, чтобы он закрыл вопрос за полдня.',
+        ],
+      },
+      {
+        heading: 'Чем ограничена ответственность?',
+        emblem: emLiability,
+        body: 'Договорная ответственность ограничена суммой, которую вы заплатили, — это сказано здесь, а не спрятано в пункте 14. Страхования профессиональной ответственности у меня по умолчанию нет; если для вашего проекта оно требуется — скажите об этом до подписания, и мы вместе выясним, можно ли это организовать.',
+      },
+      {
+        heading: 'Что будет, если вы станете недоступны в середине проекта?',
+        body: 'Структура оплаты по этапам — это и есть защита: первый платёж (30%) — единственный, который вносится вперёд, до того как вы увидели результат; два следующих выставляются только за уже сданный и принятый этап. Что происходит дальше — с проектом, кодом и уже уплаченной суммой — прописано в договоре до начала работ, а не придумывается по ходу дела. Сегодня нет ни отдельного резервного инженера, ни эскроу-счёта; если вашему проекту это конкретно нужно — скажите об этом до подписания, и это станет частью договорённости.',
+      },
+      {
+        heading: 'Как защищён доступ к нашим системам?',
+        body: 'Доступ к вашим системам выдаёте вы и можете отозвать в любой момент — у меня никогда нет постоянных учётных данных, которые вы не выдавали сами. Над вашей средой не работает второй инженер: её касается только тот инженер, с которым вы разговариваете, — а сторонние сервисы, на которых держится моя собственная практика (почта, хостинг кода, резервные копии), названы в письменном списке субобработчиков, который идёт вместе с договором. При завершении проекта все учётные данные перевыпускаются и переносятся в ваше собственное хранилище секретов, не в моё. Письменное описание технических и организационных мер по статье 32 предоставляется по запросу.',
+      },
+      {
+        heading: 'С кем мы заключаем договор?',
+        emblem: emIdentity,
+        body: 'Валерий Карпов — VKV Studio, индивидуальный предприниматель, зарегистрированный в Армении с февраля 2026 года. Полные регистрационные и налоговые реквизиты — в каждом договоре и счёте: у вас на руках ещё до первого платежа. Хотите убедиться, что ИП действительно зарегистрирован, прежде чем отправлять что-то конфиденциальное? Спросите — регистрационное свидетельство и документ, удостоверяющий личность, придут в тот же рабочий день, под NDA, если хотите. Часовой пояс GMT+4: вторая половина моего рабочего дня ежедневно пересекается с рабочими часами ЕС и Великобритании, ответ — не позднее следующего рабочего дня. Общение по умолчанию письменное — у каждого решения остаётся след в переписке.',
+      },
+    ],
+  },
+};
+
+const copy = COPY[lang];
+
+// The hero art is the mobile LCP element (same family as services, where a
+// head preload with the real srcset was trace-confirmed to shave discovery).
+// Master is 1280×720, so [768, 1280] is everything that actually ships.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+const pageUrl = `${SITE_ORIGIN}/${lang}/trust/`;
+const jsonLd = [
+  breadcrumbNode(lang, [
+    { name: t(lang, 'nav.home'), item: `${SITE_ORIGIN}/${lang}/` },
+    { name: copy.h1, item: pageUrl },
+  ]),
+  // The tiles are literal procurement Q/A — headings are the questions,
+  // bodies the answers, all visible on-page (house rule: no ratings/reviews).
+  // Multi-paragraph answers are joined, so the structured answer is the same
+  // text the visitor reads and never a truncated first paragraph.
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: copy.sections.slice(1).map((s) => ({
+      '@type': 'Question',
+      name: s.heading,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: [s.body, ...(s.bodyMore ?? [])].join(' '),
+      },
+    })),
+  },
+];
+---
+
+<BaseLayout
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  jsonLd={jsonLd}
+  ogImage="/og-trust.jpg"
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={lang} />
+  <main id="main-content" class="trust-page">
+    {
+      /* Hero in the etalon family. The art: two threads tied into one — the
+         page's whole argument in a single quiet image. The plexus is born
+         from the knot itself. */
+    }
+    <header class="trust-hero">
+      <div class="trust-hero__art" aria-hidden="true" id="trust-hero-art">
+        <Picture
+          src={heroArt}
+          formats={['avif', 'webp']}
+          widths={[768, 1280]}
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+        {
+          /* The living knot: threads tug the bow side to side, the center
+             crossing holds still (WAN 5B palindrome). Same gating as every
+             hero loop: desktop, motion allowed, no data-saver. */
+        }
+        <video
+          id="trust-hero-video"
+          class="trust-hero__video"
+          muted
+          loop
+          playsinline
+          preload="none"
+          data-webm="/trust-hero-loop.webm"
+          data-mp4="/trust-hero-loop.mp4"></video>
+      </div>
+      {
+        /* Anchored to the knot's center crossing, measured in the video frame
+           itself — cover-crop math keeps it exact at every viewport. */
+      }
+      <NeuralPlexus
+        client:idle
+        originX={0.519}
+        originY={0.52}
+        anchor={{ selector: '#trust-hero-video', width: 1024, height: 576, x: 0.5205, y: 0.5 }}
+        originGlow
+        pace={1.8}
+      />
+      <div class="container">
+        <p class="trust-hero__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{copy.heroEyebrow}
+        </p>
+        <h1 class="trust-hero__title" aria-label={copy.h1}>
+          {
+            copy.h1.split(' ').map((word, wordIdx) => [
+              wordIdx > 0 ? ' ' : null,
+              <span class="trust-hero__word" aria-hidden="true">
+                {Array.from(word).map((char) => (
+                  <span class="trust-hero__letter">{char}</span>
+                ))}
+              </span>,
+            ])
+          }
+        </h1>
+        <p class="trust-hero__lede">{copy.lede}</p>
+      </div>
+
+      <button type="button" class="trust-hero__scroll js-trust-scroll-hint">
+        <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14"></path>
+          <path d="m19 12-7 7-7-7"></path>
+        </svg>
+      </button>
+    </header>
+
+    {
+      /* The human anchor: a real, unretouched-by-AI photo of the person the
+         whole page keeps referring to. Facts beside a face — the trust
+         formula no paragraph can substitute. */
+    }
+    <section class="trust-face" id="trust-face">
+      <div class="container">
+        <div class="trust-face__card glass-panel js-trust-reveal">
+          <Image
+            src={portrait}
+            alt={copy.faceAlt}
+            width={360}
+            height={360}
+            widths={[132, 180, 264, 360]}
+            sizes="(max-width: 639px) 132px, 180px"
+            class="trust-face__photo"
+            loading="lazy"
+          />
+          <div class="trust-face__text">
+            <p class="trust-face__label text-mono">
+              <span aria-hidden="true">// </span>{copy.faceLabel.replace('// ', '')}
+            </p>
+            <p class="trust-face__name">{copy.faceName}</p>
+            <p class="trust-face__line">{copy.faceLine}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {
+      /* Not one canvas (owner): the credo becomes a philosophy callout,
+         and the procurement answers become numbered glass tiles —
+         the etalon's deliverables idiom carrying diligence instead. */
+    }
+    <section class="trust-body">
+      <div class="container">
+        {
+          copy.sections[0] && (
+            <blockquote class="trust-callout js-trust-reveal">
+              <h2 class="trust-callout__label text-mono">{copy.sections[0].heading}</h2>
+              <p class="trust-callout__text">{copy.sections[0].body}</p>
+            </blockquote>
+          )
+        }
+
+        <p class="trust-grid__eyebrow text-mono js-trust-reveal">
+          <span aria-hidden="true">// </span>{copy.gridEyebrow.replace('// ', '')}
+        </p>
+        <h2 class="trust-grid__heading js-trust-reveal">{copy.gridHeading}</h2>
+        <div class="trust-grid">
+          {
+            copy.sections.slice(1).map((s) => (
+              <MagneticCard client:visible strength={0.2}>
+                <article
+                  class:list={[
+                    'trust-tile',
+                    'js-trust-tile-reveal',
+                    s.bodyMore && 'trust-tile--wide',
+                  ]}
+                >
+                  {s.emblem && (
+                    <div class="trust-tile__emblem" aria-hidden="true">
+                      <Picture
+                        src={s.emblem}
+                        formats={['avif', 'webp']}
+                        widths={[240, 480]}
+                        sizes="240px"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
+                  )}
+                  <h3>{s.heading}</h3>
+                  <p>{s.body}</p>
+                  {s.bodyMore?.map((para) => (
+                    <p>{para}</p>
+                  ))}
+                  {s.link && (
+                    <p class="trust-tile__link">
+                      <a href={s.link.href}>
+                        {s.link.text} <span aria-hidden="true">→</span>
+                      </a>
+                    </p>
+                  )}
+                </article>
+              </MagneticCard>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <ServiceCta lang={lang} outcome={t(lang, 'services.ctaOutcomes.trust')} />
+  </main>
+</BaseLayout>
+
+<script>
+  // Etalon motion grammar: Lenis, per-element reveals, lede parallax, the
+  // scroll hint's promise. Nothing hidden by CSS — gsap.from owns it all.
+  import { initLenis } from '@scripts/lenis-init';
+
+  async function initTrustMotion(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      document.querySelectorAll<HTMLElement>('.js-trust-reveal').forEach((el) => {
+        // A keyboard user can reach these before the scroll trigger fires.
+        // Landing focus on an invisible target is a trap, so focus
+        // fast-forwards the element's own tween — the recipe copied here
+        // came from the page that established it. The tile grid below gets
+        // the same guard on its own tween, which is where the real links
+        // on this page (the privacy policy, the retainers page) actually
+        // live.
+        const tw = gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+        el.addEventListener('focusin', () => tw.progress(1), { once: true });
+      });
+
+      // The nine procurement tiles get their own entrance — the geo-audit
+      // deliverables recipe (rise and settle from a slight scale) rather
+      // than the plain fade-up above, so the grid reads as its own beat
+      // instead of blending into the page's general reveal cadence. Same
+      // focusin guard: two of the nine carry real links (the privacy
+      // policy, the retainers page), and landing keyboard focus on an
+      // invisible tile is a trap either way.
+      document.querySelectorAll<HTMLElement>('.js-trust-tile-reveal').forEach((el) => {
+        const tw = gsap.fromTo(
+          el,
+          { opacity: 0, y: 50, scale: 0.92 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.7,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: el, start: 'top 82%' },
+          }
+        );
+        el.addEventListener('focusin', () => tw.progress(1), { once: true });
+      });
+    } catch (err) {
+      console.error('[trust] motion failed to load:', err);
+    }
+  }
+
+  // The hero loop, gated like every hero loop (etalon recipe verbatim).
+  function initTrustVideo(): void {
+    const video = document.getElementById('trust-hero-video') as HTMLVideoElement | null;
+    const art = document.getElementById('trust-hero-art');
+    if (!video || !art) return;
+
+    const wantsMotion = window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    const saveData =
+      'connection' in navigator &&
+      (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!wantsMotion || saveData) return;
+
+    let lastVisible = false;
+
+    // The width gate is evaluated once at call time by default — a resize
+    // across the breakpoint (e.g. rotating a tablet) would never arm the
+    // loop. Arm on first match, whether that's now or after a later resize.
+    const mq = window.matchMedia('(min-width: 768px)');
+    const arm = () => {
+      const webm = video.dataset.webm ?? '';
+      const mp4 = video.dataset.mp4 ?? '';
+      video.src = video.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+      video.addEventListener(
+        'playing',
+        () => {
+          art.classList.add('trust-hero__art--live');
+        },
+        { once: true }
+      );
+      video.addEventListener(
+        'error',
+        () => {
+          if (video.src.endsWith('.webm') && mp4) {
+            video.src = mp4;
+            void video.play().catch(() => {});
+          }
+        },
+        { once: true }
+      );
+
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            lastVisible = entry.isIntersecting;
+            if (entry.isIntersecting) {
+              void video.play().catch(() => {
+                // Autoplay refused — the breathing still simply remains.
+              });
+            } else {
+              video.pause();
+            }
+          }
+        },
+        { threshold: 0.12 }
+      );
+      io.observe(art);
+
+      // Browsers pause media on bfcache entry and never auto-resume it.
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) void video.play().catch(() => {});
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          video.pause();
+        } else if (lastVisible) {
+          void video.play().catch(() => {});
+        }
+      });
+    };
+
+    if (mq.matches) {
+      arm();
+    } else {
+      mq.addEventListener(
+        'change',
+        (e) => {
+          if (e.matches) arm();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  function initTrustManners(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const hero = document.querySelector<HTMLElement>('.trust-hero');
+    const lede = document.querySelector<HTMLElement>('.trust-hero__lede');
+    if (!hero || !lede) return;
+
+    hero.addEventListener(
+      'mousemove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        lede.style.transform = `translate(${nx * -3}px, ${ny * -2}px)`;
+      },
+      { passive: true }
+    );
+
+    hero.addEventListener('mouseleave', () => {
+      lede.style.transform = '';
+    });
+  }
+
+  function initTrustScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-trust-scroll-hint');
+    const target = document.getElementById('trust-face');
+    if (!hint || !target) return;
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      void initTrustMotion();
+      initTrustVideo();
+      initTrustManners();
+      initTrustScrollHint();
+    });
+  } else {
+    initLenis();
+    void initTrustMotion();
+    initTrustVideo();
+    initTrustManners();
+    initTrustScrollHint();
+  }
+</script>
+
+<style>
+  .trust-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  @media (max-width: 767px) {
+    .trust-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* ── Hero: the etalon idiom family ─────────────────── */
+  .trust-hero {
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    isolation: isolate;
+    overflow: hidden;
+    min-height: calc(100vh - 7.5rem);
+    min-height: calc(100svh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Text rides the upper third; the knot glows on the calm band below. */
+    justify-content: flex-start;
+    padding-top: clamp(3rem, 12vh, 7rem);
+  }
+
+  .trust-hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .trust-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .trust-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 62%;
+    opacity: 0.55;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .trust-hero__art :global(img) {
+      animation: trust-breathe 9s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes trust-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(1.035);
+      filter: brightness(1.15);
+    }
+  }
+
+  .trust-hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 62%;
+    opacity: 0;
+    transition: opacity 1.2s ease-out;
+  }
+
+  .trust-hero__art--live .trust-hero__video {
+    opacity: 0.55;
+  }
+
+  /* The still leaves entirely once the loop plays — its differently
+     framed ghost doubled the knot (owner caught it). */
+  .trust-hero__art--live :global(img) {
+    opacity: 0;
+    animation: none;
+  }
+
+  .trust-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, var(--bg-obsidian) 2%, transparent 30%),
+      linear-gradient(to top, var(--bg-obsidian) 4%, transparent 35%);
+  }
+
+  .trust-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: hsl(155, 85%, 65%);
+    padding: var(--space-1) var(--space-4);
+    background: hsla(220, 25%, 6%, 0.9);
+    border: 1px solid hsla(155, 50%, 40%, 0.2);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color 0.4s ease-out,
+      border-color 0.4s ease-out,
+      background 0.4s ease-out;
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away: in the built bundle it collapses `backdrop-filter` into the -webkit-
+     alias alone, and Firefox (standard-only) then renders a flat fill. The
+     minifier does not merge across an @supports boundary, so this copy ships.
+     Must stay AFTER the base rule — equal specificity, last one wins.
+     Same idiom as .glass-panel / .hero-plate in src/styles/global.css. */
+  @supports (backdrop-filter: blur(1px)) {
+    .trust-hero__eyebrow {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .trust-hero__eyebrow:hover {
+    color: hsl(220, 70%, 65%);
+    border-color: hsla(220, 50%, 50%, 0.25);
+    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
+  }
+
+  .trust-hero__title {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    max-width: 20ch;
+    margin: 0 auto var(--space-5);
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px hsla(180, 80%, 55%, 0.7);
+
+    filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .trust-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  @media (max-width: 767px) {
+    .trust-hero__title {
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+  }
+
+  .trust-hero__word {
+    white-space: nowrap;
+  }
+
+  .trust-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow, 0.4s) var(--ease-out, ease-out),
+      text-shadow var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+    cursor: default;
+  }
+
+  .trust-hero__letter:hover {
+    -webkit-text-stroke-color: hsla(180, 90%, 70%, 0.95);
+    text-shadow:
+      0 0 10px hsla(180, 85%, 60%, 0.55),
+      0 0 22px hsla(180, 85%, 55%, 0.3);
+  }
+
+  .trust-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 60ch;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .trust-hero__scroll {
+    position: absolute;
+    /* The gesture bar on a modern phone owns the last ~34px of the viewport;
+       a hint pinned at a bare --space-6 sits inside it. */
+    bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease-out;
+  }
+
+  .trust-hero__scroll:hover,
+  .trust-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .trust-hero__eyebrow {
+      animation:
+        trust-fade-up-15 0.6s ease-out 0.15s backwards,
+        trust-eyebrow-breathe 4s ease-in-out 1.5s infinite;
+    }
+
+    .trust-hero__title {
+      animation:
+        trust-title-opacity-in 0.7s ease-out 0.15s backwards,
+        trust-title-transform-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+    }
+
+    .trust-hero__lede {
+      animation:
+        trust-fade-up-15 0.6s ease-out 0.3s backwards,
+        trust-lede-glow 5s ease-in-out 2s infinite;
+    }
+
+    .trust-hero__scroll svg {
+      animation: trust-scroll-nudge 2.2s ease-in-out 2.5s infinite;
+    }
+  }
+
+  @keyframes trust-fade-up-15 {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes trust-title-opacity-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes trust-title-transform-in {
+    from {
+      transform: translateY(20px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes trust-eyebrow-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes trust-lede-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsla(155, 60%, 60%, 0.08));
+    }
+  }
+
+  @keyframes trust-scroll-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .trust-hero__letter {
+      transition: none;
+    }
+  }
+
+  .trust-body {
+    margin-bottom: var(--space-8);
+  }
+
+  /* The credo — Engineering Philosophy idiom, verbatim family. */
+  .trust-callout {
+    max-width: var(--container-narrow);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-10);
+    border-left: 2px solid var(--accent-green-300);
+    background: hsla(155, 65%, 50%, 0.03);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin: 0 0 var(--space-16);
+  }
+
+  .trust-callout__label {
+    /* An h2 for the outline, an eyebrow to the eye — undo heading weight. */
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    margin-bottom: var(--space-3);
+  }
+
+  .trust-callout__text {
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    font-weight: var(--weight-medium);
+    margin: 0;
+  }
+
+  .trust-grid__eyebrow {
+    margin-bottom: var(--space-4);
+  }
+
+  .trust-grid__heading {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-8);
+  }
+
+  /* Numbered glass tiles — the etalon's deliverables idiom carrying
+     the diligence answers. */
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+    counter-reset: trust-tile;
+  }
+
+  /* MagneticCard (T-4) makes the astro-island the grid's actual direct
+     child, not the article — unlike geo-audit's li-wrapped variant, this
+     container is the grid itself, so the astro-island needs no flex:1
+     (there is no flex ancestor here): CSS Grid's own default
+     align-items: stretch already equalises row height once the island is
+     blockified. Left unstyled, the island is display: contents (Astro's own
+     injected astro-island rule — audit correction 2026-08-30, the earlier
+     claim of an inline default was wrong): the .magnetic-wrapper would
+     become the grid item instead, and the --wide grid-column rule below
+     would miss its target. Blockifying the island keeps geo-audit's chain:
+     island as grid item, wrapper and card filling it at height 100%. */
+  .trust-grid > :global(astro-island) {
+    display: block;
+  }
+
+  @media (max-width: 767px) {
+    .trust-grid {
+      grid-template-columns: 1fr;
+    }
+
+    /* The 2px accent border keeps the blockquote identity; the ~72px of
+       horizontal padding it carried on desktop ate 21% of a ~337px column. */
+    .trust-callout {
+      padding: var(--space-5) var(--space-4) var(--space-5) var(--space-5);
+    }
+  }
+
+  .trust-tile {
+    position: relative;
+    overflow: hidden;
+    /* MagneticCard's own .magnetic-wrapper already relays height: 100% down
+       from the stretched astro-island (T-4); block children don't inherit
+       a parent's height on their own, so without this the shorter tile in
+       a row would stop short of the taller one instead of matching it —
+       same height: 100% geo-audit's .geo-tile carries for the same reason. */
+    height: 100%;
+    box-sizing: border-box;
+    padding: var(--space-8);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition: var(--transition-all);
+  }
+
+  /* The standard property, restated where the CSS minifier cannot rewrite it
+     away (see the note on .trust-hero__eyebrow above). Must stay AFTER the
+     base rule — equal specificity, last one wins. */
+  @supports (backdrop-filter: blur(1px)) {
+    .trust-tile {
+      backdrop-filter: blur(var(--glass-blur));
+    }
+  }
+
+  .trust-tile::before {
+    content: counter(trust-tile, decimal-leading-zero);
+    counter-increment: trust-tile;
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent-green-400);
+    margin-bottom: var(--space-3);
+    transition: color var(--duration-normal) var(--ease-out);
+  }
+
+  /* Lab card recipe's glow layer (LabSection.astro's .lab__card-glow, also
+     the geo-audit .geo-tile recipe verbatim), as a pseudo-element — the
+     counter already owns ::before, so the glow takes ::after. */
+  .trust-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-card-hover);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .trust-tile:hover {
+    background: linear-gradient(
+      135deg,
+      hsla(155, 50%, 50%, 0.07) 0%,
+      hsla(225, 50%, 50%, 0.07) 100%
+    );
+    border-color: var(--accent-green-300);
+    box-shadow: var(--glass-shadow), var(--glow-green);
+  }
+
+  .trust-tile:hover::after {
+    opacity: 1;
+  }
+
+  .trust-tile:hover::before {
+    color: var(--accent-green-200);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .trust-tile:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  .trust-tile h3 {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-3);
+  }
+
+  .trust-tile p {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .trust-tile p + p {
+    margin-top: var(--space-4);
+  }
+
+  /* The personal-data answer is the one tile a DPO is sent a link to, and
+     it cannot be one paragraph. Given a full row it reads as a deliberate
+     band rather than as the tile that broke the row's rhythm. */
+  .trust-tile--wide {
+    grid-column: 1 / -1;
+  }
+
+  /* Now that the astro-island — not the article — is the actual grid item
+     (T-4), the span above is inert: grid-column only does something on a
+     grid item itself. :has() re-targets the one that matters without a
+     magic child-index, so the row still breaks cleanly however the nine
+     answers get reordered. */
+  .trust-grid > :global(astro-island):has(.trust-tile--wide) {
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 960px) {
+    .trust-tile--wide p {
+      max-width: 78ch;
+    }
+  }
+
+  /* The emblem family: obsidian ground, one object lit from inside. `screen`
+     drops the ground to nothing, so the art arrives as light on the glass
+     instead of as a dark rectangle; the radial mask keeps its far edges from
+     reaching the text column. Decorative — empty alt, aria-hidden, and no
+     tile depends on having one (six emblems exist, nine tiles do). */
+  .trust-tile__emblem {
+    position: absolute;
+    /* Driven deep enough into the corner that the object's lit core is
+       mostly outside the tile's clip — what stays inside is its falloff,
+       which is the part that can sit under a line of text without
+       competing with it. */
+    right: calc(var(--space-8) * -1);
+    bottom: calc(var(--space-8) * -1);
+    width: 15rem;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(circle at 72% 72%, #000 26%, transparent 66%);
+    mask-image: radial-gradient(circle at 72% 72%, #000 26%, transparent 66%);
+    transition: opacity var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+  }
+
+  .trust-tile__emblem :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .trust-tile:hover .trust-tile__emblem {
+    opacity: 0.5;
+  }
+
+  /* Text sits above the emblem — the tile's own stacking context is created
+     by `position: relative` on .trust-tile, already there for the counter. */
+  .trust-tile h3,
+  .trust-tile p {
+    position: relative;
+    z-index: 1;
+  }
+
+  .trust-tile::before {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 767px) {
+    .trust-tile__emblem {
+      width: 11rem;
+      opacity: 0.24;
+    }
+  }
+
+  /* ── The face card ─────────────────────────────────── */
+  .trust-face {
+    margin-bottom: var(--space-16);
+  }
+
+  .trust-face__card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    max-width: var(--container-narrow);
+    padding: var(--space-6);
+  }
+
+  .trust-face__photo {
+    width: 180px;
+    height: 180px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+  }
+
+  .trust-face__label {
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+
+  .trust-face__name {
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-2);
+  }
+
+  .trust-face__line {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  @media (max-width: 767px) {
+    .trust-face__card {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .trust-face__photo {
+      width: 132px;
+      height: 132px;
+    }
+  }
+
+  /* Overlay positioning collides with the lede on short phones. Placed
+     AFTER the base rule on purpose: same specificity, so source order
+     decides — the earlier position was silently overridden. The second
+     clause catches the landscape phone (812×375 is wider than 767px, so
+     the width query alone left the hint pinned over the lede). */
+  @media (max-width: 767px), ((max-height: 767px) and (pointer: coarse)) {
+    .trust-hero__scroll {
+      position: static;
+      transform: none;
+      margin-top: var(--space-6);
+    }
+  }
+
+  .trust-tile__link {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  /* The house recipe for a link inside body text (ContactSection.astro):
+     underlined at rest so the link is recognisable without relying on
+     colour alone, green on hover. */
+  .trust-tile__link a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .trust-tile__link a:hover,
+  .trust-tile__link a:focus-visible {
+    color: var(--accent-green-300);
+  }
+</style>

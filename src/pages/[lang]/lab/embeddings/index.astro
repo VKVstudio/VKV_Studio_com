@@ -1,0 +1,309 @@
+---
+import { getImage } from 'astro:assets';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import InnerHeader from '../../../../components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import EmbeddingApp from '../../../../components/lab/embedding/EmbeddingApp.svelte';
+import LabCopilot from '../../../../components/lab/LabCopilot.svelte';
+import FaqSection from '../../../../components/sections/FaqSection.astro';
+import LabToolsNav from '../../../../components/lab/LabToolsNav.astro';
+import LabServiceBridge from '@components/lab/LabServiceBridge.astro';
+import { LAB_FAQ } from '../../../../data/lab-faq';
+import { t } from '../../../../i18n/utils';
+import heroArt from '@/assets/lab/embeddings-hero.png';
+
+export function getStaticPaths() {
+  return [{ params: { lang: 'en' } }, { params: { lang: 'ru' } }];
+}
+
+const { lang } = Astro.params;
+const activeLang = (lang as 'en' | 'ru') || 'en';
+
+/**
+ * LCP preload for the hero still. PageHero cannot emit this itself — an Astro
+ * slot does not travel from a nested component up to BaseLayout's `head` slot
+ * — so the link stays here (blocks/README.md, "What it does NOT do").
+ * The widths MUST equal the ones the component requests, or the preload is a
+ * second download: the master is 1280 wide, so PageHero derives exactly
+ * [768, 1280] from it.
+ */
+const HERO_WIDTHS = [768, 1280] as const;
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+const seoData = {
+  en: {
+    title: 'Embedding Space Explorer | VKVstudio Lab',
+    description:
+      'Embed a demo corpus on a self-hosted server with Google EmbeddingGemma, project it into an interactive 3D point cloud, and search it by meaning, not keywords.',
+  },
+  ru: {
+    title: 'Embedding Space Explorer | VKVstudio Лаборатория',
+    description:
+      'Эмбеддинги демо-корпуса на собственном сервере (Google EmbeddingGemma), проекция в интерактивное 3D-облако точек и поиск по смыслу, а не по словам.',
+  },
+};
+
+const meta = seoData[activeLang] || seoData.en;
+
+const homeUrl = `https://vkvstudio.com/${activeLang}/`;
+const toolUrl = `https://vkvstudio.com/${activeLang}/lab/embeddings/`;
+
+const faq = LAB_FAQ.embeddings;
+
+const jsonLd = [
+  // This page needs the visible answers more than the other two: its island is
+  // `client:only` (WebGL + a Web Worker), so before this section a crawler got
+  // a loading spinner and 250 words of side panel.
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q[activeLang],
+      acceptedAnswer: { '@type': 'Answer', text: item.a[activeLang] },
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Embedding Space Explorer',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'All',
+    url: toolUrl,
+    description: meta.description,
+    featureList:
+      activeLang === 'ru'
+        ? [
+            'Генерация эмбеддингов на сервере через Google EmbeddingGemma',
+            'Снижение размерности с помощью UMAP',
+            'Интерактивный 3D-ландшафт семантических значений',
+            'Живой семантический поиск по демо-корпусу',
+            'Гибридный поиск: dense-эмбеддинги + лексический BM25',
+            'Слияние оценок через Reciprocal Rank Fusion (RRF) или min-max блендинг',
+            'MMR-реранкинг для разнообразия результатов',
+            'Экспериментальный LLM-реранкинг релевантности (self-hosted Gemma как судья)',
+            'Кросс-языковое сравнение сходства EN↔RU',
+            'Векторная арифметика аналогий (king − man + woman ≈ queen)',
+            'Настраиваемые стратегии чанкинга (фиксированный, по предложениям, семантический)',
+            'Matryoshka-усечение эмбеддингов (768/512/256/128 измерений)',
+          ]
+        : [
+            'Server-side embedding generation via Google EmbeddingGemma',
+            'UMAP dimensionality reduction',
+            'Interactive 3D semantic landscape',
+            'Live semantic search over a demo corpus',
+            'Hybrid retrieval: dense embeddings + BM25 lexical search',
+            'Score fusion via Reciprocal Rank Fusion (RRF) or min-max blending',
+            'MMR diversity-aware reranking',
+            'Experimental LLM relevance reranking (self-hosted Gemma as judge)',
+            'Cross-lingual EN↔RU similarity comparison',
+            'Vector analogy arithmetic (king − man + woman ≈ queen)',
+            'Configurable chunking strategies (fixed, sentence, semantic)',
+            'Matryoshka embedding truncation (768/512/256/128 dims)',
+          ],
+    // @id reference, NOT a fresh inline Person. Inlining one here created a
+    // SECOND, anonymous "Valerii" node on the same page alongside the
+    // "Valerii Karpov" defined in BaseLayout — the exact entity fragmentation
+    // the @id graph exists to prevent. Confirmed by validator.schema.org,
+    // which rendered them as two separate people.
+    // Note also: this SoftwareApplication node is deliberately kept even
+    // though Google's Rich Results Test flags it as missing
+    // aggregateRating/review. Those require real user ratings; inventing them
+    // is spam markup and a manual-action risk. The node stays because AI
+    // answer engines read it, and it is truthful.
+    author: { '@id': 'https://vkvstudio.com/#person' },
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t(activeLang, 'nav.home'), item: homeUrl },
+      { '@type': 'ListItem', position: 2, name: t(activeLang, 'nav.lab'), item: `${homeUrl}#lab` },
+      { '@type': 'ListItem', position: 3, name: t(activeLang, 'embeddings.title'), item: toolUrl },
+    ],
+  },
+];
+---
+
+<BaseLayout title={meta.title} description={meta.description} lang={lang} jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={activeLang} />
+  <main id="main-content" class="lab-page">
+    {
+      /* The shared inner-page hero. Copy is unchanged — the same three i18n
+         keys the hand-written header read. What is new is the art: the page
+         had none because src/assets/lab/ did not exist, which is why the
+         header read as empty however faithfully the etalon CSS was copied
+         (.system/gaps/gap-lab.md).
+
+         NO `plexus` on the three Lab pages, deliberately, and least of all
+         here: this island is client:only WebGL plus a Web Worker, and
+         NeuralPlexus is another client:idle Svelte island — a second animated
+         canvas competing with the tool for the same main thread and the same
+         GPU. The art already breathes; that is the movement the header was
+         missing.
+
+         The page's own scroll-hint <script> went with the markup. Behaviour
+         is unchanged: PageHero rides Lenis only when `window.lenisInstance`
+         exists, and Lenis is still never initialised on these three pages
+         (nothing here imports initLenis), so the click resolves to the same
+         native scrollIntoView it always did. The house rule stands — page
+         shell only, never touch the canvas's own orbit/zoom handling. */
+    }
+    <PageHero
+      lang={activeLang}
+      eyebrow={t(activeLang, 'nav.lab').toLowerCase()}
+      title={t(activeLang, 'embeddings.title')}
+      lede={t(activeLang, 'embeddings.subtitle')}
+      image={heroArt}
+      scrim="center"
+      scrollTarget="#lab-tool"
+    />
+
+    <section class="lab-content" id="lab-tool">
+      <div class="container">
+        <!--
+          client:only — this island needs WebGL (Three.js) and a Web Worker
+          (UMAP layout refinement), neither of which can run during SSR.
+          Embeddings themselves are computed server-side by the inference
+          backend's EmbeddingGemma (POST /api/embed), not in the browser.
+
+          The slotted markup below is NOT rendered before hydration, whatever it
+          looks like. Astro puts a client:only island's slot inside
+          `<template data-astro-template>` and reads it back out in JS — verified
+          in the built HTML — and a <template> paints nothing. So the island
+          occupied zero height, the FAQ below it sat ~676 px too high, and
+          everything from here down was shoved into place the moment the bundle
+          landed. Lighthouse measured CLS 0.206 on mobile and 0.142 on desktop,
+          almost all of it attributed to #embeddings-faq.
+
+          Hence this wrapper, which is ordinary markup and therefore actually
+          exists at first paint. Its min-height reserves what the app turns out
+          to occupy, so nothing below it moves. The numbers are measured rather
+          than derived — the app's own scene panel is 560 px desktop / 340 px
+          below 767 px (styles/lab/embeddings.css), and the rest is tabs and
+          controls. Keep this breakpoint in step with that one.
+        -->
+        <div class="embeddings-island-slot">
+          <EmbeddingApp lang={activeLang} client:only="svelte">
+            <div class="embeddings-loading-fallback" role="status" aria-live="polite">
+              <span class="embeddings-loading-fallback__spinner" aria-hidden="true"></span>
+              <p>{t(activeLang, 'embeddings.statusLoadingModel')}</p>
+            </div>
+          </EmbeddingApp>
+        </div>
+      </div>
+    </section>
+
+    <FaqSection
+      lang={activeLang}
+      items={faq.items}
+      heading={faq.heading[activeLang]}
+      id="embeddings-faq"
+    />
+
+    {
+      /* The free tier must not dead-end: after the FAQ the visitor has
+        actually used the tool, and LabToolsNav alone would only loop
+        them back to the other two free ones. */
+    }
+    <LabServiceBridge lang={activeLang} tool="embeddings" />
+
+    <LabToolsNav lang={activeLang} current="embeddings" />
+
+    <LabCopilot tool="embeddings" lang={activeLang} client:idle />
+  </main>
+</BaseLayout>
+
+<style>
+  .lab-page {
+    padding-top: var(--space-10);
+    min-height: 100vh;
+    background: var(--bg-obsidian);
+  }
+
+  /* No fixed header on this page (InnerHeader is static, not fixed) — a
+     desktop-sized top offset is just dead air on a phone. */
+  @media (max-width: 767px) {
+    .lab-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  /* The tool's own anchor. Without it the scroll hint parks the section flush
+     against the top edge of the window (precedent: .log-entry in
+     log/index.astro). */
+  .lab-content {
+    scroll-margin-top: var(--space-24);
+  }
+
+  .lab-content .container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    /* Mirrors .container's safe-area guard (global.css) — this scoped rule
+       outranks the global one, and the flat 16px it used to write here made
+       the tool the widest section on the site and dropped the notch guard
+       that `max(..., env())` exists for. Same form as the prompt page.
+       The bottom pad is untouched: where the three sister pages put their
+       closing air is an open question for the owner (.system/gaps/gap-lab.md). */
+    padding-left: max(var(--container-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right, 0px));
+    padding-bottom: var(--space-24);
+  }
+
+  /* Holds the space a client:only island cannot hold for itself. See the
+     comment on the element: the slot Astro renders for client:only lives inside
+     an inert <template>, so without this the whole page below the tool jumped
+     once the bundle arrived. Sized from what the app actually occupies, not
+     from a guess — adjust by measuring, not by eyeballing. */
+  .embeddings-island-slot {
+    min-height: 676px;
+  }
+
+  @media (min-width: 768px) {
+    .embeddings-island-slot {
+      min-height: 900px;
+    }
+  }
+
+  /* Pre-hydration / no-JS placeholder — keeps the page from showing a blank
+     gap while the client:only island's JS bundle loads. NOTE: this only ever
+     applies once the island has hydrated and re-inserted the slot; before that
+     it is markup inside a <template> and paints nothing. */
+  .embeddings-loading-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    min-height: 50vh;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+  }
+
+  .embeddings-loading-fallback__spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border-default);
+    border-right-color: var(--accent-green-300);
+    border-radius: 50%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .embeddings-loading-fallback__spinner {
+      animation: embeddings-fallback-spin 800ms linear infinite;
+    }
+  }
+
+  @keyframes embeddings-fallback-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>

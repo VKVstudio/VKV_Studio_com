@@ -1,0 +1,193 @@
+---
+/**
+ * HeroCanvas — Scroll-driven video hero section
+ *
+ * Renders a fullscreen canvas with video frame scrubbing controlled by scroll.
+ * Uses Tier 2 (Canvas + Video seeking) with all-keyframe MP4 for instant seek.
+ * Interactive overlay powered by HeroOverlay Svelte island.
+ *
+ * Props:
+ *   lang - current language for i18n
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import HeroOverlay from '@components/ui/HeroOverlay.svelte';
+import HeroLangSwitcher from '@components/ui/HeroLangSwitcher.svelte';
+
+import '@styles/hero.css';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<section class="hero" id="hero-section" aria-label={t(lang, 'hero.tagline')}>
+  <div class="hero__sticky">
+    {/* Video canvas — rendered via JS scroll engine */}
+    <canvas id="hero-canvas" class="hero__canvas" aria-hidden="true"></canvas>
+
+    {
+      /* Hidden video source — seeks are driven by scroll fraction.
+        NO `src` in the static markup: on mobile / prefers-reduced-motion the
+        init script below never assigns one, so the 24.5 MB file is never
+        requested. Desktop assigns `data-src` -> `src` before starting the
+        scroll engine. */
+    }
+    <video
+      id="hero-video"
+      class="hero__video"
+      data-src="/hero-scroll.mp4"
+      muted
+      playsinline
+      preload="none"
+      aria-hidden="true"></video>
+
+    {
+      /* Static poster — shown instead of the video/canvas on mobile and for
+        prefers-reduced-motion (Tier 3). Deliberately EMPTY in the static
+        markup: the <picture> is only injected by the init script's mobile/
+        reduced-motion branch below, so desktop never fetches these bytes
+        either (an <img> inside a `display: none` ancestor still downloads
+        in every major browser — the only way to guarantee zero requests is
+        to never put it in the DOM to begin with). */
+    }
+    <div class="hero__poster" id="hero-poster" aria-hidden="true"></div>
+
+    {/* Gradient overlay for text readability */}
+    <div class="hero__gradient" aria-hidden="true"></div>
+
+    {
+      /* client:visible, not client:load — the house rule in CLAUDE.md forbids
+        client:load and this was one of the two places still using it. Everything
+        a visitor reads here (H1, tagline, subtitle, CTA) is server-rendered and
+        its entrance is a CSS keyframe, precisely so it never waits on Svelte;
+        hydration only adds the neural canvas, cursor parallax and the magnetic
+        button. For an element this far above the fold IntersectionObserver fires
+        immediately, so behaviour is unchanged — this is about obeying the rule,
+        not a measured win. Local Lighthouse TBT on this box swings between 20 ms
+        and 1180 ms on an IDENTICAL build, so no directive choice here can be
+        justified by those numbers either way. */
+    }
+    <div id="hero-overlay">
+      <HeroOverlay
+        client:visible
+        label="VKVstudio"
+        tagline={t(lang, 'hero.tagline')}
+        subtitle={t(lang, 'hero.subtitle')}
+        cta={t(lang, 'hero.ctaServices')}
+        ctaHref={`/${lang}/services/`}
+        ctaSecondary={t(lang, 'hero.cta')}
+        ctaSecondaryHref={`/${lang}/#lab`}
+      />
+    </div>
+
+    {/* Binary Star language switcher — visible while hero title is in viewport */}
+    {
+      /* Same reasoning: a 64–110px decorative canvas widget is nowhere near an
+        LCP candidate and does not deserve eager hydration. */
+    }
+    <HeroLangSwitcher client:visible lang={lang} />
+
+    {/* Scroll indicator */}
+    <div class="hero__scroll-indicator" id="hero-scroll-indicator">
+      <span>{t(lang, 'hero.scroll')}</span>
+      <svg
+        class="hero__scroll-arrow"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 5v14"></path>
+        <path d="m19 12-7 7-7-7"></path>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initScrollEngine } from '@scripts/scroll-engine';
+  import { initLenis } from '@scripts/lenis-init';
+
+  // Initialize Lenis smooth scroll
+  initLenis();
+
+  // Initialize scroll engine once DOM is ready
+  function init(): void {
+    const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement | null;
+    const video = document.getElementById('hero-video') as HTMLVideoElement | null;
+    const section = document.getElementById('hero-section') as HTMLElement | null;
+    const overlay = document.getElementById('hero-overlay') as HTMLElement | null;
+    const scrollIndicator = document.getElementById('hero-scroll-indicator') as HTMLElement | null;
+
+    if (!canvas || !video || !section || !overlay || !scrollIndicator) {
+      console.warn('[HeroCanvas] Missing required DOM elements');
+      return;
+    }
+
+    // Mobile (small screens, incl. tablets in the "mobile LCP killer" bracket)
+    // and prefers-reduced-motion never load the 24.5 MB scrub video — the
+    // static poster (already in the DOM, `.hero--static` CSS) stands in.
+    // Checked once at init: this is a static site, viewport class doesn't
+    // change without a reload crossing the breakpoint.
+    // Two clauses, not width alone: a phone rotated to landscape is 812px
+    // WIDE but 375px tall — width-only gating sent it down the desktop path
+    // and fetched the 24.5 MB scrub video on a cellular connection. "Short
+    // AND coarse-pointer" catches rotated phones while leaving 720p laptops
+    // (short but fine-pointer) and iPads (768+ on both axes) on desktop.
+    // HeroLangSwitcher.svelte gates its visibility branch and mobile CSS on
+    // the SAME query — keep them in lockstep.
+    const isMobile = window.matchMedia(
+      '(max-width: 767px), ((max-height: 767px) and (pointer: coarse))'
+    ).matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (isMobile || prefersReducedMotion) {
+      section.classList.add('hero--static');
+
+      // Inject the poster <picture> now — only reachable from this branch,
+      // so desktop visitors never issue this request either.
+      const poster = document.getElementById('hero-poster');
+      if (poster) {
+        poster.innerHTML = `
+          <picture>
+            <source srcset="/hero-poster.avif" type="image/avif" />
+            <source srcset="/hero-poster.webp" type="image/webp" />
+            <img src="/hero-poster.jpg" alt="" class="hero__poster-img" />
+          </picture>
+        `;
+      }
+
+      return; // `video` element keeps no `src` — zero bytes fetched
+    }
+
+    // Desktop, motion allowed: assign the real source now and start scrubbing
+    const videoSrc = video.dataset.src;
+    if (videoSrc) {
+      video.src = videoSrc;
+      video.preload = 'auto';
+    }
+
+    initScrollEngine({
+      canvas,
+      video,
+      section,
+      overlay,
+      scrollIndicator,
+    });
+  }
+
+  // Astro pages: script runs after DOMContentLoaded by default
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>

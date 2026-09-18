@@ -1,0 +1,235 @@
+---
+/**
+ * LabServiceBridge — the one link from a free tool to the rung it points at.
+ *
+ * The Lab is the free tier of the paid work, and until now the tool pages
+ * ended in LabToolsNav — a loop between three free tools. This block breaks
+ * the loop at the only moment the visitor has actually used something and is
+ * warm: after the FAQ, before the nav back to the other tools.
+ *
+ * Every number on this block comes from `SERVICES` in src/data/services.ts.
+ * Nothing here restates a price or a duration — a rung's price lives in one
+ * file and this block reads it, so it cannot go stale on its own.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import { SERVICES, type ServiceRung } from '@/data/services';
+
+export type LabTool = 'tokenizer' | 'prompt' | 'embeddings';
+
+interface Props {
+  lang: Lang;
+  /** Which tool page this bridge closes. Decides the rung it points at. */
+  tool: LabTool;
+}
+
+/**
+ * The mapping is the plan's, not a guess: counting tokens is the free half of
+ * the question the audit answers for money; a hand-composed prompt is where a
+ * retrieval pilot starts; embeddings in a browser tab are the demo of the
+ * maths the on-prem build runs on hardware the client owns.
+ */
+const RUNG_FOR_TOOL: Record<LabTool, ServiceRung['id']> = {
+  tokenizer: 'geo-audit',
+  prompt: 'rag-pilot',
+  embeddings: 'on-prem-ai',
+};
+
+const { lang, tool } = Astro.props;
+
+const rungId = RUNG_FOR_TOOL[tool];
+const rung = SERVICES.find((s) => s.id === rungId);
+
+/**
+ * A missing rung means services.ts was renamed out from under this block.
+ * Failing the build is the right answer — a silently missing bridge is the
+ * exact defect this component exists to fix.
+ */
+if (!rung) {
+  throw new Error(
+    `LabServiceBridge: no rung "${rungId}" in SERVICES — the tool→rung map in this file is stale.`
+  );
+}
+---
+
+<section class="lab-bridge" aria-labelledby={`lab-bridge-${tool}`}>
+  <div class="container">
+    <div class="lab-bridge__panel glass-panel">
+      {
+        /* House idiom: the `// ` is decoration, so it is aria-hidden and never
+          reaches a screen reader — which read "slash slash next step" here
+          until an audit caught it, on a page whose neighbouring eyebrow had
+          been fixed the same night. The slashes live in the markup, not in
+          the i18n string: decoration is not something a translator should be
+          handed. */
+      }
+      <p class="lab-bridge__eyebrow text-mono">
+        <span aria-hidden="true">// </span>{t(lang, 'bridge.eyebrow')}
+      </p>
+      <h2 id={`lab-bridge-${tool}`} class="lab-bridge__heading">{t(lang, 'bridge.heading')}</h2>
+      <p class="lab-bridge__lede">{t(lang, `bridge.${tool}`)}</p>
+
+      <a class="lab-bridge__rung" href={`/${lang}/services/${rung.id}/`}>
+        <span class="lab-bridge__rung-title">
+          {rung.title[lang]}
+          <span class="lab-bridge__rung-arrow" aria-hidden="true">&#8594;</span>
+        </span>
+        {
+          /* Price and timeframe are separate lines, never joined by a middle
+            dot: `priceLine` already carries one of its own, and a second
+            separator on the same line read as one run-on fact. */
+        }
+        <span class="lab-bridge__rung-price">{rung.priceLine[lang]}</span>
+        <span class="lab-bridge__rung-time">{rung.timeframe[lang]}</span>
+      </a>
+
+      <a class="lab-bridge__all" href={`/${lang}/services/`}>
+        {t(lang, 'bridge.all')}
+        <span aria-hidden="true">&#8594;</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .lab-bridge {
+    padding-block: var(--space-16);
+  }
+
+  .lab-bridge .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    /* Mirrors .container rather than writing a flat value: on a phone in
+       landscape this is what keeps the panel clear of the camera cutout. */
+    padding-left: max(var(--container-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--container-padding), env(safe-area-inset-right, 0px));
+  }
+
+  .lab-bridge__panel {
+    /* .glass-panel (global.css) supplies background, blur, border and shadow,
+       including the @supports restatement the minifier cannot collapse. */
+    border-radius: var(--radius-lg);
+    padding: var(--space-10) var(--space-8);
+    text-align: center;
+  }
+
+  .lab-bridge__eyebrow {
+    color: var(--accent-green-400);
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-wide);
+    margin-bottom: var(--space-3);
+  }
+
+  .lab-bridge__heading {
+    font-size: var(--text-h2);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+    /* The RU heading runs longer than the EN one and wraps to two lines. */
+    text-wrap: balance;
+  }
+
+  .lab-bridge__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    line-height: 1.7;
+    max-width: 58ch;
+    margin: 0 auto var(--space-8);
+    text-wrap: pretty;
+  }
+
+  /* ── The rung itself ───────────────────────────────────── */
+  .lab-bridge__rung {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    /* A link, not a button element: it navigates. Sized as a touch target
+       anyway — 44px is the floor, and the padding puts it well past. */
+    min-height: 44px;
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid var(--accent-green-400);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out),
+      background-color var(--duration-normal) var(--ease-out);
+  }
+
+  .lab-bridge__rung:hover,
+  .lab-bridge__rung:focus-visible {
+    background-color: hsla(155, 70%, 50%, 0.08);
+    box-shadow: var(--glow-green);
+  }
+
+  .lab-bridge__rung-title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+
+  .lab-bridge__rung-price {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--accent-green-300);
+  }
+
+  .lab-bridge__rung-time {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  .lab-bridge__rung-arrow {
+    /* Rides the title, so it reads as part of the action rather than as a
+       third fact under the two mono lines. `inline-block` belongs in the
+       BASE rule, not in the hover one: `transform` does not apply to a
+       non-replaced inline box, so declaring it on hover would have changed
+       the box type mid-interaction. */
+    display: inline-block;
+    margin-left: var(--space-2);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lab-bridge__rung-arrow {
+      transition: transform var(--duration-normal) var(--ease-out);
+    }
+
+    /* transform, not margin: margin would reflow the whole title line. */
+    .lab-bridge__rung:hover .lab-bridge__rung-arrow,
+    .lab-bridge__rung:focus-visible .lab-bridge__rung-arrow {
+      transform: translateX(3px);
+    }
+  }
+
+  /* ── Secondary way out: the whole ladder ───────────────── */
+  .lab-bridge__all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    /* The Lab section's own bridge (LabSection.astro) sets 24px here and is
+       distinguished by colour alone; both are defects the canon names, so
+       this one takes the floor and keeps the underline. */
+    min-height: 44px;
+    margin-top: var(--space-6);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .lab-bridge__all:hover,
+  .lab-bridge__all:focus-visible {
+    color: var(--accent-green-300);
+  }
+
+  @media (max-width: 767px) {
+    .lab-bridge__panel {
+      padding: var(--space-8) var(--space-5);
+    }
+  }
+</style>

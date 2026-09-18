@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - esbuild
+  - protobufjs
+  - sharp
+
+allowBuilds:
+  esbuild: true
+  protobufjs: true
+  sharp: true

@@ -1,0 +1,203 @@
+---
+import { getImage } from 'astro:assets';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import InnerHeader from '../../../../components/layout/InnerHeader.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import PromptApp from '../../../../components/lab/prompt/PromptApp.svelte';
+import LabCopilot from '../../../../components/lab/LabCopilot.svelte';
+import FaqSection from '../../../../components/sections/FaqSection.astro';
+import LabToolsNav from '../../../../components/lab/LabToolsNav.astro';
+import LabServiceBridge from '@components/lab/LabServiceBridge.astro';
+import { LAB_FAQ } from '../../../../data/lab-faq';
+import { t, type Lang } from '../../../../i18n/utils';
+import { MODELS } from '../../../../lib/prompt/builder';
+import heroArt from '@/assets/lab/prompt-hero.png';
+
+export function getStaticPaths() {
+  return [{ params: { lang: 'en' } }, { params: { lang: 'ru' } }];
+}
+
+const { lang } = Astro.params;
+const langTyped = lang as Lang;
+
+/**
+ * LCP preload for the hero still. PageHero cannot emit this itself — an Astro
+ * slot does not travel from a nested component up to BaseLayout's `head` slot
+ * — so the link stays here (blocks/README.md, "What it does NOT do").
+ * The widths MUST equal the ones the component requests, or the preload is a
+ * second download: the master is 1280 wide, so PageHero derives exactly
+ * [768, 1280] from it.
+ */
+const HERO_WIDTHS = [768, 1280] as const;
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+
+const title = lang === 'ru' ? 'Архитектор промптов — VKVstudio' : 'Prompt Architect — VKVstudio';
+// Counted from the roster, not typed in. A hardcoded "18 models" was already
+// wrong the day it was written — the picker had 19 — and this is exactly the
+// claim that goes stale silently every time a model is added.
+const modelCount = MODELS.length;
+// Long enough to survive Google's ~155-character snippet cut without being
+// truncated mid-thought, and specific enough to say what the tool does rather
+// than what category it belongs to. The old one-liner was 69 characters, which
+// left the SERP snippet to be filled in from page text instead.
+const description =
+  lang === 'ru'
+    ? `Собирайте промпт из ролевых блоков и следите, как на лету меняются бюджет токенов и цена — по ${modelCount} моделям, с учётом кеширования и цен Batch API.`
+    : `Compose a prompt from role blocks and watch the token budget and cost move as you type, across ${modelCount} models, with caching and Batch API pricing.`;
+
+const homeUrl = `https://vkvstudio.com/${langTyped}/`;
+const toolUrl = `https://vkvstudio.com/${langTyped}/lab/prompt/`;
+
+const faq = LAB_FAQ.prompt;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q[langTyped],
+      acceptedAnswer: { '@type': 'Answer', text: item.a[langTyped] },
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Prompt Architect',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'All',
+    url: toolUrl,
+    description,
+    featureList:
+      langTyped === 'ru'
+        ? [
+            'Drag-and-drop конструктор промптов по ролевым блокам',
+            'Отслеживание бюджета токенов в реальном времени',
+            'Оценка стоимости в реальном времени для разных провайдеров моделей',
+            'Экспорт промпта в несколько форматов',
+          ]
+        : [
+            'Drag-and-drop role-block prompt builder',
+            'Live token budget tracking',
+            'Real-time cost estimation across model providers',
+            'Multi-format prompt export',
+          ],
+    // @id reference, NOT a fresh inline Person. Inlining one here created a
+    // SECOND, anonymous "Valerii" node on the same page alongside the
+    // "Valerii Karpov" defined in BaseLayout — the exact entity fragmentation
+    // the @id graph exists to prevent. Confirmed by validator.schema.org,
+    // which rendered them as two separate people.
+    // Note also: this SoftwareApplication node is deliberately kept even
+    // though Google's Rich Results Test flags it as missing
+    // aggregateRating/review. Those require real user ratings; inventing them
+    // is spam markup and a manual-action risk. The node stays because AI
+    // answer engines read it, and it is truthful.
+    author: { '@id': 'https://vkvstudio.com/#person' },
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t(langTyped, 'nav.home'), item: homeUrl },
+      { '@type': 'ListItem', position: 2, name: t(langTyped, 'nav.lab'), item: `${homeUrl}#lab` },
+      { '@type': 'ListItem', position: 3, name: t(langTyped, 'prompt.title'), item: toolUrl },
+    ],
+  },
+];
+---
+
+<BaseLayout title={title} description={description} lang={langTyped} jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <InnerHeader lang={langTyped} />
+  <main id="main-content" class="lab-page">
+    {
+      /* The shared inner-page hero. Copy is unchanged — the same three i18n
+         keys the hand-written header read. What is new is the art: the page
+         had none because src/assets/lab/ did not exist, which is why the
+         header read as empty however faithfully the etalon CSS was copied
+         (.system/gaps/gap-lab.md).
+
+         NO `plexus` on the three Lab pages, deliberately. These carry the
+         heaviest islands on the site (drag-to-reorder builder, tokenizer
+         engine, WebGL) and NeuralPlexus is another client:idle Svelte island
+         — a second animated canvas competing with the tool for the same main
+         thread. The art already breathes; that is the movement the header
+         was missing.
+
+         The page's own scroll-hint <script> went with the markup. Behaviour
+         is unchanged: PageHero rides Lenis only when `window.lenisInstance`
+         exists, and Lenis is still never initialised on these three pages
+         (nothing here imports initLenis), so the click resolves to the same
+         native scrollIntoView it always did. The house rule stands — page
+         shell only, never touch the island's own drag/wheel handling. */
+    }
+    <PageHero
+      lang={langTyped}
+      eyebrow={t(langTyped, 'nav.lab').toLowerCase()}
+      title={t(langTyped, 'prompt.title')}
+      lede={t(langTyped, 'prompt.subtitle')}
+      image={heroArt}
+      scrim="center"
+      scrollTarget="#lab-tool"
+    />
+
+    <div class="lab-container" id="lab-tool">
+      <PromptApp client:idle lang={langTyped} />
+    </div>
+
+    <FaqSection
+      lang={langTyped}
+      items={faq.items}
+      heading={faq.heading[langTyped]}
+      id="prompt-faq"
+    />
+
+    {
+      /* The free tier must not dead-end: after the FAQ the visitor has
+        actually used the tool, and LabToolsNav alone would only loop
+        them back to the other two free ones. */
+    }
+    <LabServiceBridge lang={langTyped} tool="prompt" />
+
+    <LabToolsNav lang={langTyped} current="prompt" />
+
+    <LabCopilot tool="prompt" lang={langTyped} client:idle />
+  </main>
+</BaseLayout>
+
+<style>
+  .lab-page {
+    min-height: 100vh;
+    padding-top: var(--space-10);
+    padding-bottom: var(--space-24);
+    background: var(--bg-obsidian);
+  }
+
+  /* No fixed header on this page (InnerHeader is static, not fixed) — a
+     desktop-sized top offset is just dead air on a phone. */
+  @media (max-width: 767px) {
+    .lab-page {
+      padding-top: var(--space-4);
+    }
+  }
+
+  .lab-container {
+    /* The tool's own anchor. Without it the scroll hint parks the block flush
+       against the top edge of the window (precedent: .log-entry in
+       log/index.astro). */
+    scroll-margin-top: var(--space-24);
+    max-width: var(--container-max);
+    margin: 0 auto;
+    /* Mirrors .container's safe-area guard (global.css) — this rule bypasses
+       .container and used to reimplement the unguarded pattern. */
+    padding: 0 max(var(--container-padding), env(safe-area-inset-right, 0px)) 0
+      max(var(--container-padding), env(safe-area-inset-left, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+</style>

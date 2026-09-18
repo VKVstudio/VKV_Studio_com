@@ -1,0 +1,119 @@
+/*
+  # NOTE (Sprint 3b, Embedding Explorer): connect-src is widened so transformers.js
+  # can download on-device embedding model weights (ONNX) straight from the
+  # Hugging Face Hub / its LFS CDN. Sprint 4 (security hardening) should review
+  # this — either tighten to a narrower/pinned set of hosts once the exact CDN
+  # hosts in use are confirmed, or move to self-hosted model weights under
+  # /public and drop these origins entirely.
+  # NOTE (Embedding Explorer audit fix): script-src carries 'wasm-unsafe-eval'
+  # because Chrome (and other CSP-strict browsers) require it for ALL WebAssembly
+  # instantiation — onnxruntime-web boots via WASM even when the WEBGPU backend
+  # is selected (it's the runtime host, not just the CPU fallback). Without it
+  # the embedding model fails to load for every visitor, silently or not.
+  # worker-src already allows 'blob:' below for Vite's `?worker` bundles.
+  # cdn.jsdelivr.net is ALSO required (both script-src, for the dynamic
+  # `import()` of onnxruntime-web's WASM loader `.mjs`, and connect-src, for
+  # the `.wasm`/`.mjs` fetches themselves) — onnxruntime-web's default
+  # `wasmPaths` point at jsDelivr, not Hugging Face, regardless of which
+  # model is selected. `blob:` is required in script-src too: onnxruntime-web
+  # fetches that `.mjs` as text, wraps it in a same-origin `Blob`, and
+  # `import()`s THAT blob: URL (a workaround for cross-origin module-script
+  # restrictions) — without `blob:` in script-src the blob-wrapped import
+  # itself gets refused even once the jsDelivr fetch succeeds. All three
+  # pieces (wasm-unsafe-eval + jsDelivr host + blob:) were verified
+  # necessary and sufficient with a headless-Chrome run of the actual
+  # production CSP against /lab/embeddings/.
+  #
+  # NOTE (security hardening): connect-src includes the Synapse backend origin
+  # https://api.vkvstudio.com — this MUST match the PUBLIC_SYNAPSE_API_URL used for
+  # the Cloudflare Pages build, or every chat/voice/tts/stream fetch is CSP-blocked and
+  # the site silently degrades to the mock assistant. Update BOTH together if the API
+  # host changes. object-src 'none' + base-uri 'self' + form-action 'none' block
+  # plugin/base-tag/form-hijack vectors (there are no <object>/<form> on the site).
+  # 'unsafe-inline' in script-src/style-src is REQUIRED and must NOT be removed:
+  # Astro's island-hydration runtime + the JSON-LD blocks emit unnonceable inline
+  # <script>/<style>, and Cloudflare Pages _headers is static (no per-request nonce).
+  # NOTE (Google sign-in): Google Identity Services powers Synapse conversation
+  # ownership. It needs https://accounts.google.com in script-src (the gsi/client
+  # loader), connect-src (token + JWKS fetches), and frame-src (the sign-in button
+  # + One Tap render inside a Google iframe). Avatar images come from
+  # https://*.googleusercontent.com → img-src. All are inert until a client id is
+  # configured (PUBLIC_GOOGLE_OAUTH_CLIENT_ID). See src/lib/auth.ts.
+  # NOTE (2026-08-09): style-src carries https://accounts.google.com because
+  # Google Identity Services loads its own stylesheet (accounts.google.com/gsi/style)
+  # for the sign-in button. 'unsafe-inline' does NOT cover an EXTERNAL sheet, so
+  # without this host the button renders unstyled or fails outright. Google's own
+  # setup guide states this directive requirement.
+  # NOTE (2026-08-13): media-src carries blob: because that is the ONLY way the
+  # assistant's speech can play. /api/tts returns audio as a Blob, synapse-audio.ts
+  # turns it into a blob: URL via createObjectURL, and an <audio> element loads
+  # that. With a bare `media-src 'self'` the browser refused it —
+  # "Loading media from 'blob:…' violates the following Content Security Policy
+  # directive: media-src 'self'" — and the failure surfaced only as
+  # "NotSupportedError: Failed to load because no supported source was found",
+  # which reads like a codec problem and is not one. Text-to-speech was therefore
+  # broken on the DEPLOYED site from the day this header was added, while working
+  # perfectly in dev, where Cloudflare's _headers are not applied at all. blob: is
+  # same-origin by construction, so this grants nothing an attacker can reach.
+  Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self'; connect-src 'self' https://api.vkvstudio.com https://accounts.google.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://cdn.jsdelivr.net; worker-src 'self' blob:; media-src 'self' blob:; frame-src https://accounts.google.com; frame-ancestors 'none'
+  # Kept for ancient user agents only. frame-ancestors above is what actually
+  # enforces this — per OWASP, X-Frame-Options is obsolete and ignored wherever
+  # frame-ancestors is present. 20 bytes, no harm, no illusions.
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  # Blocks this origin's assets from being embedded by other sites.
+  Cross-Origin-Resource-Policy: same-origin
+  # same-origin-allow-popups (not bare same-origin): the Google sign-in popup must
+  # keep its `window.opener` link to postMessage the credential back. Bare
+  # same-origin severs it and the sign-in callback never fires.
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  # microphone=(self): the Synapse voice assistant calls getUserMedia({audio}) from
+  # the top-level document (src/lib/synapse-audio.ts). An EMPTY allowlist microphone=()
+  # disables the mic for EVERY context incl. same-origin → voice input breaks. camera/
+  # geolocation/payment stay fully disabled (unused).
+  # usb/serial/display-capture denied too — the site never uses them, and an
+  # explicit denial is what a scanner looks for. Do NOT add interest-cohort or
+  # browsing-topics here: those features were removed and now only emit
+  # "Unrecognized feature" console warnings.
+  Permissions-Policy: camera=(), microphone=(self), geolocation=(), payment=(), usb=(), serial=(), display-capture=()
+  # `preload` was claimed here but vkvstudio.com was never submitted to
+  # hstspreload.org (verified 2026-08-09: status "unknown"), so the token
+  # asserted something untrue. Dropped rather than left as decoration.
+  # Submitting is also a one-way door — with includeSubDomains it would pin
+  # api.vkvstudio.com to HTTPS-only before that host even exists.
+  # UPDATE 2026-08-15: api.vkvstudio.com has been live since 13 August, and
+  # includeSubDomains above already pins it for anyone who has visited the apex.
+  # What is still missing is on the ZONE, not here: api.* answers plain HTTP with
+  # real JSON and sends no HSTS of its own, because the apex's 301 comes from
+  # Pages and the tunnelled host never inherits it. Turn on "Always Use HTTPS"
+  # and HSTS at the Cloudflare zone; preload submission can follow once that is
+  # true for every host under the domain.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Content-hashed build output. Pages' default for these is
+# `public, max-age=14400, must-revalidate` — four hours, then a revalidation
+# round-trip for a file whose name changes whenever its bytes do. The hash IS
+# the cache key, so a year and `immutable` cost nothing and remove the
+# conditional request entirely. Lighthouse flags the default as an inefficient
+# cache policy, and on a site that treats 100 as the baseline that is a free
+# point.
+#
+# This block sits AFTER /* on purpose: Cloudflare Pages does not pick the most
+# specific rule, it applies every matching block in order, so a later block is
+# what wins. Deliberately scoped to /_astro/* — the videos, icons and fonts in
+# public/ keep their plain names across rebuilds and must NOT be immutable.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The self-hosted fonts carry stable, non-hashed names (inter-latin.woff2, …),
+# so they cannot be `immutable` the way /_astro can — a rebuild reuses the name.
+# But Pages' 4-hour must-revalidate default costs a returning visitor a
+# conditional request on every preloaded font, and a font that changes gets a
+# new @font-face `src` in the hashed CSS anyway, so 30 days is safe and removes
+# the revalidation. Same reasoning for the videos and the PWA icons below them:
+# plain names, rarely changed, and a change ships new markup that points at it.
+/fonts/*
+  Cache-Control: public, max-age=2592000
+/*.mp4
+  Cache-Control: public, max-age=2592000

@@ -1,0 +1,271 @@
+---
+/**
+ * ContactSection — the homepage's closing CTA, blurring out to --bg-void.
+ *
+ * Reuses the ladder's own closing copy (services.ctaHeading/ctaSub) rather
+ * than inventing homepage-only copy, so the last thing a visitor reads
+ * matches the last thing every service page reads. GitHub/LinkedIn used to
+ * live here too; they're in the footer's social row now (every page, not
+ * just this one), so the buyer sees the funnel — contact, trust, email —
+ * and nothing that asks them to go read source code instead.
+ */
+import type { Lang } from '@i18n/utils';
+import { t } from '@i18n/utils';
+import { CONTACT_EMAIL } from '@/lib/site-config';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<section class="contact-section" id="contact" aria-labelledby="contact-heading">
+  {/* Blur-out gradient top fade */}
+  <div class="contact__fade-top" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="contact__inner js-contact-reveal">
+      {/* Label */}
+      <p class="text-mono contact__label">// contact</p>
+
+      {/* Headline — the same closing line every service page ends on */}
+      <h2 id="contact-heading" class="contact__title">
+        {t(lang, 'services.ctaHeading')}
+      </h2>
+
+      {/* Subtitle */}
+      <p class="contact__subtitle">{t(lang, 'services.ctaSub')}</p>
+
+      {/* CTA links */}
+      <div class="contact__links">
+        {/* Primary CTA: the contact funnel (form → Cal.com link-out) */}
+        <a
+          href={`/${lang}/contact/`}
+          class="contact__cta-primary btn btn-primary"
+          id="contact-email-btn"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+          </svg>
+          {t(lang, 'services.contactCta')}
+        </a>
+
+        {/* Secondary: Trust & Process, compressed to one line's worth of trust */}
+        <a
+          href={`/${lang}/trust/`}
+          class="contact__cta-secondary btn btn-ghost"
+          id="contact-trust-btn"
+        >
+          {t(lang, 'services.trustLink')}
+        </a>
+      </div>
+
+      {/* Email fallback for form-averse buyers — same pattern as ServiceCta */}
+      <p class="contact__email-fallback text-mono">
+        {t(lang, 'services.emailFallback')}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+      </p>
+
+      {/* Ambient domain label */}
+      <p class="contact__domain text-mono">vkvstudio.com</p>
+    </div>
+  </div>
+
+  {/* Blur-out gradient bottom fade into void */}
+  <div class="contact__fade-bottom" aria-hidden="true"></div>
+</section>
+
+<style>
+  /* ── Section ───────────────────────────────────────────── */
+  .contact-section {
+    padding-block: var(--section-gap);
+    background: var(--bg-graphite);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  /* Ambient radial glow behind CTA */
+  .contact-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    background: radial-gradient(
+      ellipse at center,
+      hsla(155, 60%, 15%, 0.12) 0%,
+      hsla(225, 60%, 15%, 0.06) 40%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  /* ── Fade overlays ─────────────────────────────────────── */
+  .contact__fade-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(to bottom, var(--bg-obsidian), transparent);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .contact__fade-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 160px;
+    background: linear-gradient(to bottom, transparent, var(--bg-void));
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── Inner content ─────────────────────────────────────── */
+  .contact__inner {
+    position: relative;
+    z-index: 2;
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-8);
+    /* No static opacity/scale hidden-state: section-animations.ts' fromTo()
+       applies its own "from" values immediately on init (immediateRender) —
+       the CSS default here must stay visible so a blocked/failed script
+       never leaves this content permanently hidden. */
+  }
+
+  /* ── Label ─────────────────────────────────────────────── */
+  .contact__label {
+    /* text-mono handles styling */
+  }
+
+  /* ── Headline ──────────────────────────────────────────── */
+  .contact__title {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
+    letter-spacing: var(--tracking-tight);
+    /* Gradient text */
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Subtitle ──────────────────────────────────────────── */
+  .contact__subtitle {
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    max-width: 52ch;
+  }
+
+  /* ── CTA links ─────────────────────────────────────────── */
+  .contact__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    justify-content: center;
+  }
+
+  /* Button styles (from global.css .btn / .btn-primary / .btn-ghost) */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-all);
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--gradient-accent);
+    color: var(--bg-void);
+    border-color: transparent;
+  }
+
+  .btn-primary:hover {
+    box-shadow: var(--glow-green);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-primary);
+    border-color: var(--border-default);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--accent-green-300);
+    color: var(--accent-green-300);
+    box-shadow: var(--glow-green);
+  }
+
+  /* Hover lift is motion, not just a glow/color shift — kept fully behind
+     reduced-motion (PricingCard's own precedent) so those users get an
+     identical resting button with a color/glow-only hover, never a forced
+     translate. .btn already carries the base transition unconditionally. */
+  @media (prefers-reduced-motion: no-preference) {
+    .btn-primary:hover,
+    .btn-ghost:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* ── Email fallback ────────────────────────────────────── */
+  .contact__email-fallback {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .contact__email-fallback a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .contact__email-fallback a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* ── Domain watermark ──────────────────────────────────── */
+  .contact__domain {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-top: var(--space-4);
+    text-transform: lowercase;
+    letter-spacing: var(--tracking-wider);
+  }
+</style>

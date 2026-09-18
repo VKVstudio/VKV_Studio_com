@@ -1,0 +1,531 @@
+---
+/**
+ * /services/rag-pilot/ — rung 02. ServiceRungLayout still owns everything
+ * below the fold (included/excluded, guarantee, retainer, terms, FAQ, CTA —
+ * the buyer's reading order, unchanged); this file only adds the etalon
+ * full-viewport hero above it, via ServiceRungLayout's `hero` named slot
+ * (hideHeader — see that component's own comment for why the plain
+ * rung-header would otherwise render twice).
+ *
+ * Art (ComfyUI, in-house): a stack of documents inside a glass vault,
+ * threads of light rising FROM the pages into one node above them. The
+ * argument the whole page has to earn: the answer comes out of YOUR
+ * documents, and they never leave your side.
+ */
+import { Picture, getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ServiceRungLayout from '@components/services/ServiceRungLayout.astro';
+import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
+import heroArt from '@/assets/services/rung2-rag.png';
+import { getRung } from '@/data/services';
+import { SERVICES_FAQ } from '@/data/services-faq';
+import { rungJsonLd } from '@/lib/services-jsonld';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const rung = getRung('rag-pilot');
+const faq = SERVICES_FAQ['rag-pilot'];
+
+const copy = {
+  en: {
+    eyebrow: rung.monoLabel.replace(/^\/\/\s*/, ''),
+    h1: 'Your documents hold the answer. They never leave your side.',
+    // Answer-first, per the house SEO/GEO rule: price, scope and the
+    // hardest fact (a conditional final payment) before any adjective.
+    lede: '€4,500, fixed: a working RAG assistant over your documents, deployed on infrastructure you own, with an acceptance test we write together before work starts. Three weeks — and if the assistant fails that test, the final milestone stays unpaid.',
+    linksPre:
+      'Contract terms, milestone payments and how access to your systems is handled live on the ',
+    linksTrust: 'Trust & Process',
+    linksMid:
+      ' page. If keeping the model itself on infrastructure you own matters beyond one pilot, the next rung is ',
+    linksNeighbour: 'Self-Hosted AI',
+    linksPost: '.',
+  },
+  ru: {
+    eyebrow: rung.monoLabel.replace(/^\/\/\s*/, ''),
+    h1: 'Ответ живёт в ваших документах. Они остаются у вас.',
+    lede: '€4 500, фиксированная цена: рабочий RAG-ассистент по вашим документам, развёрнутый на инфраструктуре, которой владеете вы, с приёмочным тестом, который мы пишем вместе с вами до начала работ. Три недели — и если тест не пройден, финальный платёж вы не вносите.',
+    linksPre: 'Условия договора, этапы оплаты и порядок доступа к вашим системам — на странице ',
+    linksTrust: '«Доверие и процесс»',
+    linksMid:
+      '. Если держать саму модель на инфраструктуре, которой владеете вы, важно не только в рамках одного пилота, следующая ступень — ',
+    linksNeighbour: 'self-hosted AI',
+    linksPost: '.',
+  },
+}[lang];
+
+// The hero art is this page's LCP element — a head preload with the real
+// srcset shaves its discovery off the critical path (etalon: services/index,
+// contact). The master is 1280px wide, so widths stop there.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout
+  lang={lang}
+  title={rung.seo.title[lang]}
+  description={rung.seo.description[lang]}
+  jsonLd={rungJsonLd(lang, rung, faq)}
+  ogImage="/og-rag-pilot.jpg"
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <ServiceRungLayout lang={lang} rung={rung} faqItems={faq} hideHeader>
+    <Fragment slot="hero">
+      <header class="rag-hero">
+        {
+          /* Generated in-house (ComfyUI): documents in a glass vault, light
+             rising from the pages into one node. Decorative: empty alt,
+             gradient overlays carry text contrast (etalon recipe). */
+        }
+        <div class="rag-hero__art" aria-hidden="true" id="rag-pilot-hero-art">
+          <Picture
+            src={heroArt}
+            formats={['avif', 'webp']}
+            widths={HERO_WIDTHS}
+            sizes="100vw"
+            alt=""
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </div>
+        {
+          /* Born where the light leaves the pages — just under the node it
+             climbs into, upper-middle of the frame — so the network appears
+             to continue the same rise the still already shows. */
+        }
+        <NeuralPlexus
+          client:idle
+          originX={0.5}
+          originY={0.34}
+          anchor={{
+            selector: '#rag-pilot-hero-art img',
+            width: 1280,
+            height: 720,
+            x: 0.5,
+            y: 0.34,
+          }}
+        />
+        <div class="container">
+          <p class="rag-hero__eyebrow text-mono">
+            <span aria-hidden="true">// </span>{copy.eyebrow}
+          </p>
+          <h1 class="rag-hero__title" aria-label={copy.h1}>
+            {
+              copy.h1.split(' ').map((word, wordIdx) => [
+                wordIdx > 0 ? ' ' : null,
+                <span class="rag-hero__word" aria-hidden="true">
+                  {Array.from(word).map((char) => (
+                    <span class="rag-hero__letter">{char}</span>
+                  ))}
+                </span>,
+              ])
+            }
+          </h1>
+          <p class="rag-hero__lede">{copy.lede}</p>
+          <p class="rag-hero__links">
+            {copy.linksPre}<a href={`/${lang}/trust/`}>{copy.linksTrust}</a>{copy.linksMid}<a
+              href={`/${lang}/services/on-prem-ai/`}>{copy.linksNeighbour}</a
+            >{copy.linksPost}
+          </p>
+        </div>
+
+        {/* Full-viewport hero owes the reader a nudge (etalon pattern). */}
+        <button type="button" class="rag-hero__scroll js-rag-scroll-hint">
+          <span class="text-mono">{t(lang, 'hero.scroll')}</span>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14"></path>
+            <path d="m19 12-7 7-7-7"></path>
+          </svg>
+        </button>
+      </header>
+    </Fragment>
+  </ServiceRungLayout>
+</BaseLayout>
+
+<script>
+  // The homepage scroll engine (etalon manners). Reduced motion turns this
+  // off at the source — initLenis() is a no-op returning null.
+  import { initLenis } from '@scripts/lenis-init';
+
+  // The scroll hint keeps its promise: Lenis rides down to the first body
+  // section (whichever rung this is), native smooth-scroll otherwise, an
+  // honest instant jump under reduced motion.
+  function initRagScrollHint(): void {
+    const hint = document.querySelector<HTMLElement>('.js-rag-scroll-hint');
+    const target = document.querySelector<HTMLElement>('.rung-page .rung-section');
+    if (!hint || !target) return;
+
+    hint.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const lenis = (
+        window as Window & {
+          lenisInstance?: { scrollTo: (t: Element, o?: Record<string, unknown>) => void };
+        }
+      ).lenisInstance;
+      if (lenis && !reduced) {
+        lenis.scrollTo(target, { duration: 1.6 });
+      } else {
+        target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      initRagScrollHint();
+    });
+  } else {
+    initLenis();
+    initRagScrollHint();
+  }
+</script>
+
+<style>
+  /* ── Hero: the etalon idiom family (geo-audit/services/contact) ──── */
+  .rag-hero {
+    position: relative;
+    text-align: center;
+    padding-block: var(--space-8) var(--space-12);
+    isolation: isolate;
+    overflow: hidden;
+    min-height: calc(100vh - 7.5rem);
+    min-height: calc(100svh - 7.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rag-hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .rag-hero__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .rag-hero__art :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.5;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .rag-hero__art :global(img) {
+      animation: rag-breathe 9s ease-in-out infinite alternate;
+      will-change: transform;
+    }
+  }
+
+  @keyframes rag-breathe {
+    from {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    to {
+      transform: scale(1.045);
+      filter: brightness(1.18);
+    }
+  }
+
+  .rag-hero__art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, var(--bg-obsidian) 4%, transparent 40%),
+      linear-gradient(to top, var(--bg-obsidian) 6%, transparent 42%);
+  }
+
+  /* The homepage hero badge (HeroOverlay's .hero-overlay__label), same
+     literals as every other page in this family. */
+  .rag-hero__eyebrow {
+    display: inline-block;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-widest);
+    color: hsl(155, 85%, 65%);
+    padding: var(--space-1) var(--space-4);
+    background: hsla(220, 25%, 6%, 0.9);
+    border: 1px solid hsla(155, 50%, 40%, 0.2);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    text-shadow: 0 0 12px var(--accent-glow);
+    transition:
+      color 0.4s ease-out,
+      border-color 0.4s ease-out,
+      background 0.4s ease-out;
+    cursor: default;
+    margin-bottom: var(--space-4);
+  }
+
+  /* Standard property restated where a CSS minifier cannot fold it into
+     the -webkit- alias — without this Firefox renders it flat. */
+  @supports (backdrop-filter: blur(1px)) {
+    .rag-hero__eyebrow {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  .rag-hero__eyebrow:hover {
+    color: hsl(220, 70%, 65%);
+    border-color: hsla(220, 50%, 50%, 0.25);
+    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
+  }
+
+  /* Neural-texture title (geo-audit's .geo-hero__title recipe — see its
+     comments for why the JPEG fallback lives in @supports and why letter
+     spans must never create their own rendering surface). */
+  .rag-hero__title {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    max-width: 20ch;
+    margin: 0 auto var(--space-5);
+
+    background-image: image-set(
+      url('/neural-texture.avif') type('image/avif'),
+      url('/neural-texture.webp') type('image/webp')
+    );
+    background-position: center center;
+    background-size: cover;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px hsla(180, 80%, 55%, 0.7);
+
+    filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
+  }
+
+  @supports not (background-image: image-set(url('/neural-texture.avif') type('image/avif'))) {
+    .rag-hero__title {
+      background-image: url('/neural-texture.jpg');
+    }
+  }
+
+  @media (max-width: 767px) {
+    .rag-hero__title {
+      background-image: image-set(
+        url('/neural-texture-mobile.avif') type('image/avif'),
+        url('/neural-texture-mobile.webp') type('image/webp')
+      );
+    }
+  }
+
+  .rag-hero__word {
+    white-space: nowrap;
+  }
+
+  .rag-hero__letter {
+    transition:
+      -webkit-text-stroke-color var(--duration-slow, 0.4s) var(--ease-out, ease-out),
+      text-shadow var(--duration-slow, 0.4s) var(--ease-out, ease-out);
+    cursor: default;
+  }
+
+  .rag-hero__letter:hover {
+    -webkit-text-stroke-color: hsla(180, 90%, 70%, 0.95);
+    text-shadow:
+      0 0 10px hsla(180, 85%, 60%, 0.55),
+      0 0 22px hsla(180, 85%, 55%, 0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rag-hero__letter {
+      transition: none;
+    }
+  }
+
+  .rag-hero__lede {
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    max-width: 58ch;
+    margin: 0 auto var(--space-4);
+    line-height: 1.7;
+  }
+
+  .rag-hero__links {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    max-width: 52ch;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .rag-hero__links a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .rag-hero__links a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* ── Entrance cascade — the etalon's timings, CSS-only ── */
+  @media (prefers-reduced-motion: no-preference) {
+    .rag-hero__eyebrow {
+      animation:
+        rag-fade-up-15 0.6s ease-out 0.15s backwards,
+        rag-eyebrow-breathe 4s ease-in-out 1.5s infinite;
+    }
+
+    .rag-hero__title {
+      animation:
+        rag-title-opacity-in 0.7s ease-out 0.15s backwards,
+        rag-title-transform-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+    }
+
+    .rag-hero__lede {
+      animation:
+        rag-fade-up-15 0.6s ease-out 0.3s backwards,
+        rag-lede-glow 5s ease-in-out 2s infinite;
+    }
+
+    .rag-hero__links {
+      animation: rag-fade-up-20 0.8s ease-out 0.5s backwards;
+    }
+
+    .rag-hero__scroll svg {
+      animation: rag-scroll-nudge 2.2s ease-in-out 2.5s infinite;
+    }
+  }
+
+  @keyframes rag-fade-up-15 {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rag-fade-up-20 {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rag-title-opacity-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes rag-title-transform-in {
+    from {
+      transform: translateY(20px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rag-eyebrow-breathe {
+    0%,
+    100% {
+      text-shadow: 0 0 12px var(--accent-glow);
+    }
+    50% {
+      text-shadow:
+        0 0 20px var(--accent-glow-strong),
+        0 0 40px var(--accent-glow);
+    }
+  }
+
+  @keyframes rag-lede-glow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsla(155, 60%, 60%, 0.08));
+    }
+  }
+
+  .rag-hero__scroll {
+    position: absolute;
+    bottom: var(--space-6);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: transparent;
+    border: 0;
+    color: var(--text-ghost);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease-out;
+  }
+
+  .rag-hero__scroll:hover,
+  .rag-hero__scroll:hover .text-mono {
+    color: var(--accent-green-200);
+  }
+
+  @keyframes rag-scroll-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(6px);
+    }
+  }
+
+  /* Mobile scroll-hint override MUST come after the base absolute rule in
+     this same stylesheet — same specificity, source order decides (this bug
+     shipped once already on trust/contact). On short phones the pinned hint
+     would otherwise land on the last lines of the links paragraph. */
+  @media (max-width: 767px) {
+    .rag-hero__scroll {
+      position: static;
+      transform: none;
+      margin-top: var(--space-6);
+    }
+  }
+</style>

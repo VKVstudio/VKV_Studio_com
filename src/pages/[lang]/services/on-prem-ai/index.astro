@@ -1,0 +1,527 @@
+---
+/**
+ * /services/on-prem-ai/ — rung 03. ServiceRungLayout still owns the body
+ * (included/excluded, guarantee, retainer, terms, FAQ, CTA); this file adds
+ * the hero, one extra block in the layout's default slot, and the page's
+ * motion.
+ *
+ * HERO. Was ~330 lines of hand-typed `.onprem-hero__*` CSS — the thirteenth
+ * copy of one recipe. Now the shared block `@components/blocks/PageHero.astro`
+ * (measurement: `.system/canon/92-hero-diff.md`; contract: that folder's
+ * README). Only this page's own answers are passed: the copy, the ComfyUI
+ * still, the plexus birth point, the scroll target. The scrim stays the
+ * default `bottom` — its two stops are byte-identical to what this page
+ * painted by hand, so the migration changes no pixel of the art. Three fixes
+ * arrive for free with the component: the chrome reserve computed from
+ * tokens instead of the `7.5rem` literal, the safe-area inset under the
+ * scroll hint, and the `@supports` restatement of `backdrop-filter`.
+ *
+ * Art (ComfyUI, in-house): a server rack inside a luminous perimeter,
+ * absolute darkness outside, no cable crossing the line. The argument the
+ * whole page has to earn: the model lives inside your walls, and the border
+ * is visible.
+ */
+import { getImage } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHero from '@components/blocks/PageHero.astro';
+import ServiceRungLayout from '@components/services/ServiceRungLayout.astro';
+import heroArt from '@/assets/services/rung2-onprem.png';
+import { getRung } from '@/data/services';
+import { SERVICES_FAQ } from '@/data/services-faq';
+import { rungJsonLd } from '@/lib/services-jsonld';
+import { supportedLangs } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => {
+  return supportedLangs.map((lang) => ({ params: { lang } }));
+}) satisfies GetStaticPaths;
+
+const { lang } = Astro.params as { lang: Lang };
+
+const rung = getRung('on-prem-ai');
+const faq = SERVICES_FAQ['on-prem-ai'];
+
+const copy = {
+  en: {
+    h1: 'The model lives inside your walls. The border is visible.',
+    // Answer-first: price, scope and the hardest fact (whose infrastructure,
+    // whose jurisdiction) before any adjective. "Never a subprocessor" used
+    // to close the first sentence; it stated a role rather than a fact, and
+    // the hosting question it glossed over is answered properly in the
+    // two-contracts block below instead.
+    lede: 'From €7,500 for a starter deployment: one fine-tuned open model, running on hardware you own or a dedicated EU server registered to you — never a shared platform. Four to six weeks. Typical full deployments run €15,000–25,000 as node count, document sources and fine-tuning depth scale past the starter, and the data never crosses that line at either size.',
+    linksPre: 'Contract terms, liability caps and how client data is handled live on the ',
+    linksTrust: 'Trust & Process',
+    linksMid: ' page. Not ready to commit to a full deployment yet? The smaller first step is the ',
+    linksNeighbour: 'RAG pilot',
+    linksPost: ' — three weeks, €4,500, the same infrastructure discipline.',
+    modes: {
+      eyebrow: 'how the work is split',
+      heading: 'Deployment and support are two separate contracts',
+      intro:
+        'They are papered separately because they are not the same work, and because the second one can need something the first one never asks for: access.',
+      cards: [
+        {
+          label: '01',
+          title: 'Deployment',
+          body: 'The training and inference pipeline is delivered as code and runs on your infrastructure. The model is trained on your side and the weights stay there — nothing is exported to me. I build and tune against synthetic or de-identified material that you approve, and I do not ask for accounts in your production systems. Day-to-day operation is handed to your own staff, with a written runbook.',
+        },
+        {
+          label: '02',
+          title: 'Support',
+          body: 'A separate agreement, taken or declined on its own merits, because this is where access becomes a question again. Two ways to run it: your operator executes the runbook and I never touch production data; or you open time-boxed break-glass access on request — granted per ticket, logged into your own infrastructure, and covered by its own set of documents.',
+        },
+      ],
+      note: 'One more thing a hosting line usually hides: where the server is rented in your name, the contract with the provider is yours and I am not a party to it. In neither arrangement is your workload placed on a platform shared with my other clients.',
+    },
+  },
+  ru: {
+    h1: 'Модель живёт внутри ваших стен. Граница видна.',
+    lede: 'От €7 500 за стартовое развёртывание: одна дообученная открытая модель работает на вашем железе или на выделенном сервере в ЕС, оформленном на вас, — никогда на общей платформе. Четыре-шесть недель. Типичное полное развёртывание стоит €15 000–25 000 — цена растёт по мере того, как число узлов, источников документов и глубина дообучения выходят за стартовый объём, и данные не пересекают эту границу при любом масштабе.',
+    linksPre:
+      'Условия договора, предел ответственности и порядок обращения с данными клиента — на странице ',
+    linksTrust: '«Доверие и процесс»',
+    linksMid: '. Не готовы сразу к полному развёртыванию? Шаг поменьше — ',
+    linksNeighbour: 'RAG-пилот',
+    linksPost: ': три недели, €4 500, та же инфраструктурная дисциплина.',
+    modes: {
+      eyebrow: 'как разделена работа',
+      heading: 'Развёртывание и сопровождение — два разных договора',
+      intro:
+        'Они оформляются отдельно, потому что это разная работа и потому что второму может понадобиться то, чего первый не просит никогда, — доступ.',
+      cards: [
+        {
+          label: '01',
+          title: 'Развёртывание',
+          body: 'Пайплайн обучения и инференса поставляется как код и работает на вашей инфраструктуре. Модель обучается на вашей стороне, и веса остаются там же — ко мне ничего не выгружается. Сборка и настройка идут на синтетическом или обезличенном материале, который вы согласовали; учётных записей в ваших продакшн-системах я не запрашиваю. Повседневную эксплуатацию ведёт ваш сотрудник по письменному регламенту.',
+        },
+        {
+          label: '02',
+          title: 'Сопровождение',
+          body: 'Отдельный договор — его берут или не берут сам по себе, потому что именно здесь вопрос доступа возвращается. Два режима: либо ваш оператор выполняет регламент и продакшн-данных я не касаюсь, либо вы открываете ограниченный по времени доступ break-glass по заявке — он выдаётся на конкретную задачу, журналируется в вашей же инфраструктуре и закрывается своим комплектом документов.',
+        },
+      ],
+      note: 'И ещё одно, что обычно прячется за строчкой про хостинг: если сервер арендован на ваше имя, договор с провайдером ваш, и я в нём не сторона. Ни в одном из двух вариантов ваша нагрузка не ставится на платформу, общую с другими моими клиентами.',
+    },
+  },
+}[lang];
+
+// The hero art is this page's LCP element — a head preload with the real
+// srcset shaves its discovery off the critical path. Astro slots do not
+// travel from a nested component up to BaseLayout's `head` slot, so this
+// stays on the page (blocks/README.md, "What it does NOT do"). The widths
+// MUST match the ones PageHero derives from the same 1280px master, or the
+// preload becomes a second download.
+const HERO_WIDTHS = [768, 1280];
+const heroPreloads = await Promise.all(
+  HERO_WIDTHS.map((width) => getImage({ src: heroArt, format: 'avif', width }))
+);
+const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i]}w`).join(', ');
+---
+
+<BaseLayout
+  lang={lang}
+  title={rung.seo.title[lang]}
+  description={rung.seo.description[lang]}
+  jsonLd={rungJsonLd(lang, rung, faq)}
+  ogImage="/og-on-prem-ai.jpg"
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
+  <ServiceRungLayout lang={lang} rung={rung} faqItems={faq} hideHeader>
+    <Fragment slot="hero">
+      {
+        /* `eyebrow` is passed RAW: PageHero strips the leading `// ` and
+           redraws it aria-hidden. `scrollTarget` is a selector, not an id —
+           the first body section belongs to ServiceRungLayout, which does
+           not give it one. */
+      }
+      <PageHero
+        lang={lang}
+        eyebrow={rung.monoLabel}
+        title={copy.h1}
+        lede={copy.lede}
+        image={heroArt}
+        scrollTarget=".rung-page .rung-section"
+        plexus={{
+          /* Born at the rack itself — the model's own light, centre of the
+             lit perimeter — rather than at the dark edge the network is
+             never meant to cross. */
+          originX: 0.5,
+          originY: 0.46,
+          anchor: { x: 0.5, y: 0.46, width: 1280, height: 720 },
+        }}
+      >
+        <p class="onprem-links" slot="under-lede">
+          {copy.linksPre}<a href={`/${lang}/trust/`}>{copy.linksTrust}</a>{copy.linksMid}<a
+            href={`/${lang}/services/rag-pilot/`}>{copy.linksNeighbour}</a
+          >{copy.linksPost}
+        </p>
+      </PageHero>
+    </Fragment>
+
+    {
+      /* ServiceRungLayout's default slot — the extension point between the
+         engagement terms and the FAQ, unused by any consumer until now.
+         The legal research (`.system/legal/g11-decision.md` §3.4) separates
+         the two engagements: during deployment nothing productive is handed
+         over, during support the access question returns. This block states
+         the WORKING ORDER only, never a legal qualification of it — whether
+         that order may be described in legal terms on a marketing page is
+         question 4 to the lawyer, not this page's to answer. */
+    }
+    <section class="onprem-modes" aria-labelledby="onprem-modes-heading">
+      <div class="container">
+        <p class="onprem-modes__eyebrow text-mono">
+          <span aria-hidden="true">// </span>{copy.modes.eyebrow}
+        </p>
+        <h2 class="onprem-modes__heading" id="onprem-modes-heading">{copy.modes.heading}</h2>
+        <p class="onprem-modes__intro">{copy.modes.intro}</p>
+        <div class="onprem-modes__grid">
+          {
+            copy.modes.cards.map((card) => (
+              <article class="onprem-modes__card">
+                <p class="onprem-modes__label text-mono" aria-hidden="true">
+                  {card.label}
+                </p>
+                <h3 class="onprem-modes__title">{card.title}</h3>
+                <p class="onprem-modes__body">{card.body}</p>
+              </article>
+            ))
+          }
+        </div>
+        <p class="onprem-modes__note">{copy.modes.note}</p>
+      </div>
+    </section>
+  </ServiceRungLayout>
+</BaseLayout>
+
+<script>
+  // The homepage scroll engine (etalon manners). Reduced motion turns this
+  // off at the source — initLenis() is a no-op returning null.
+  import { initLenis } from '@scripts/lenis-init';
+
+  // Hero motion parity with the rest of the family: the lede drifts on a
+  // light cursor parallax. PageHero deliberately does NOT ship this (its
+  // README, "What it does NOT do") — it belongs to the caller, and it is the
+  // one response to the cursor this page owes the reader (canon 10 §7 step 7,
+  // question 3). Desktop fine-pointer only, reduced-motion excluded, listener
+  // passive. The inline transform cannot fight PageHero's entrance:
+  // `page-hero-rise` is finished long before a cursor has travelled, and the
+  // infinite breath it leaves behind animates `filter`, not `transform`.
+  function initOnpremHeroManners(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const hero = document.querySelector<HTMLElement>('.page-hero');
+    const lede = document.querySelector<HTMLElement>('.page-hero__lede');
+    if (!hero || !lede) return;
+
+    hero.addEventListener(
+      'mousemove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        lede.style.transform = `translate(${nx * -3}px, ${ny * -2}px)`;
+      },
+      { passive: true }
+    );
+
+    hero.addEventListener('mouseleave', () => {
+      lede.style.transform = '';
+    });
+  }
+
+  /**
+   * BODY MOTION — rewritten 2026-08-24 against `.system/canon/10-motion.md`.
+   *
+   * WHAT WAS WRONG. The previous version ran ONE tween per `<section>`:
+   * `gsap.from(el, { opacity: 0, y: 24, duration: 0.7, ease: 'power2.out',
+   * scrollTrigger: { trigger: el, start: 'top 88%' } })` over
+   * `.rung-page .rung-section`. Those numbers are the etalon's
+   * (geo-audit:640-648) — but there they animate a single eyebrow, heading
+   * or anchor, and `top 88%` is the dictionary threshold for exactly that,
+   * "мелкий текстовый элемент" (canon §4.4). Hung on a whole section 700-900
+   * px tall, the trigger fires when the section's TOP crosses 88% of the
+   * viewport — i.e. when roughly 12% of the screen height of it is showing —
+   * and the 0.7 s tween is over while the body of the block is still below
+   * the fold. By the time the reader's eye reaches the text there is nothing
+   * left to see. The animation existed, both gates passed, the trigger
+   * fired: it simply played off-screen. That is the failure the etalon names
+   * in its own comment (geo-audit:632-636 — a stagger "played below the fold
+   * invisibly and looked like 'no animation'"). And nothing INSIDE a section
+   * moved at all — no cascade, no wave down the lists — so canon §7 step 7
+   * questions 1 and 2 were both answered "no".
+   *
+   * WHAT IT IS NOW. Per element, by role, with the dictionary's values
+   * (§4.3 durations and eases, §4.4 thresholds):
+   *   heading      0.8 / expo.out   / y 40          / top 85%
+   *   card, panel  0.7 / expo.out   / y 40 + scale  / top 82%
+   *   list         0.5 / expo.out   / stagger 0.08  / top 80%
+   *   small text   0.7 / power2.out / y 24          / top 88%
+   *   final CTA    0.9 / back.out(1.4)              / top 75%
+   * One ordered query does the dispatch, so triggers are created top-down
+   * the way ScrollTrigger wants them (canon §7 step 6, check 15).
+   *
+   * The body below the hero is ServiceRungLayout's shared markup plus
+   * FaqSection and ServiceCta — reached here only by querying their already
+   * public class names, never by editing those components.
+   *
+   * Content is never hidden by CSS: gsap.from()/fromTo() hide and reveal
+   * only once they actually run, and clearProps hands each element back to
+   * the stylesheet on completion, so a failed import or a bfcache restore
+   * leaves a fully visible page.
+   */
+  async function initOnpremBodyReveals(): Promise<void> {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    try {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      const HEADING = '.rung-section__heading, .faq__heading, .onprem-modes__heading';
+      const PANEL = '.rung-guarantee, .rung-retainer, .onprem-modes__card, .service-cta__panel';
+      const LIST = '.rung-columns .rung-list, .rung-list--terms, .faq__list';
+      const CTA = '.service-cta__panel';
+
+      // One query, document order — the order ScrollTrigger prefers for
+      // creation, and the reason this is a dispatch and not five passes.
+      const ORDERED = [
+        HEADING,
+        PANEL,
+        LIST,
+        '.rung-proof__eyebrow',
+        '.rung-proof__text',
+        '.faq__eyebrow',
+        '.onprem-modes__eyebrow',
+        '.onprem-modes__intro',
+        '.onprem-modes__note',
+      ].join(', ');
+
+      // A keyboard user tabbing ahead of the trigger must never land on an
+      // invisible link, and several of these blocks hold real ones.
+      // Typed structurally, not as `gsap.core.Tween`: gsap arrives through a
+      // dynamic import here, so naming its type would drag the module's
+      // types back into the static graph the import gate exists to avoid.
+      const guard = (el: HTMLElement, tween: { progress: (value: number) => void }): void => {
+        el.addEventListener('focusin', () => tween.progress(1), { once: true });
+      };
+
+      document.querySelectorAll<HTMLElement>(ORDERED).forEach((el) => {
+        if (el.matches(LIST)) {
+          const items = el.querySelectorAll<HTMLElement>(':scope > li');
+          if (items.length === 0) return;
+          const tween = gsap.fromTo(
+            items,
+            { opacity: 0, y: 24 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.5,
+              stagger: 0.08,
+              ease: 'expo.out',
+              clearProps: 'all',
+              scrollTrigger: { trigger: el, start: 'top 80%' },
+            }
+          );
+          guard(el, tween);
+          return;
+        }
+
+        if (el.matches(CTA)) {
+          // The page's last word gets the section-accent overshoot.
+          const tween = gsap.fromTo(
+            el,
+            { opacity: 0, y: 40, scale: 0.94 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.9,
+              ease: 'back.out(1.4)',
+              clearProps: 'all',
+              scrollTrigger: { trigger: el, start: 'top 75%' },
+            }
+          );
+          guard(el, tween);
+          return;
+        }
+
+        if (el.matches(PANEL)) {
+          const tween = gsap.fromTo(
+            el,
+            { opacity: 0, y: 40, scale: 0.94 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.7,
+              ease: 'expo.out',
+              clearProps: 'all',
+              scrollTrigger: { trigger: el, start: 'top 82%' },
+            }
+          );
+          guard(el, tween);
+          return;
+        }
+
+        if (el.matches(HEADING)) {
+          const tween = gsap.from(el, {
+            opacity: 0,
+            y: 40,
+            duration: 0.8,
+            ease: 'expo.out',
+            clearProps: 'all',
+            scrollTrigger: { trigger: el, start: 'top 85%' },
+          });
+          guard(el, tween);
+          return;
+        }
+
+        const tween = gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.7,
+          ease: 'power2.out',
+          clearProps: 'all',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+        guard(el, tween);
+      });
+    } catch (err) {
+      // No rescue pass needed — content was never hidden.
+      console.error('[on-prem-ai] body reveals failed to load:', err);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initLenis();
+      initOnpremHeroManners();
+      void initOnpremBodyReveals();
+    });
+  } else {
+    initLenis();
+    initOnpremHeroManners();
+    void initOnpremBodyReveals();
+  }
+</script>
+
+<style>
+  /* The links row under the lede. It lives in PageHero's `under-lede` slot,
+     so it carries THIS file's scope and PageHero cannot style it — only the
+     wrapper's gap is the component's. The entrance comes free with that
+     wrapper (`page-hero__extras`). */
+  .onprem-links {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    max-width: 52ch;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .onprem-links a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: var(--transition-colors);
+  }
+
+  .onprem-links a:hover {
+    color: var(--accent-green-300);
+  }
+
+  /* ── Two contracts, not one ─────────────────────────────────────────
+     Sits in ServiceRungLayout's default slot. That component's own
+     `.rung-section` spacing is scoped to its markup and cannot reach here,
+     so the rhythm is restated from the same tokens it uses. */
+  .onprem-modes {
+    margin-bottom: var(--space-12);
+  }
+
+  .onprem-modes__eyebrow {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-2);
+  }
+
+  .onprem-modes__heading {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  .onprem-modes__intro,
+  .onprem-modes__note {
+    max-width: var(--container-narrow);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .onprem-modes__note {
+    color: var(--text-muted);
+    margin-top: var(--space-6);
+  }
+
+  .onprem-modes__grid {
+    max-width: var(--container-narrow);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+    margin-top: var(--space-6);
+  }
+
+  .onprem-modes__card {
+    border: 1px solid var(--border-subtle);
+    border-left: 2px solid var(--accent-green-300);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: var(--bg-void);
+    padding: var(--space-6);
+    transition:
+      border-color var(--duration-normal) var(--ease-out),
+      background-color var(--duration-normal) var(--ease-out);
+  }
+
+  /* The one hover this block owes the reader. `transform` is deliberately
+     NOT touched: the entrance tween writes to it and clearProps releases it,
+     and a competing hover transform is exactly how that fight is lost. */
+  .onprem-modes__card:hover {
+    border-color: var(--accent-green-400);
+    background-color: var(--bg-surface);
+  }
+
+  .onprem-modes__label {
+    font-size: var(--text-xs);
+    color: var(--text-ghost);
+    margin-bottom: var(--space-2);
+  }
+
+  .onprem-modes__title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-medium);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-3);
+  }
+
+  .onprem-modes__body {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  /* Mobile block LAST in the sheet — same-specificity rules are decided by
+     source order, the trap PageHero's README calls out by name. */
+  @media (max-width: 767px) {
+    .onprem-modes__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
