@@ -1,3 +1,9 @@
+<!-- Styles travel inside the JS chunk and are appended to <head> on first
+     mount, instead of being emitted as a stylesheet. This component is only
+     reachable through SynapseTerminal's lazy chunk, and the reason is the
+     same as there — see the note at the top of SynapseTerminal.svelte. -->
+<svelte:options css="injected" />
+
 <script lang="ts">
   /**
    * SynapseSidebar.svelte
@@ -239,12 +245,16 @@
 ></div>
 
 <!-- ── Panel ───────────────────────────────────────────────────────────────── -->
+<!-- No explicit role: <aside> is the `complementary` landmark natively and
+     may not carry role="navigation" (axe aria-allowed-role, Lighthouse a11y
+     2026-09-20). It is not a <nav> either — beside the conversation list it
+     holds the account block and the delete dialog, and the list already has
+     its own role="list" + label. The aria-label keeps the landmark named. -->
 <aside
   bind:this={panelEl}
   class="sidebar-panel"
   style="transform: translateX(-280px); opacity: 0; visibility: hidden;"
   aria-label={t(uiLang, 'synapse.sidebar.history')}
-  role="navigation"
 >
   <!-- Header -->
   <div class="sidebar-header">
@@ -498,13 +508,49 @@
   }
 
   .sidebar-logo__dot {
+    position: relative;
     display: inline-block;
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: #00ffd5;
-    box-shadow: 0 0 8px hsla(175, 100%, 50%, 0.6);
     animation: logo-pulse 2.4s ease-in-out infinite;
+  }
+
+  /* The pulse used to widen the dot's own box-shadow at 50%, which keeps the
+     whole animation on the main thread (Lighthouse non-composited-animations:
+     "Unsupported CSS Property: box-shadow", 2026-09-20). Both halos now live
+     on pseudo-elements with STATIC shadows, and only their opacity breathes —
+     opacity and transform are the two properties the compositor owns.
+
+     Two pseudos, not one, so the extremes match the old keyframe exactly:
+     the old 50% frame set `box-shadow: 0 0 14px @0.9`, and box-shadow is a
+     shorthand, so that REPLACED the resting `0 0 8px @0.6` rather than adding
+     to it. A first rewrite kept the 8px halo on the dot itself under a fading
+     14px pseudo, which summed to a brighter peak (audit 2026-09-21). Now:
+       rest (0% / 100%): ::before 8px@0.6 at opacity 1, ::after 14px@0.9 at 0
+       peak (50%):       ::before at 0,                  ::after at 1
+     i.e. 8px@0.6 alone at rest and 14px@0.9 alone at peak, the old numbers;
+     in between the two crossfade instead of the old interpolated single
+     shadow. Both pseudos scale with the dot because they sit inside it,
+     exactly as the shadow used to. */
+  .sidebar-logo__dot::before,
+  .sidebar-logo__dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+  }
+
+  .sidebar-logo__dot::before {
+    box-shadow: 0 0 8px hsla(175, 100%, 50%, 0.6);
+    animation: logo-rest 2.4s ease-in-out infinite;
+  }
+
+  .sidebar-logo__dot::after {
+    box-shadow: 0 0 14px hsla(175, 100%, 50%, 0.9);
+    opacity: 0;
+    animation: logo-glow 2.4s ease-in-out infinite;
   }
 
   @keyframes logo-pulse {
@@ -516,7 +562,36 @@
     50% {
       opacity: 1;
       transform: scale(1.3);
-      box-shadow: 0 0 14px hsla(175, 100%, 50%, 0.9);
+    }
+  }
+
+  @keyframes logo-rest {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes logo-glow {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* Static state under reduced motion = the resting look: 8px halo on, 14px
+     halo off (its base opacity is 0). */
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar-logo__dot,
+    .sidebar-logo__dot::before,
+    .sidebar-logo__dot::after {
+      animation: none;
     }
   }
 

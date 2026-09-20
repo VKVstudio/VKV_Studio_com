@@ -120,6 +120,64 @@ export default defineConfig({
   // 'unsafe-inline' stays for now. Revisit if Astro exposes style-src-attr,
   // or if the parallax stops using inline style attributes.
   compressHTML: true,
+  build: {
+    // Every page's CSS ships inside the HTML instead of as <link rel="stylesheet">.
+    //
+    // WHY, measured 2026-09-20 on /en/: the home page shipped FIVE render-blocking
+    // stylesheets (index 74.6 KB raw / 15.3 KiB over the wire, BaseLayout 14.3/5.5,
+    // PricingCard 3.7/2.6, FaqSection 2.0/2.4, MagneticCard 0.36/1.9) and Lighthouse
+    // charged 130-170 ms mobile / 10-70 ms desktop for them — a sixth
+    // (SynapseTerminal) appeared the same day, which is the point: every new
+    // component with scoped CSS silently adds another blocking round trip. They must
+    // ALL land before the first paint, and most are under 4 KB — per-request
+    // overhead with almost no payload under it.
+    //
+    // Astro's default here is already 'auto', so this looks redundant. It is not:
+    // 'auto' delegates the decision to `shouldInlineAsset(source, file,
+    // vite.build.assetsInlineLimit)` (node_modules/astro/dist/core/build/plugins/
+    // plugin-css.js:270), and this config pins assetsInlineLimit to 0 below — which
+    // means 'auto' inlines NOTHING. That is why a 360-byte MagneticCard.css was
+    // still costing a request. 'auto' + a raised threshold was the other candidate
+    // and was rejected: assetsInlineLimit is global, so raising it to ~4 KB would
+    // also start base64-ing images and fonts into the CSS, which is a different
+    // (and unwanted) trade. There is no CSS-only threshold knob.
+    //
+    // Measured on /en/ (brotli q11, what Cloudflare serves): a COLD visit gets
+    // SMALLER, not bigger — 13.7 KB HTML + 17.1 KB CSS = 30.8 KB before, 28.2 KB as
+    // one document after, because a single compression window over HTML+CSS beats
+    // six separate streams. The round trips go away for free.
+    //
+    // The cost lands on the two other axes. (1) A repeat visitor used to get the
+    // CSS from the `/_astro/* immutable` bucket in public/_headers for nothing and
+    // now re-downloads it with every HTML revalidation: +14.5 KB per pageview.
+    // (2) The same CSS is duplicated into all 36 pages, so a full crawl of the site
+    // goes 487 KB -> 671 KB compressed. Both are accepted: traffic here is
+    // overwhelmingly single-page arrivals from search and AI answers, so the
+    // cross-page cache was being paid for on every first visit and collected on
+    // almost none.
+    //
+    // Measured 2026-09-21 on a Cloudflare Pages preview of this tree vs the live
+    // site, Lighthouse 13.5 mobile: render-blocking-insight went from failing (5
+    // stylesheets, est. 130-170 ms) to passing with no items, and stylesheet
+    // requests dropped 5 -> 0. The document itself went from 17.6 KB to ~35.7 KB
+    // over the wire (brotli) while the separate 17.1 KB of CSS disappeared —
+    // roughly byte-neutral per cold visit, not a net win. FCP and LCP moved
+    // within run-to-run noise (no reproducible gain either way), and Speed Index
+    // did NOT improve. The LCP element is hero text held back ~2.2s by the intro
+    // animation, which is a separate fix — this change was never expected to move
+    // LCP.
+    //
+    // Does not disturb the -webkit-backdrop-filter situation documented under
+    // vite.build.cssTarget: inlining moves the emitted CSS text, it does not
+    // re-generate it. The CSS text itself is unchanged — every one of the 30
+    // pre-inlining .css files appears verbatim inside the post-inlining HTML, and
+    // per-page inlined CSS equals the concatenation of the previously-external
+    // sheets for all 36 pages. (A raw -webkit-backdrop-filter/backdrop-filter grep
+    // count across the whole dist will NOT match before vs after — inlining
+    // duplicates each shared stylesheet into every page that uses it, so counts
+    // multiply roughly 4x; that's expected and not a regression.)
+    inlineStylesheets: 'always',
+  },
   server: {
     port: 4173,
     host: 'localhost',

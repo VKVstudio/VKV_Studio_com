@@ -14,10 +14,41 @@
   interface Props {
     /** Optional click callback — when provided, fires instead of tooltip toggle */
     onActivate?: () => void;
+    /** First sign the visitor is about to use the orb: pointer enters it,
+        keyboard focus lands on it, or it is clicked. Fires only once the
+        orb is `ready` (before that it has pointer-events:none and
+        tabindex=-1, so none of those events can reach it). SynapseApp uses
+        it to mount the lazily-loaded terminal ahead of the click. */
+    onIntent?: () => void;
+    /** The scroll gate opened (`.ready` was added for the first time).
+        SynapseApp uses it to warm the terminal chunk in an idle slot. */
+    onReady?: () => void;
+    /** Scale the orb away (1→0) while the terminal is open. A CSS transition
+        on the `scale` property — see the stylesheet for why not GSAP. Only
+        ever true once the terminal is mounted (SynapseApp derives it from
+        that), so the orb never shrinks to nothing with nothing behind it. */
+    collapsed?: boolean;
+    /** The visitor clicked, the terminal chunk has not landed yet: the orb
+        stays where it is, reports aria-busy and pulses until the terminal
+        mounts and takes over (or the fetch fails and `pending` drops). */
+    pending?: boolean;
+    /** Two failed opens in a row: the label and a small tooltip say the
+        assistant did not load and that a page reload recovers (the import
+        is retried on every click anyway — SynapseApp explains why that
+        alone is not enough). Cleared by the next successful mount. */
+    failed?: boolean;
     /** Site language for the a11y label / tooltip. Defaults to EN if omitted. */
     lang?: Lang;
   }
-  const { onActivate, lang = 'en' }: Props = $props();
+  const {
+    onActivate,
+    onIntent,
+    onReady,
+    collapsed = false,
+    pending = false,
+    failed = false,
+    lang = 'en',
+  }: Props = $props();
 
   let containerEl: HTMLElement | undefined = $state();
   let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -26,16 +57,45 @@
 
   let tooltipVisible: boolean = $state(false);
   let isReady: boolean = $state(false);
+  /** Escape hides the failure tooltip (the label keeps saying it). Re-armed
+      whenever `failed` clears, so a later failure shows it again. Reads
+      `failed`, writes `failedTipDismissed` — two different states. */
+  let failedTipDismissed: boolean = $state(false);
+  $effect(() => {
+    if (!failed) failedTipDismissed = false;
+  });
 
   const ariaExpanded = $derived(tooltipVisible ? 'true' : 'false');
+
+  /** Failure beats pending beats ready: a visitor whose second click just
+      failed must hear why, not "loading". */
+  const ariaLabel = $derived(
+    failed
+      ? t(lang, 'synapse.brain.failed')
+      : pending
+        ? t(lang, 'synapse.brain.pending')
+        : isReady
+          ? t(lang, 'synapse.brain.open')
+          : t(lang, 'synapse.brain.loading')
+  );
 
   let engine: BrainMorphInstance | null = null;
 
   $effect(() => {
     if (!containerEl || !canvasEl || !videoEl || !onlineDocEl) return;
 
+    // `.ready` is toggled by brain-morph.ts (class + inline styles, outside
+    // Svelte's reactivity), so it is mirrored into state here. onReady fires
+    // on the first false→true edge only: the class comes and goes with every
+    // scroll past #about, and the warm-up it triggers is a one-shot.
+    let readyAnnounced = false;
     const observer = new MutationObserver(() => {
-      isReady = containerEl?.classList.contains('ready') ?? false;
+      const ready = containerEl?.classList.contains('ready') ?? false;
+      isReady = ready;
+      if (ready && !readyAnnounced) {
+        readyAnnounced = true;
+        onReady?.();
+      }
     });
     observer.observe(containerEl, { attributes: true, attributeFilter: ['class'] });
 
@@ -43,21 +103,26 @@
     if (!heroSection) return;
 
     engine = initBrainMorph({
-      canvas:      canvasEl,
-      video:       videoEl,
-      container:   containerEl,
-      onlineDoc:   onlineDocEl,
+      canvas: canvasEl,
+      video: videoEl,
+      container: containerEl,
+      onlineDoc: onlineDocEl,
       heroSection: heroSection,
     });
 
     // Publish how much of the footer is on screen so the orb (fixed
     // bottom-right) can ride above it instead of squatting on the footer's
     // links — same contract as CookieConsent's --consent-sheet-height.
-    // Threshold steps + the CSS `bottom` transition smooth out the ride.
-    // `bottom` is safe to drive from CSS: no script writes it inline —
-    // brain-morph.ts writes only opacity/pointerEvents/cursor, and the one
-    // inline `transform` writer (SynapseApp's GSAP scale tween) is already
-    // neutralized on mobile by this file's `transform: none !important`.
+    // Threshold steps + the CSS `translate` transition smooth out the ride.
+    // `translate` is safe to drive from CSS: no script writes a transform
+    // inline — brain-morph.ts writes only opacity/pointerEvents/cursor, and
+    // the collapse is a class toggle, not a GSAP tween (GSAP 3.15.0, the
+    // version this project pins, stamps `translate: none` inline on any
+    // element it tweens, which would have frozen the ride — first seen in
+    // the CLS culprit snippet 2026-09-20, re-checked against gsap.min.js
+    // 3.15.0 in headless Chrome 2026-09-21: after gsap.set(el, { scale: 0 })
+    // the element's style attribute carries `translate: none; rotate: none;
+    // scale: none; transform: scale(0, 0)`).
     const footerEl = document.querySelector('footer');
     let footerObserver: IntersectionObserver | null = null;
     if (footerEl) {
@@ -85,10 +150,18 @@
     };
   });
 
+  function handleIntent(): void {
+    if (!isReady) return;
+    onIntent?.();
+  }
+
   function handleClick(): void {
     if (!isReady) return;
     // If parent provided onActivate callback (SynapseApp), delegate to it
     if (onActivate) {
+      // Belt and braces: a tap on a touch screen does fire pointerenter
+      // first, but a synthetic click (assistive tech, tests) may not.
+      onIntent?.();
       onActivate();
       return;
     }
@@ -103,6 +176,7 @@
     }
     if (event.key === 'Escape') {
       tooltipVisible = false;
+      failedTipDismissed = true;
     }
   }
 </script>
@@ -111,13 +185,20 @@
 <div
   bind:this={containerEl}
   class="synapse-container"
+  class:synapse-container--collapsed={collapsed}
+  class:synapse-container--pending={pending}
+  class:synapse-container--failed={failed}
   role="button"
   tabindex={isReady ? 0 : -1}
-  aria-label={isReady ? t(lang, 'synapse.brain.open') : t(lang, 'synapse.brain.loading')}
+  aria-label={ariaLabel}
+  aria-busy={pending ? 'true' : 'false'}
+  style:cursor={pending ? 'progress' : isReady ? 'pointer' : null}
   aria-expanded={ariaExpanded}
   aria-haspopup="dialog"
   onclick={handleClick}
   onkeydown={handleKeydown}
+  onpointerenter={handleIntent}
+  onfocus={handleIntent}
 >
   <picture>
     <source srcset="/neural-brain.avif" type="image/avif" />
@@ -158,7 +239,7 @@
   <video
     bind:this={videoEl}
     class="synapse-video-source"
-    data-src="/brain-morph.mp4"
+    data-src="/brain-morph.v2.mp4"
     data-poster="/neural-brain.webp"
     preload="none"
     muted
@@ -166,11 +247,7 @@
     aria-hidden="true"
   ></video>
 
-  <canvas
-    bind:this={canvasEl}
-    class="synapse-canvas"
-    aria-hidden="true"
-  ></canvas>
+  <canvas bind:this={canvasEl} class="synapse-canvas" aria-hidden="true"></canvas>
 
   <span
     bind:this={onlineDocEl}
@@ -192,6 +269,15 @@
   </div>
 {/if}
 
+<!-- Two failed opens in a row: the same tooltip surface, one line, polite
+     live region so a screen reader hears it without focus moving. Hidden
+     while a retry is pending, on Escape, and gone once a mount succeeds. -->
+{#if failed && !pending && !failedTipDismissed}
+  <div class="synapse-tooltip synapse-tooltip--failed" role="status" aria-live="polite">
+    <p class="synapse-tooltip__sub">{t(lang, 'synapse.brain.failed')}</p>
+  </div>
+{/if}
+
 <style>
   /* `<picture>` is inline by default — make it a transparent wrapper so the
      absolutely-positioned fallback `<img>` inside lays out exactly as before. */
@@ -202,13 +288,34 @@
   /* ── Container: ALWAYS a circle ────────────────────────────────── */
   .synapse-container {
     position: fixed;
-    /* --footer-clearance on the BASE rule, not just mobile: at 768-1023px
-       (and desktop) the orb's 80px box fully covered the footer's GitHub/
-       LinkedIn links at page bottom — measured, not guessed. env(): landscape
+    /* `bottom` is now STATIC: the orb's resting edge and nothing else.
+       The ride above the footer / cookie sheet is `translate` below, on the
+       compositor. It used to be folded into `bottom` and transitioned there,
+       which Lighthouse flagged twice on 2026-09-20: a non-composited
+       animation (Unsupported CSS Property: bottom) AND the page's whole CLS —
+       0.0162 of 0.0163 — because a fixed element moving through `bottom`
+       counts as a layout shift while a transform does not. env(): landscape
        notch side + gesture strip, same as the mobile block. */
-    bottom: calc(24px + var(--footer-clearance, 0px));
+    bottom: 24px;
     right: calc(24px + env(safe-area-inset-right, 0px));
     z-index: 90;
+
+    /* --footer-clearance on the BASE rule, not just mobile: at 768-1023px
+       (and desktop) the orb's 80px box fully covered the footer's GitHub/
+       LinkedIn links at page bottom — measured, not guessed. Negative =
+       upward. The individual `translate` property, not `transform`: it is
+       untouched by the mobile `transform: none` rule below and cannot be
+       clobbered by any inline transform writer. */
+    translate: 0 calc(-1 * var(--footer-clearance, 0px));
+    /* Collapse state for SynapseApp (terminal open). `scale` is its own
+       property for the same reason, and composes with the translate above
+       around the centre — the orb shrinks in place, where it currently rides.
+       This replaced a GSAP scale tween: GSAP 3.15.0 (the pinned version)
+       writes `translate: none` inline on first touch of an element (seen in
+       the Lighthouse snippet 2026-09-20, re-checked 2026-09-21 — see the
+       script comment above the footer observer), which would have pinned
+       the ride at zero for the rest of the visit. */
+    scale: 1;
 
     width: 80px;
     height: 80px;
@@ -228,17 +335,54 @@
       border-color var(--duration-normal) var(--ease-out);
   }
 
-  /* The cookie-sheet / footer offsets live in the mobile block at the BOTTOM
-     of this stylesheet — they must come after the 767px geometry block to win
-     the cascade. A 640px block here used to hold the consent offset, and the
-     later 767px `bottom: 16px` silently overrode it on every phone. */
+  /* On EVERY viewport, phones included — a conscious call (2026-09-21), not
+     a side effect. The old GSAP collapse wrote an inline `transform`, which
+     the mobile block's historic `transform: none !important` cancelled, so
+     phones never saw the orb shrink; the individual `scale` property is not
+     touched by that rule. Collapsing on phones is the better behaviour: the
+     terminal is a fixed inset:0 overlay at z-index 9999, so the orb is
+     covered either way, and the spring back on close (0→1) is the one cue
+     that shows where the assistant went. The historic rule stays as it is —
+     removing it is the owner's call. */
+  .synapse-container--collapsed {
+    scale: 0;
+  }
+
+  /* Click landed, terminal chunk still in flight: the orb stays put (scale
+     stays 1 — `collapsed` cannot be true before the terminal exists) and
+     signals work-in-progress. The pulse is opacity only (compositor) and
+     lives behind the motion query below. The static cue that survives
+     reduced motion, next to aria-busy, is `cursor: progress` — written by
+     the `style:cursor` directive on the element, not by a rule here: a
+     class rule loses to the inline `cursor: pointer` brain-morph.ts writes
+     in the ready state (measured 2026-09-21 — the first cut used a rule and
+     the probe still read `pointer` while pending). */
+
+  /* Two failed opens: a warning ring, and the tooltip below says why. The
+     orb keeps its hit area — a click retries the import. */
+  .synapse-container--failed {
+    border-color: var(--color-warning);
+  }
+
+  .synapse-tooltip--failed {
+    border-color: var(--color-warning);
+  }
+
+  .synapse-tooltip--failed .synapse-tooltip__sub {
+    color: var(--text-secondary);
+    letter-spacing: normal;
+    max-width: 20ch;
+  }
+
+  /* The cookie-sheet offset lives in the 640px block at the BOTTOM of this
+     stylesheet — it must come after the 767px geometry block to win the
+     cascade on `translate`. A 640px block here used to hold the consent
+     offset, and the later 767px block silently overrode it on every phone. */
 
   /* Ready glow */
   .synapse-container:global(.ready) {
     border-color: var(--border-accent);
-    box-shadow:
-      var(--shadow-lg),
-      var(--glow-green);
+    box-shadow: var(--shadow-lg), var(--glow-green);
   }
 
   .synapse-container:global(.ready):hover {
@@ -295,8 +439,12 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .synapse-fallback { display: block; }
-    .synapse-canvas   { display: none;  }
+    .synapse-fallback {
+      display: block;
+    }
+    .synapse-canvas {
+      display: none;
+    }
     .synapse-container {
       opacity: 1 !important;
     }
@@ -366,22 +514,32 @@
   }
 
   @keyframes tooltip-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* ── Mobile ────────────────────────────────────────────────────── */
   @media (max-width: 767px) {
     .synapse-container {
       left: auto !important;
-      /* --footer-clearance: published by the effect above while the footer
-         intersects the viewport — the orb rides up so it never squats on the
-         footer's links (every mobile visitor ends the page there).
-         env(safe-area-inset-bottom): with viewport-fit=cover the page reaches
+      /* env(safe-area-inset-bottom): with viewport-fit=cover the page reaches
          the true screen edge — in the installed PWA (standalone) the old flat
-         16px put the orb inside the home-indicator swipe strip. */
-      bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--footer-clearance, 0px));
+         16px put the orb inside the home-indicator swipe strip.
+         The footer ride is the base rule's `translate` — it applies here
+         unchanged, so it no longer needs restating in this block. */
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
       right: calc(16px + env(safe-area-inset-right, 0px));
+      /* Historic guard against inline transforms (pre-dates the individual
+         `translate`/`scale` properties this file now rides on, which it does
+         not touch — so the collapse above DOES run on phones now; see the
+         note on .synapse-container--collapsed). Kept: harmless, and removal
+         is the owner's call. */
       transform: none !important;
       width: 64px;
       height: 64px;
@@ -399,34 +557,57 @@
      point into the assistant is buried under the consent prompt.
      --consent-sheet-height is published by CookieConsent.svelte only while
      the sheet is visible; once dismissed the property disappears and this
-     collapses back. AFTER the 767px block on purpose: an earlier placement
-     lost the cascade to `bottom: 16px` above and was dead on every phone. */
+     collapses back. This is the move Lighthouse used to score as CLS on
+     every first visit — now a transform, which layout-shift ignores.
+     AFTER the 767px block on purpose: an earlier placement lost the cascade
+     and was dead on every phone. */
   @media (max-width: 640px) {
     .synapse-container {
-      bottom: calc(
-        16px + env(safe-area-inset-bottom, 0px) + var(--consent-sheet-height, 0px) +
-          var(--footer-clearance, 0px)
-      );
+      translate: 0 calc(-1 * (var(--consent-sheet-height, 0px) + var(--footer-clearance, 0px)));
     }
   }
 
-  @media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+  /* One block for every viewport: the ride above the footer / cookie sheet
+     eases (without it the observer's 1% steps would jump-cut), and the
+     collapse behind the terminal springs. --ease-spring is cubic-bezier
+     (0.34, 1.56, 0.64, 1) — the same curve as GSAP's back.out(1.7) that the
+     old tween used, so the feel is unchanged. Under reduced motion neither
+     transitions: the state still changes (the orb must still hide behind the
+     terminal and come back), only the tween goes — the house rule. */
+  @media (prefers-reduced-motion: no-preference) {
     .synapse-container {
       transition:
         box-shadow var(--duration-normal) var(--ease-out),
         border-color var(--duration-normal) var(--ease-out),
-        bottom var(--duration-normal) var(--ease-out);
+        translate var(--duration-normal) var(--ease-out),
+        scale 300ms var(--ease-spring);
     }
-  }
 
-  /* Desktop/tablet ride above the footer eases too — without this the new
-     base-rule footer clearance would jump-cut at each observer step. */
-  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
-    .synapse-container {
+    /* Going away is an ease-in (GSAP's power2.in), coming back is the spring. */
+    .synapse-container--collapsed {
       transition:
         box-shadow var(--duration-normal) var(--ease-out),
         border-color var(--duration-normal) var(--ease-out),
-        bottom var(--duration-normal) var(--ease-out);
+        translate var(--duration-normal) var(--ease-out),
+        scale 300ms cubic-bezier(0.55, 0.085, 0.68, 0.53);
+    }
+
+    /* Pending pulse: 1 → 0.55 → 1 every 1.8 s. An animation on opacity
+       outranks the inline `opacity: 1` brain-morph.ts writes in the ready
+       state (animations sit above author inline styles in the cascade), and
+       stops the moment the class goes — the collapse transition then starts
+       from wherever the pulse left off. */
+    .synapse-container--pending {
+      animation: synapse-pending 900ms var(--ease-out) infinite alternate;
+    }
+  }
+
+  @keyframes synapse-pending {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.55;
     }
   }
 
@@ -434,19 +615,29 @@
     /* brain-morph.mp4 is never fetched on mobile (see brain-morph.ts) —
        show the static neural-brain fallback image instead of a blank
        canvas while the hero is in view. */
-    .synapse-fallback { display: block; }
-    .synapse-canvas   { display: none;  }
+    .synapse-fallback {
+      display: block;
+    }
+    .synapse-canvas {
+      display: none;
+    }
 
     /* Once "ready" (About visible): show the STATIC synapse-text <img>,
        never the canvas — on phones the canvas ready-draw silently failed
        and left an empty circle where the brand should be. The circle now
        always shows something real: brain image before ready, wordmark
        after. Canvas stays a desktop-only concern. */
-    .synapse-container:global(.ready) .synapse-fallback  { display: none;  }
-    .synapse-container:global(.ready) .synapse-ready-img { display: block; }
+    .synapse-container:global(.ready) .synapse-fallback {
+      display: none;
+    }
+    .synapse-container:global(.ready) .synapse-ready-img {
+      display: block;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .synapse-tooltip { animation: none; }
+    .synapse-tooltip {
+      animation: none;
+    }
   }
 </style>

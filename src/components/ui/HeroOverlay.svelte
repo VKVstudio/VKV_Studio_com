@@ -93,9 +93,40 @@
   // About/Stack/FAQ far below the fold. IntersectionObserver (lifecycle
   // effect) flips this and starts/stops the loop.
   let heroInView = true;
+  // Page Visibility: a backgrounded tab throttles rAF rather than stopping it
+  // in every engine, and a bfcache restore resumes mid-loop. Written by the
+  // visibilitychange listener, read by gate() — plain variables, no $effect
+  // reads them, so there is nothing for reactivity to loop on.
+  let docVisible = true;
   let frameCount = 0;
   let lastSpawn = [0, 0, 0];
   let lastMouseFork = 0;
+
+  /* ── Frame pacing (same discipline as HeroLangSwitcher) ──────────
+     Every rate in animateNeural — SPAWN_INTERVAL, GROW_DURATION, the 0.03
+     settle lerp, MOUSE_LERP, DRIFT_SPEED, the tip pulse — was authored as
+     "per 60fps frame". The loop no longer paints at 60fps everywhere, so
+     each paint receives a `step` = how many 60fps frames it stands for, and
+     frameCount plus the two lerps scale by it. Without that the mobile cap
+     would halve the growth speed of the plexus, which is a visible change.
+     A budget, not a divisor: a 60Hz phone lands on 30fps, a 120Hz one on
+     ~40fps, and the plexus grows at the same rate on all of them. */
+  const FRAME_MS = 1000 / 60;
+  // 0 = uncapped (desktop). 1.5 frames, not 2: a 33.33ms budget compared
+  // against rAF ticks landing at 16.67/33.33ms falls on the wrong side of
+  // the compare whenever a tick jitters late, and the loop drops to 20fps.
+  // 25ms always rejects the 1st tick and always accepts the 2nd.
+  let frameBudgetMs = 0;
+  let lastFrameTs = 0;
+  // Deferred first start (see startLoop). Two handle kinds: Safari has no
+  // requestIdleCallback, and stopLoop must cancel whichever was scheduled.
+  let idleHandle: number | null = null;
+  let idleIsTimeout = false;
+  let hasRunOnce = false;
+  // The 2D context, fetched once in the setup effect. The old loop called
+  // getContext('2d') on every frame; it returns the same object each time,
+  // but it is a call into the canvas bindings per frame for nothing.
+  let ctx: CanvasRenderingContext2D | null = null;
 
   function initNetwork(width: number, height: number): void {
     frameCount = 0;
@@ -218,13 +249,13 @@
     }
   }
 
-  function animateNeural(): void {
-    if (!neuralCanvas) return;
-    const ctx = neuralCanvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
+  /** One paint. `step` = how many 60fps frames this paint stands for. */
+  function animateNeural(step: number): void {
+    if (!neuralCanvas || !ctx) return;
 
-    mouseX += (rawMouseX - mouseX) * MOUSE_LERP;
-    mouseY += (rawMouseY - mouseY) * MOUSE_LERP;
+    // Lerps scaled by step so a 30fps paint moves as far as two 60fps ones.
+    mouseX += (rawMouseX - mouseX) * Math.min(1, MOUSE_LERP * step);
+    mouseY += (rawMouseY - mouseY) * Math.min(1, MOUSE_LERP * step);
 
     const w = neuralCanvas.width;
     const h = neuralCanvas.height;
@@ -235,7 +266,7 @@
     const my = mouseY * vh;
 
     ctx.clearRect(0, 0, w, h);
-    frameCount++;
+    frameCount += step;
 
     // === 1) SPAWN — new nodes when ready (no mouse) ===
     for (let b = 0; b < 3; b++) {
@@ -271,8 +302,9 @@
         const t = frameCount * DRIFT_SPEED;
         const dx = smoothNoise(t + node.noiseOffX, node.noiseOffY) * DRIFT_AMP;
         const dy = smoothNoise(node.noiseOffX, t + node.noiseOffY) * DRIFT_AMP;
-        node.x += (node.baseX + dx - node.x) * 0.03;
-        node.y += (node.baseY + dy - node.y) * 0.03;
+        const settle = Math.min(1, 0.03 * step);
+        node.x += (node.baseX + dx - node.x) * settle;
+        node.y += (node.baseY + dy - node.y) * settle;
       }
     }
 
@@ -427,14 +459,109 @@
         ctx.fill();
       }
     }
+  }
 
-    // Reduced motion: draw exactly one frame, then stop (don't re-request).
-    // Out of view: stop too — the observer below restarts the loop on re-entry.
-    if (!reduceMotion && heroInView) {
-      animFrameId = requestAnimationFrame(animateNeural);
+  /* ── Loop control ───────────────────────────────────── */
+  function tick(ts: number): void {
+    animFrameId = requestAnimationFrame(tick);
+    if (lastFrameTs === 0) {
+      lastFrameTs = ts;
+      animateNeural(1);
+      return;
+    }
+    const elapsed = ts - lastFrameTs;
+    if (frameBudgetMs > 0 && elapsed < frameBudgetMs) return;
+    lastFrameTs = ts;
+    // Clamp: a long task, or a tab the visibility gate caught a beat late,
+    // must not teleport every node three seconds ahead on resume.
+    animateNeural(Math.min(elapsed / FRAME_MS, 3));
+  }
+
+  function startLoop(): void {
+    if (reduceMotion) {
+      // One static paint, no perpetual loop — CSS cannot stop rAF, so this
+      // is where prefers-reduced-motion is honoured for the canvas.
+      animateNeural(1);
+      return;
+    }
+    if (animFrameId !== null || idleHandle !== null) return;
+    lastFrameTs = 0;
+
+    if (hasRunOnce) {
+      // A re-entry (scrolled back to the hero, tab refocused) resumes at
+      // once — an idle deferral here would freeze the plexus in full view.
+      animFrameId = requestAnimationFrame(tick);
+      return;
+    }
+    hasRunOnce = true;
+
+    // Paint ONE frame now so the canvas is never blank while its 1.5s CSS
+    // fade-in runs, then hand the perpetual loop to the idle queue AFTER the
+    // load event. This island hydrates inside the LCP window and the plexus
+    // is decorative; its per-frame work (60 nodes, O(n²) cross-links) was
+    // competing with hero paint and the load for the main thread.
+    // Lighthouse mobile, bootup-time for the HeroOverlay chunk, two builds
+    // off one source snapshot, 2026-09-21, three runs each, twice:
+    //   batch 1 (quiet box)          before 1658 / 1553 / 1454 ms
+    //                                after      0 /   50 /  826 ms
+    //   batch 2 (interleaved, box    before 1334 / 1770 / 1461 ms
+    //   shared with a GPU render)    after   1123 /   83 /   57 ms
+    // Medians 1553 -> 50 and 1461 -> 83. The spread on the "after" side is
+    // whether the idle callback fired inside the trace window at all.
+    animateNeural(1);
+
+    const begin = (): void => {
+      idleHandle = null;
+      if (animFrameId === null && heroInView && docVisible) {
+        animFrameId = requestAnimationFrame(tick);
+      }
+    };
+    const schedule = (): void => {
+      if (typeof requestIdleCallback === 'function') {
+        idleIsTimeout = false;
+        idleHandle = requestIdleCallback(begin, { timeout: 1500 });
+      } else {
+        // Safari: rIC is Baseline "Limited". Plain timeout, same intent.
+        idleIsTimeout = true;
+        idleHandle = window.setTimeout(begin, 600);
+      }
+    };
+    if (document.readyState === 'complete') {
+      schedule();
     } else {
+      // Marker handle so a stopLoop() before `load` cancels the pending start
+      // instead of letting the listener resurrect the loop off-screen.
+      idleIsTimeout = true;
+      idleHandle = window.setTimeout(() => {}, 0);
+      window.addEventListener(
+        'load',
+        () => {
+          if (idleHandle === null) return; // stopLoop() ran first
+          idleHandle = null;
+          schedule();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  function stopLoop(): void {
+    if (animFrameId !== null) {
+      cancelAnimationFrame(animFrameId);
       animFrameId = null;
     }
+    if (idleHandle !== null) {
+      if (idleIsTimeout) clearTimeout(idleHandle);
+      else cancelIdleCallback(idleHandle);
+      idleHandle = null;
+    }
+    lastFrameTs = 0;
+  }
+
+  /** The loop runs only while the hero is on screen AND the tab is visible. */
+  function gate(): void {
+    if (heroInView && docVisible) startLoop();
+    else stopLoop();
   }
 
   /* ── Mouse tracking ─────────────────────────────────── */
@@ -477,36 +604,43 @@
     neuralCanvas.style.width = `${rect.width}px`;
     neuralCanvas.style.height = `${rect.height}px`;
 
-    const ctx = neuralCanvas.getContext('2d');
+    ctx = neuralCanvas.getContext('2d', { alpha: true });
     if (ctx) ctx.scale(dpr, dpr);
 
     reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 30fps on mobile. Same two-clause query as HeroCanvas's hero--static
+    // gate and HeroLangSwitcher's budget — keep them in lockstep. The
+    // measured effect of the budget + the deferred start together is in
+    // the startLoop comment.
+    frameBudgetMs = window.matchMedia(
+      '(max-width: 767px), ((max-height: 767px) and (pointer: coarse))'
+    ).matches
+      ? FRAME_MS * 1.5
+      : 0;
     initNetwork(rect.width, rect.height);
-    // Start animation outside $effect to avoid reactive tracking of mouseX/mouseY.
-    // Under reduced motion, animateNeural draws one frame and does not loop.
-    animFrameId = requestAnimationFrame(animateNeural);
+    docVisible = document.visibilityState === 'visible';
+    // Start outside any reactive read: animateNeural writes mouseX/mouseY
+    // ($state) and this effect must never track them. gate() → startLoop()
+    // paints one frame now and defers the loop to idle time after `load`.
+    gate();
 
     // Visibility gate for the loop (see heroInView above). Observing the
     // container works on both branches: mobile's .hero--static is one 100svh
     // screen, and on desktop this element leaves the viewport when the 800vh
-    // scrub is over — either way, below the fold the orbit stops burning CPU.
+    // scrub is over — either way, below the fold the plexus stops burning CPU.
     const visObserver = new IntersectionObserver((entries) => {
       const last = entries[entries.length - 1];
       if (!last) return;
-      if (last.isIntersecting) {
-        heroInView = true;
-        if (!reduceMotion && animFrameId === null) {
-          animFrameId = requestAnimationFrame(animateNeural);
-        }
-      } else {
-        heroInView = false;
-        if (animFrameId !== null) {
-          cancelAnimationFrame(animFrameId);
-          animFrameId = null;
-        }
-      }
+      heroInView = last.isIntersecting;
+      gate();
     });
     visObserver.observe(containerEl);
+
+    const onVisibility = (): void => {
+      docVisible = document.visibilityState === 'visible';
+      gate();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     // Entrance animation
     setTimeout(() => {
@@ -520,19 +654,20 @@
       neuralCanvas!.height = r.height * dpr;
       neuralCanvas!.style.width = `${r.width}px`;
       neuralCanvas!.style.height = `${r.height}px`;
-      const c = neuralCanvas!.getContext('2d');
-      if (c) c.scale(dpr, dpr);
+      // Assigning width/height reset the context's transform (spec) — same
+      // context object, so re-apply the dpr scale on the cached one.
+      if (ctx) ctx.scale(dpr, dpr);
       initNetwork(r.width, r.height);
       // Resizing cleared the bitmap; under reduced motion no loop repaints it.
-      // Guarded: with the loop running, a direct call would schedule a SECOND
-      // concurrent rAF chain (the tail re-requests when !reduceMotion).
-      if (reduceMotion) animateNeural();
+      // Guarded: with the loop running, tick() repaints within a frame.
+      if (reduceMotion) animateNeural(1);
     };
     window.addEventListener('resize', onResize);
 
     return () => {
-      if (animFrameId !== null) cancelAnimationFrame(animFrameId);
+      stopLoop();
       visObserver.disconnect();
+      document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', onResize);
     };
   });
@@ -558,7 +693,10 @@
 
   <!-- Text layers with parallax -->
   <div class="hero-overlay__content">
-    <p class="hero-overlay__label" style:transform={parallax1}>
+    <!-- data-label feeds the two glow twins (::before / ::after in the CSS):
+         the same nine characters, colour transparent, carrying the resting
+         and the peak text-shadow. See .hero-overlay__label::before. -->
+    <p class="hero-overlay__label" data-label={label} style:transform={parallax1}>
       {label}
     </p>
 
@@ -670,22 +808,107 @@
       color 0.4s ease-out,
       border-color 0.4s ease-out,
       background 0.4s ease-out;
-    text-shadow: 0 0 12px var(--accent-glow);
     cursor: default;
+    /* The two glow twins (::before / ::after, below) are absolutely
+       positioned over this text, so the pill is their positioning root.
+       backdrop-filter already makes it a stacking context; `isolation`
+       states the intent: z-index:-1 children paint ABOVE the pill background
+       and BELOW this element's real, coloured inline text (CSS 2.1 App. E,
+       steps 1 → 2 → 5). That order holds here because the label's glyphs are
+       ordinary text — NOT the case for a background-clip: text element,
+       whose glyphs are its background and paint in step 1, before any
+       negative-z child. That is why the subtitle carries no halo any more. */
+    position: relative;
+    isolation: isolate;
     /* Entrance driven by a CSS keyframe (animation-fill-mode: backwards),
        not the JS-toggled `.is-visible` class — the label paints + animates
        in on its own as soon as CSS is parsed, so it never waits on Svelte
-       hydration (mobile LCP fix; see .hero-overlay__title/__subtitle below
-       for the same pattern). Same duration/delay as before, so the entrance
-       looks identical. */
-    animation:
-      hero-fade-up-20 0.8s ease-out 0.2s backwards,
-      label-breathe 4s ease-in-out 1.5s infinite;
+       hydration.
+
+       THE CASCADE (label → headline → line → CTA, the «резонанс-проход»)
+       and the LCP floors, read together with the title and subtitle rules:
+         label     0.00s  from opacity 0.2   0.8s ease-out
+         headline  0.20s  from opacity 0.2   1.0s ease-out (transform 1.2s)
+         subtitle  0.50s  from opacity 0.1   0.8s ease-out
+         CTA       0.80s  from opacity 0     0.8s ease-out
+         ghost     0.95s  from opacity 0     0.8s ease-out
+       Every element starts at its floor and brightens in that order. With
+       one easing curve, floors that never increase down the list, and delays
+       that never decrease, the painted opacity keeps the order
+       label >= headline >= subtitle >= CTA at EVERY instant (the difference
+       between two neighbours is at least (floor_a − floor_b)·(1 − ease_b),
+       never negative) — so the label always leads, and the line can never
+       be brighter than the headline it sits under. Verified on the built
+       page with every animation paused and stepped through 0–2.5 s
+       (tests/unit/hero-overlay-lcp.test.ts locks the floors and delays).
+       The beats are the original ones, 0.2/0.3/0.3/0.15 s apart; only the
+       0.2 s of emptiness before the first beat is gone, because with floors
+       there is no empty frame to wait through.
+
+       `label-breathe` used to be the second animation here. It animated
+       text-shadow — a paint property — so every one of its frames repainted
+       the text on the main thread and Lighthouse's non-composited-animations
+       audit named this element. The breathing now happens on the twins. */
+    animation: hero-fade-up-20 0.8s ease-out 0s backwards;
   }
 
+  /* The breathing, moved off the real text onto two invisible copies of it.
+     The old keyframes interpolated the pill's text-shadow between the
+     resting `0 0 12px accent-glow` and the peak `0 0 20px accent-glow-strong,
+     0 0 40px accent-glow`. text-shadow is a paint property: every frame
+     repainted the text. Here the real text carries NO shadow; ::before holds
+     the resting shadow and ::after the peak shadow, each on a transparent
+     copy of the same nine characters (content: attr(data-label)) sitting
+     exactly over the real glyphs — same font, size, tracking, padding — and
+     the two cross-fade on OPACITY only, which the compositor handles without
+     touching the text. Both endpoints match the old ones exactly: at rest
+     ::before is at 1 and ::after at 0 (= 12px glow); at the peak ::before is
+     at 0 and ::after at 1 (= 20px strong + 40px glow). Between them the old
+     code interpolated blur radii; this cross-fades two fixed radii — same
+     colours, same 40px reach, glyph-hugging like the shadow it replaces
+     (the wave-1 elliptical box was a 30%-alpha cloud filling the pill).
+     A nine-character twin is text to Chrome's paint-timing detector, but
+     its paint area (the pill measures 135×32 px at 1280 wide) is a fraction
+     of the headline's or the line's, so it cannot become the LCP candidate:
+     across 3 mobile + 3 desktop Lighthouse runs of the built page
+     (2026-09-21) the LCP element was the subtitle on mobile and the
+     headline on desktop, and the non-composited-animations audit listed
+     nothing (the baseline listed the label and the subtitle).
+     `content: attr() / ''` is the alt-text form: assistive tech reads the
+     label once, not three times (Chrome 77+, Safari 17.4+, Firefox 128+;
+     older engines fall back to the plain form and may announce the copy). */
+  .hero-overlay__label::before,
+  .hero-overlay__label::after {
+    content: attr(data-label);
+    content: attr(data-label) / '';
+    position: absolute;
+    inset: 0;
+    padding: inherit;
+    z-index: -1;
+    pointer-events: none;
+    color: transparent;
+    white-space: nowrap;
+    will-change: opacity;
+  }
+
+  .hero-overlay__label::before {
+    text-shadow: 0 0 12px var(--accent-glow);
+    opacity: 1;
+    animation: hero-halo-rest 4s ease-in-out 1.5s infinite;
+  }
+
+  .hero-overlay__label::after {
+    text-shadow:
+      0 0 20px var(--accent-glow-strong),
+      0 0 40px var(--accent-glow);
+    opacity: 0;
+    animation: hero-halo-breathe 4s ease-in-out 1.5s infinite;
+  }
+
+  /* `from` opacity is an LCP floor — see .hero-overlay__subtitle. */
   @keyframes hero-fade-up-20 {
     from {
-      opacity: 0;
+      opacity: 0.2;
       transform: translateY(20px);
     }
     to {
@@ -694,22 +917,36 @@
     }
   }
 
-  @keyframes label-breathe {
+  /* The pair that cross-fades the two twins: rest fades out as peak fades in. */
+  @keyframes hero-halo-breathe {
     0%,
     100% {
-      text-shadow: 0 0 12px var(--accent-glow);
+      opacity: 0;
     }
     50% {
-      text-shadow:
-        0 0 20px var(--accent-glow-strong),
-        0 0 40px var(--accent-glow);
+      opacity: 1;
     }
   }
 
+  @keyframes hero-halo-rest {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* Hover recolours the pill blue. The old rule also set a blue 12px
+     text-shadow here, but the breathing animation animated the same
+     property on the same element and an animation outranks a normal rule,
+     so that shadow never showed while the page was not reduced-motion. The
+     twins keep breathing green underneath; this rule only does what it
+     visibly did before. */
   .hero-overlay__label:hover {
     color: hsl(220, 70%, 65%);
     border-color: hsla(220, 50%, 50%, 0.25);
-    text-shadow: 0 0 12px hsla(220, 70%, 60%, 0.4);
   }
 
   /* ── Title — Neural connections texture ─────────────── */
@@ -719,6 +956,12 @@
     letter-spacing: -0.03em;
     line-height: 1.05;
     margin: 0;
+    /* Solid fallback for the clipped texture below. With text-fill-color
+       transparent this never shows; it is what an engine WITHOUT
+       background-clip: text paints instead (the @supports not (…) block after
+       the letter rules also resets the fill there). Lighthouse's Baseline
+       audit lists background-clip-text as Limited — this is the answer. */
+    color: var(--text-primary);
 
     /* Neural connections texture clipped to text.
 
@@ -759,15 +1002,19 @@
 
     filter: drop-shadow(0 0 2px hsla(0, 0%, 0%, 0.8)) drop-shadow(0 0 6px hsla(0, 0%, 0%, 0.5));
 
-    /* Entrance: CSS keyframes, not the JS `.is-visible` class — this is the
-       LCP element (headline). It must paint on first render, so the fade-in
-       is driven purely by CSS (animation-fill-mode: backwards holds the
-       "from" state until the delay elapses) and never blocks on Svelte
-       hydration/GSAP. Two animations reproduce the original per-property
-       timing (opacity 1s vs. transform 1.2s) so the look is unchanged. */
+    /* Entrance: CSS keyframes, not the JS `.is-visible` class — this is an
+       LCP candidate (the largest text on the page; on desktop its clipped
+       texture makes it an image candidate too). It must be RECORDED at first
+       paint, so the fade starts from a floor, not from 0 — the rule and the
+       measurements are on .hero-overlay__subtitle below; the floor here is
+       0.2, never lower than the subtitle's, so the headline is always the
+       brighter of the two. The texture is preloaded from the page head
+       (src/pages/[lang]/index.astro) so a headline that is visible from the
+       first frame does not pop its fill in later. Two animations reproduce
+       the original per-property timing (opacity 1s vs. transform 1.2s). */
     animation:
-      hero-title-opacity-in 1s ease-out 0.4s backwards,
-      hero-title-transform-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
+      hero-title-opacity-in 1s ease-out 0.2s backwards,
+      hero-title-transform-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
   }
 
   /* The fallback the minifier kept deleting. In its own conditional rule it is
@@ -781,9 +1028,10 @@
     }
   }
 
+  /* `from` opacity is an LCP floor — see .hero-overlay__subtitle. */
   @keyframes hero-title-opacity-in {
     from {
-      opacity: 0;
+      opacity: 0.2;
     }
     to {
       opacity: 1;
@@ -845,6 +1093,8 @@
     line-height: var(--leading-relaxed);
     max-width: 520px;
     letter-spacing: 0.01em;
+    /* Solid fallback — see .hero-overlay__title. */
+    color: var(--text-secondary);
 
     /* Subtle gradient instead of flat color */
     background: linear-gradient(
@@ -858,52 +1108,57 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
 
-    /* Entrance: CSS keyframe, not the JS `.is-visible` class — this is the
-       other LCP-critical text. Same rationale as .hero-overlay__title. */
-    /* MEASURED, 2026-08-24 — read before touching either animation here.
-       The homepage's LCP element on mobile is hero TEXT, not media: no network
-       is involved, and Lighthouse's breakdown shows only time-to-first-byte
-       plus an element render delay of ~1.6-2.1s. The ambient breathing is what
-       fills that delay: `label-breathe` and `subtitle-glow` both animate
-       text-shadow, a paint property, so every cycle repaints the element and
-       Chrome keeps moving the LCP mark forward.
-       Removing both was tried and measured: mobile LCP 4217 -> 3997ms, score
-       84 -> 86. Real, but small — and the breathing is the site's signature.
-       So both stay, and the trade is written down instead of taken silently.
-       If the owner wants the two points: delete `label-breathe` from the label
-       above and `subtitle-glow` from the line below. Full chain of experiments
-       in .system/metrics/p6-lcp-chain.md. */
-    animation:
-      hero-fade-up-15 0.8s ease-out 0.7s backwards,
-      subtitle-glow 5s ease-in-out 2s infinite;
+    /* Entrance: CSS keyframe, not the JS `.is-visible` class — this is an
+       LCP element of the homepage (.system/metrics/p1-lcp.md, p6-lcp-chain.md:
+       text, no resource, only "element render delay"); on desktop the
+       headline's clipped texture can win instead, and either is fine.
+
+       THE RULE THIS LINE OBEYS — measured 2026-09-20 on an isolated replica
+       of the hero, Lighthouse mobile profile, and re-measured 2026-09-21 on
+       the built page (see the label comment for the cascade):
+         opacity 0 -> 1, delay + 0.8s, + text-shadow glow      = 1553 ms delay
+         opacity .45 -> 1, same delay/duration, no glow on text =  196 ms
+         opacity .1 -> 1 (this floor), headline floor .2 — element render
+           delay, two batches of 3 runs per profile on the built page:
+           quiet box:   mobile 216 / 231 / 288 ms, desktop 247 / 255 / 308 ms
+           box shared with a GPU render, runs interleaved with the baseline:
+                        mobile 398 / 410 / 1359 ms, desktop 235 / 243 / 417 ms
+           In all twelve runs the observed LCP time EQUALLED the observed
+           first-paint time (e.g. 254 = 254, 1367 = 1367): what is left of
+           the "delay" is first paint itself, not this animation. Baseline
+           in the same two batches: 2096–4158 ms mobile, 2136–2286 desktop,
+           and there LCP came ~1.9 s after first paint every time.
+           LCP element: the subtitle on mobile, the headline on desktop.
+       Chrome refuses to record text at opacity 0 and, once a fade-from-0 is
+       running, waits for the animation to END before it takes the paint time
+       (delay + duration). The trigger is opacity == 0 exactly: start the fade
+       from a non-zero floor and the paragraph is recorded at first paint,
+       animation still running. 0.1 is the floor because at 0.1 the line is
+       genuinely painted (not the 0.01 lie) yet reads as absent — about
+       1.4:1 against the obsidian — until the headline, which starts at 0.2
+       and 0.3 s earlier, has landed; the wave-1 value of 0.45 was legible on
+       its own and put the third beat of the cascade on screen first.
+       The `subtitle-glow` that used to be the second animation here peaked at
+       `0 0 20px hsla(155, 60%, 60%, 0.08)` — an 8% haze nobody could see,
+       repainting the LCP element every frame. It is gone, not moved: a
+       negative-z pseudo cannot sit behind background-clip: text glyphs (they
+       ARE the background, painted first), so the wave-1 halo covered the
+       letters instead of glowing behind them. Resting state was no shadow at
+       all; that is what the line has now. */
+    animation: hero-subtitle-settle 0.8s ease-out 0.5s backwards;
   }
 
-  @keyframes hero-fade-up-15 {
+  /* `from` opacity is the LCP floor. It must stay > 0 and never above the
+     headline's — see the comment above — and both are test-enforced
+     (tests/unit/hero-overlay-lcp.test.ts). */
+  @keyframes hero-subtitle-settle {
     from {
-      opacity: 0;
+      opacity: 0.1;
       transform: translateY(15px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  /* text-shadow, not filter: drop-shadow. Same glow to the eye, but a filter
-     that "may move pixels" forces the browser to treat this node as
-     non-composited, and Lighthouse's non-composited-animations audit points
-     straight at it. Three independent measurements in .system/metrics/p1-lcp.md
-     agree that this paragraph IS the LCP element of the homepage and that the
-     glow alone moved the mark from 1526 ms to 2028 ms. The animation stays —
-     the site's motion is part of the product — it just stops costing half a
-     second of Largest Contentful Paint. */
-  @keyframes subtitle-glow {
-    0%,
-    100% {
-      text-shadow: 0 0 0 transparent;
-    }
-    50% {
-      text-shadow: 0 0 20px hsla(155, 60%, 60%, 0.08);
     }
   }
 
@@ -937,8 +1192,9 @@
       box-shadow 0.3s ease-out,
       background 0.3s ease-out;
     /* Entrance opacity: CSS keyframe, not the JS `.is-visible` class — see
-       .hero-overlay__title above. */
-    animation: hero-cta-opacity-in 0.8s ease-out 1s backwards;
+       .hero-overlay__title above. The CTA is the last beat and is never an
+       LCP candidate, so it is the one element still allowed to start at 0. */
+    animation: hero-cta-opacity-in 0.8s ease-out 0.8s backwards;
   }
 
   @keyframes hero-cta-opacity-in {
@@ -952,28 +1208,39 @@
 
   /* CTA shimmer sweep. The keyframes were missing from the repo entirely —
      the animation name referenced nothing and the sweep silently never ran
-     (found during the geo-audit idiom transplant). */
+     (found during the geo-audit idiom transplant).
+     Now a transform, not background-position: the old keyframes moved a
+     250%-wide background image, and background-position is a paint
+     property — Lighthouse's non-composited-animations audit listed this
+     pseudo. The geometry is identical, just expressed on the box instead of
+     its background: a pseudo 250% as wide as the button, gradient at its
+     natural size, translated by −120% of its own width (= −3 button widths,
+     what `background-position: 200% 0` resolved to with a 2.5× image) at
+     rest and +30% (= +0.75 widths, what `-50% 0` resolved to) at the end. */
   @keyframes shimmer-pass {
     0%,
     60% {
-      background-position: 200% 0;
+      transform: translateX(-120%);
     }
     100% {
-      background-position: -50% 0;
+      transform: translateX(30%);
     }
   }
 
   .hero-overlay__cta::before {
     content: '';
     position: absolute;
-    inset: 0;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 250%;
     background: linear-gradient(
       105deg,
       transparent 30%,
       hsla(0, 0%, 100%, 0.2) 50%,
       transparent 70%
     );
-    background-size: 250% 100%;
+    transform: translateX(-120%);
     animation: shimmer-pass 4s ease-in-out 3s infinite;
     pointer-events: none;
   }
@@ -1010,7 +1277,7 @@
     color: var(--text-muted);
     transition: color 0.3s ease-out;
     /* Same CSS-keyframe entrance as the primary CTA, a beat later. */
-    animation: hero-cta-opacity-in 0.8s ease-out 1.15s backwards;
+    animation: hero-cta-opacity-in 0.8s ease-out 0.95s backwards;
   }
 
   .hero-overlay__cta-ghost:hover {
@@ -1087,6 +1354,48 @@
     }
     .hero-overlay__title::after {
       display: none;
+    }
+    /* Static resting state, no motion: the rest twin stays at opacity 1
+       (the old 12px glow), the peak twin at 0, and the shimmer stays parked
+       off the left edge of the button where its keyframes hold it. Every
+       `animation:` declared in this sheet is named here — test-enforced. */
+    .hero-overlay__label::before,
+    .hero-overlay__label::after,
+    .hero-overlay__cta::before {
+      animation: none;
+    }
+    /* The arrow's hover slide was the one transition in this sheet not
+       named here. */
+    .hero-overlay__cta svg {
+      transition: none;
+    }
+  }
+
+  /* ── No background-clip: text — solid text instead ── */
+  /* Both clipped texts (title, subtitle) set -webkit-text-fill-color:
+     transparent unconditionally. On an engine without background-clip: text
+     that leaves a box-shaped texture behind invisible glyphs — so the whole
+     clip recipe is undone here and the solid `color` tokens declared on the
+     base rules take over.
+     This block is LAST in the sheet on purpose and must stay last: it has
+     the same specificity as every base and @media rule above it and wins
+     only by source order — the mobile texture override at 767px included.
+     A first draft sat between the title and the subtitle; the built CSS
+     showed it losing to both the subtitle base rule and the mobile block,
+     which is why the position is now test-enforced
+     (tests/unit/hero-overlay-lcp.test.ts). Written as `not (…)` rather than
+     wrapping the recipe in `@supports (…)`, because the JPEG fallback for
+     the title is already a conditional rule the minifier must not read as a
+     duplicate declaration — see the comment on that block. */
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .hero-overlay__title {
+      background-image: none;
+      -webkit-text-fill-color: var(--text-primary);
+      -webkit-text-stroke: 0;
+    }
+    .hero-overlay__subtitle {
+      background: none;
+      -webkit-text-fill-color: var(--text-secondary);
     }
   }
 </style>

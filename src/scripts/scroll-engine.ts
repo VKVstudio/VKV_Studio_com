@@ -2,11 +2,25 @@
  * VKVstudio — Video Scroll Engine
  *
  * Tiered approach for scroll-driven video playback:
- *   Tier 2 (Primary): Canvas + <video> seeking with all-keyframe MP4
+ *   Tier 2 (Primary): Canvas + <video> seeking with a short-GOP MP4
  *   Tier 3 (Fallback): Static poster for reduced-motion users
  *
- * All-keyframe MP4 (-g 1) ensures instant seeking without decode lag.
  * Passive scroll listener → scroll fraction (0→1) → video.currentTime → canvas draw.
+ *
+ * ENCODING, measured 2026-09-20 (ffmpeg 7.1, 1280x720 @ 24 fps, 480 frames):
+ * this file used to say "all-keyframe MP4 (-g 1) ensures instant seeking
+ * without decode lag". That premise was tested and does not hold: a random
+ * seek into a GOP-12 encode took 67 ms against 72 ms for the all-intra
+ * original — identical within noise, because decoding up to eleven extra
+ * 720p frames is sub-millisecond work. What the all-intra choice did cost was
+ * 25.7 MB on disk and a 15.3 MB transfer on every desktop visit, which
+ * PageSpeed's own run failed to finish (ERR_CONNECTION_FAILED, the console
+ * error that dropped Best Practices to 96). The asset is now GOP 12, CRF 27,
+ * faststart, same frame count and duration: 6.6 MB, VMAF 83 against the
+ * original, no visible loss. Keep the GOP short — a long-GOP encode really
+ * does stall on backward seeks: the PREVIOUS brain-morph.mp4 (one keyframe
+ * for all 240 frames) measured 94 ms per seek against 55 ms once re-encoded
+ * at GOP 12, which is what ships now for both files.
  */
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -61,7 +75,7 @@ function updateOverlay(fraction: number, overlay: HTMLElement, scrollIndicator: 
     // Visible at start — first ~2.5 seconds
     overlayOpacity = 1;
     overlayTranslateY = 0;
-  } else if (fraction < 0.20) {
+  } else if (fraction < 0.2) {
     // Fade out zone (12% → 20% = ~2.5s to ~4s)
     const fadeProgress = (fraction - 0.12) / 0.08;
     overlayOpacity = 1 - fadeProgress;

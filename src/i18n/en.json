@@ -588,6 +588,8 @@
     "brain": {
       "open": "Open AI Synapse assistant",
       "loading": "AI Synapse — loading",
+      "pending": "AI Synapse — opening, one moment",
+      "failed": "AI Synapse did not load — reload the page to retry",
       "statusLabel": "AI Synapse status",
       "tooltipTitle": "AI Synapse assistant",
       "tooltipSub": "Chat & voice — click to open",

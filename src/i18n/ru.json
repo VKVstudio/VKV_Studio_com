@@ -590,6 +590,8 @@
     "brain": {
       "open": "Открыть ассистента AI Synapse",
       "loading": "AI Synapse — загрузка",
+      "pending": "AI Synapse — открывается, секунду",
+      "failed": "AI Synapse не загрузился — обновите страницу, чтобы повторить",
       "statusLabel": "Статус AI Synapse",
       "tooltipTitle": "Ассистент AI Synapse",
       "tooltipSub": "Чат и голос — нажмите, чтобы открыть",

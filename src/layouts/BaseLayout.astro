@@ -5,6 +5,7 @@ import CookieConsent from '@components/ui/CookieConsent.svelte';
 import Footer from '@components/layout/Footer.astro';
 import { CONTACT_EMAIL } from '@/lib/site-config';
 import { ORIGIN_TRIAL_TOKEN } from '@/lib/webmcp/origin-trial';
+import { TRUSTED_TYPES_POLICY_SCRIPT } from '@/lib/trusted-types-policy';
 import '@styles/global.css';
 
 interface Props {
@@ -107,6 +108,22 @@ const ogImageAlt =
          so the safe-area handling that exists (cookie sheet) was a no-op on
          notched/gesture-bar phones. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    {
+      /* Trusted Types default policy — deliberately the FIRST script in the
+         document and deliberately inline (see src/lib/trusted-types-policy.ts
+         for the full reasoning). It has to be registered before the first
+         innerHTML / Worker / script.src write anywhere on the page, and a
+         hoisted module would be deferred behind the parser while client:only
+         islands start importing mid-parse. It is injected via set:html so the
+         shipped bytes are exactly the exported constant, which is what
+         public/_headers hashes in script-src and what
+         tests/unit/csp-headers.test.ts re-hashes. `is:inline` keeps Astro from
+         bundling it (that would turn it into a deferred module and defeat the
+         ordering). Not `define:vars`: that would interpolate per page and the
+         hash would no longer be one value. Placed after <meta charset> so the
+         charset still sits inside the first 1024 bytes. */
+    }
+    <script is:inline set:html={TRUSTED_TYPES_POLICY_SCRIPT} />
     <meta name="description" content={pageDescription} />
 
     <!-- Self-hosted fonts preload — only the Inter subset for THIS locale is on the
@@ -494,17 +511,48 @@ const ogImageAlt =
       This note is a JSX comment, not an HTML one, for the same reason the
       FAQPage note above is: an HTML comment here would ship these fifteen
       lines into all 36 pages.
+
+      Scheduling: on WebMCP-capable Chrome this module script was measured
+      (PageSpeed + local Lighthouse, 2026-09-20) fetching the 18.7 KiB
+      register.*.js chunk at High priority DURING load — competing with the
+      LCP request on a page whose hero text is already held ~2.2s by its own
+      intro animation. The feature check itself must run unconditionally (it
+      is what keeps the import from ever happening on the ~100% of browsers
+      without the API), but the import can wait: nothing reads the tools
+      before an agent asks for them, and an agent cannot ask before the page
+      has finished loading anyway. `requestIdleCallback` is the correct
+      primitive — it explicitly excludes the load event's own busy window —
+      but Safari has never shipped it (Baseline: Limited), so the fallback is
+      a fixed `setTimeout`. Chosen to fire after `load` even on a slow
+      connection rather than tuned to any single Lighthouse trace.
     */
     }
     <script>
       if ('modelContext' in document) {
-        const lang = document.documentElement.lang === 'ru' ? 'ru' : 'en';
-        import('@/lib/webmcp/register')
-          .then((m) => m.registerSiteTools(lang))
-          .catch(() => {
-            /* An experimental surface that fails to load must never surface to
-               a human visitor — nothing else on the page depends on it. */
-          });
+        const registerTools = () => {
+          const lang = document.documentElement.lang === 'ru' ? 'ru' : 'en';
+          import('@/lib/webmcp/register')
+            .then((m) => m.registerSiteTools(lang))
+            .catch(() => {
+              /* An experimental surface that fails to load must never surface to
+                 a human visitor — nothing else on the page depends on it. */
+            });
+        };
+        const scheduleIdle = () => {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(registerTools);
+          } else {
+            // Safari: no requestIdleCallback (Baseline "Limited"). A flat delay
+            // is not as considerate as a real idle callback, but it is enough
+            // to get this off the load-event critical path.
+            setTimeout(registerTools, 1500);
+          }
+        };
+        if (document.readyState === 'complete') {
+          scheduleIdle();
+        } else {
+          window.addEventListener('load', scheduleIdle);
+        }
       }
     </script>
   </body>

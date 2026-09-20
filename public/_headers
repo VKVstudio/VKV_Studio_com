@@ -30,9 +30,79 @@
   # the site silently degrades to the mock assistant. Update BOTH together if the API
   # host changes. object-src 'none' + base-uri 'self' + form-action 'none' block
   # plugin/base-tag/form-hijack vectors (there are no <object>/<form> on the site).
-  # 'unsafe-inline' in script-src/style-src is REQUIRED and must NOT be removed:
-  # Astro's island-hydration runtime + the JSON-LD blocks emit unnonceable inline
-  # <script>/<style>, and Cloudflare Pages _headers is static (no per-request nonce).
+  #
+  # NOTE (2026-09-21, script-src WITHOUT 'unsafe-inline'): the old note here said
+  # 'unsafe-inline' was required because Astro's island runtime is inline and a
+  # static _headers cannot nonce it. Half right. It cannot be nonced, but it CAN
+  # be hashed: a build was scanned for every <script> without src (36 pages,
+  # 420 script tags, JSON-LD excluded — JSON-LD is data, script-src never applies
+  # to it), and the whole site ships exactly FIVE distinct inline scripts, none
+  # of them page-varying:
+  #   'sha256-Q27LY9eI…'  the Trusted Types default policy, BaseLayout <head>
+  #                       (src/lib/trusted-types-policy.ts, 3376 B, 34 pages —
+  #                       2026-09-21: the regex tag/handler check was replaced
+  #                       by a parse-and-rebuild allowlist sanitizer, which is
+  #                       why this grew from 769 B to 2902 B and why the hash
+  #                       changed; a second refutation pass the same day took it
+  #                       to 3376 B — it now parses in FRAGMENT context via a
+  #                       <template> (the sink's own context), rebuilds kept
+  #                       elements with createElement so an `is=` value cannot
+  #                       ride along, and RESOLVES URLs instead of matching the
+  #                       scheme with a regex)
+  #   'sha256-SaCkFfPr…'  Astro's <astro-island> runtime (4403 B, 34 pages)
+  #   'sha256-BF0290pk…'  Astro's client:idle loader (316 B, 34 pages)
+  #   'sha256-Q2BPg90Z…'  Astro's client:visible loader (372 B, 12 pages)
+  #   'sha256-eIXWvAmx…'  Astro's client:only loader (130 B, /lab/embeddings/)
+  # Every component <script> (HeroCanvas, Header, PageHero, the pages) is hoisted
+  # by Astro into a hashed /_astro/*.js module, covered by 'self'. There is no
+  # is:inline or define:vars script anywhere in src/, and the built HTML carries
+  # no on*= handler attributes and no javascript: hrefs (grep-verified), so
+  # nothing else depended on 'unsafe-inline'. The two pages without the policy
+  # hash (/index.html redirect shell, /404.html) have no islands and no sinks.
+  #
+  # The four Astro hashes are the sha256 of Astro's OWN prebuilt runtime strings
+  # (node_modules/astro/dist/runtime/{server/astro-island,client/*}.prebuilt.js)
+  # and therefore change whenever Astro changes those files — i.e. on an
+  # upgrade. tests/unit/csp-headers.test.ts re-derives all five hashes from the
+  # installed Astro and from the policy constant on every `vitest run` and fails
+  # with the replacement values, so an upgrade cannot silently ship a header
+  # that kills hydration on every page. That test is the regeneration procedure.
+  #
+  # NOT 'strict-dynamic'. Lighthouse suggests it, and it was measured here
+  # (wrangler pages dev, 2026-09-21): 'strict-dynamic' makes the browser IGNORE
+  # host sources and 'self', and only propagates trust from a hashed script to
+  # scripts that script creates itself. Astro's hoisted modules are ordinary
+  # parser-inserted <script type="module" src="/_astro/…"> tags with no hash and
+  # no integrity attribute, so every one of them is refused and the page ships
+  # dead — the same result the 2026-08-09 preview-deploy experiment recorded in
+  # astro.config.mjs. Making it work would mean an SRI hash on every emitted
+  # script tag (a post-build rewrite Astro does not offer) plus the jsDelivr
+  # blob: import chain re-verified. The host allowlist is the honest fit for a
+  # static Astro site; the residual "allowlist bypass" Lighthouse warns about
+  # (a script injected from an allowed host) is what the Trusted Types policy
+  # below closes at the DOM sink.
+  # Lighthouse's remaining Medium note ("consider adding 'unsafe-inline' for
+  # backward compatibility — ignored by browsers supporting hashes") is declined
+  # on purpose: every browser since CSP Level 2 (2015) ignores it once a hash is
+  # present, so it would only ever re-enable inline scripts on a browser too old
+  # to matter, and tests/unit/csp-headers.test.ts fails if it comes back.
+  #
+  # style-src KEEPS 'unsafe-inline' and must: Svelte SSR emits style="" attributes
+  # (hero parallax, per-frame values), Astro inlines every stylesheet as a <style>
+  # block (build.inlineStylesheets), and GIS injects its own. Per the CSP spec a
+  # single hash in style-src would switch 'unsafe-inline' off, so no style hashes
+  # are listed either. Nothing in the audit set penalises style-src.
+  #
+  # require-trusted-types-for 'script': every innerHTML / DOMParser / Worker(url)
+  # / script.src / eval write must carry a Trusted Type, and a `default` policy
+  # supplies them. The policy is the hashed inline script above, registered
+  # before any sink runs; it allowlists the closed tag set the site's own
+  # sanitizers emit and the script-src hosts, and refuses everything else — see
+  # src/lib/trusted-types-policy.ts for the audit of every sink on the site. No
+  # `trusted-types <names>` directive on purpose: Svelte 5 registers its own
+  # `svelte-trusted-html` policy for component templates and Google Identity
+  # Services registers Closure `goog#html` ones; naming the allowed policies
+  # would break both.
   # NOTE (Google sign-in): Google Identity Services powers Synapse conversation
   # ownership. It needs https://accounts.google.com in script-src (the gsi/client
   # loader), connect-src (token + JWKS fetches), and frame-src (the sign-in button
@@ -55,7 +125,7 @@
   # broken on the DEPLOYED site from the day this header was added, while working
   # perfectly in dev, where Cloudflare's _headers are not applied at all. blob: is
   # same-origin by construction, so this grants nothing an attacker can reach.
-  Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self'; connect-src 'self' https://api.vkvstudio.com https://accounts.google.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://cdn.jsdelivr.net; worker-src 'self' blob:; media-src 'self' blob:; frame-src https://accounts.google.com; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; script-src 'self' 'sha256-Q27LY9eIKgxX9LhG+ONLtn7lmsZ0gwopA0midEGvJxo=' 'sha256-SaCkFfPruIdTXT8/97JArQmGxiJAL2o4bBDvSgJ5y3Q=' 'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw=' 'sha256-Q2BPg90ZMplYY+FSdApNErhpWafg2hcRRbndmvxuL/Q=' 'sha256-eIXWvAmxkr251LJZkjniEK5LcPF3NkapbJepohwYRIc=' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self'; connect-src 'self' https://api.vkvstudio.com https://accounts.google.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://cdn.jsdelivr.net; worker-src 'self' blob:; media-src 'self' blob:; frame-src https://accounts.google.com; frame-ancestors 'none'; require-trusted-types-for 'script'
   # Kept for ancient user agents only. frame-ancestors above is what actually
   # enforces this — per OWASP, X-Frame-Options is obsolete and ignored wherever
   # frame-ancestors is present. 20 bytes, no harm, no illusions.
@@ -89,7 +159,16 @@
   # Pages and the tunnelled host never inherits it. Turn on "Always Use HTTPS"
   # and HSTS at the Cloudflare zone; preload submission can follow once that is
   # true for every host under the domain.
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  # UPDATE 2026-09-21: `preload` is back, and this time it is a request, not a
+  # claim. hstspreload.org requires the token in the header BEFORE it accepts a
+  # submission (max-age ≥ 1 year and includeSubDomains, both already here), so
+  # the header has to carry it first. Submitting at https://hstspreload.org is
+  # the OWNER'S separate action and has not been done by this change. Once the
+  # domain is in the Chromium list it is effectively a one-way door: every host
+  # under vkvstudio.com — api.vkvstudio.com (Cloudflare Tunnel) included — must
+  # answer HTTPS forever, because browsers will refuse plain http:// to any of
+  # them before a single request is sent, and removal takes months to propagate.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 
 # Content-hashed build output. Pages' default for these is
 # `public, max-age=14400, must-revalidate` — four hours, then a revalidation
@@ -115,5 +194,11 @@
 # plain names, rarely changed, and a change ships new markup that points at it.
 /fonts/*
   Cache-Control: public, max-age=2592000
+# Thirty days at the edge and in browsers, which means a video re-encoded under
+# the SAME name is invisible for up to a month: on 2026-09-21 the 6.6 MB
+# hero-scroll replaced a 25.7 MB one and Cloudflare kept serving the old bytes
+# (cf-cache-status HIT, age 2.4 days) until the file shipped as
+# hero-scroll.v2.mp4. Every re-encode ships under a NEW filename; the reference
+# lives in HeroCanvas.astro (hero) and SynapseBrain.svelte (orb).
 /*.mp4
   Cache-Control: public, max-age=2592000

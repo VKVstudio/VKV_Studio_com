@@ -55,15 +55,14 @@
 .hero__gradient {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      to bottom,
-      hsla(220, 20%, 3%, 0.3) 0%,
-      hsla(220, 20%, 3%, 0.1) 30%,
-      hsla(220, 20%, 3%, 0.1) 50%,
-      hsla(220, 20%, 3%, 0.5) 80%,
-      hsla(220, 20%, 3%, 0.85) 100%
-    );
+  background: linear-gradient(
+    to bottom,
+    hsla(220, 20%, 3%, 0.3) 0%,
+    hsla(220, 20%, 3%, 0.1) 30%,
+    hsla(220, 20%, 3%, 0.1) 50%,
+    hsla(220, 20%, 3%, 0.5) 80%,
+    hsla(220, 20%, 3%, 0.85) 100%
+  );
   pointer-events: none;
   z-index: 1;
 }
@@ -111,7 +110,8 @@
 }
 
 @keyframes hero-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
     opacity: 1;
   }
@@ -145,7 +145,7 @@
 
 /* ── STATIC MODE (mobile + prefers-reduced-motion, set by init script) ──
    HeroCanvas.astro's init() adds this class BEFORE ever assigning the
-   24.5 MB `hero-scroll.mp4` to the video element, so on mobile no video
+   6.6 MB `hero-scroll.v2.mp4` to the video element, so on mobile no video
    bytes are fetched at all — this is the mobile LCP fix, not just a
    visual fallback. */
 .hero--static {

@@ -100,3 +100,6 @@ training/EXPORT_OK_*
 # соцномер, ИНН, адреса и пароль телефонного банка. В git не кладём —
 # историю потом не вычистить.
 bank_docs/
+
+# wrangler pages dev state (created when testing _headers locally)
+.wrangler/

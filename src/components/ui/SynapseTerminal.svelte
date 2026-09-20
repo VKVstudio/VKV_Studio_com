@@ -1,3 +1,29 @@
+<!-- css="injected": this component's styles are compiled INTO its JS chunk
+     and appended to <head> by Svelte on first mount, instead of being
+     emitted as a stylesheet.
+
+     Why (measured 2026-09-21 on the built /en/): the terminal's JS is a
+     dynamic import that only loads on demand, but Astro's CSS collection
+     (core/build/plugins/plugin-css.js) walks `importers.concat(
+     dynamicImporters)` from every CSS module up to the page, so the CSS of a
+     dynamically imported component is still hoisted into the page's
+     stylesheet — and with build.inlineStylesheets 'always' it was inlined,
+     render-blocking, into every homepage load for a panel most visitors
+     never open. There is no config knob for that walk. With injected CSS the
+     Svelte compiler emits no CSS module at all (vite-plugin-svelte only adds
+     the `?svelte&type=style` import when `compiled.css` has code), so
+     nothing exists for Astro to collect; the rules ride in the lazy chunk
+     and reach <head> only when the terminal mounts. Scoping is unchanged
+     (same svelte-hash classes). Needs style-src 'unsafe-inline', which
+     public/_headers keeps for Svelte's own inline style attributes anyway.
+     Measured on the built /en/ (this file + SynapseSidebar injected):
+     inline <style> 96,250 → 71,083 B raw; the HTML document 172,362 →
+     147,232 B raw, 28,651 → 24,949 B brotli, on every homepage load; the
+     lazy SynapseTerminal chunk 57,571 → 100,202 B raw, 15,347 → 22,938 B
+     brotli, paid only by visitors who reach the orb. What is left in the
+     page from this subtree is SynapseOrb's and SynapseAccount's CSS. -->
+<svelte:options css="injected" />
+
 <script lang="ts">
   /**
    * SynapseTerminal.svelte

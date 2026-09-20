@@ -93,6 +93,65 @@ const offerCatalogJsonLd = {
   />
 
   {
+    /* The H1's neural texture — HeroOverlay.svelte clips it to the headline
+       with background-clip: text. A CSS background image is discovered only
+       when the browser styles the element, not by the preload scanner, and
+       since 2026-09-21 the headline is painted from the very first frame (it
+       starts at an opacity floor for LCP), so without this link the texture
+       filled the letters in a beat after they were already on screen.
+
+       - The mobile link carries HeroOverlay's mobile query CHARACTER FOR
+         CHARACTER (`(max-width: 767px), ((max-height: 767px) and (pointer:
+         coarse))`, the block that swaps in neural-texture-mobile);
+         tests/unit/hero-overlay-lcp.test.ts reads it out of the component
+         and compares. Change them together.
+       - The desktop link is NOT that query's complement, and the reason is
+         measured, not stylistic. This slot renders before BaseLayout's
+         <meta name="viewport">, and Chrome's speculative preload scanner
+         evaluates a <link media> the moment it sees it — against the default
+         980 px layout viewport, because the viewport meta has not been
+         parsed yet. The real element is evaluated again once it is in the
+         DOM, at the true width. So on a phone every width-based complement
+         (`not (…)`, `(min-width: 768px) and …`, an MQ3 list — all three were
+         tried, 2026-09-21, Chrome 140 headless, 412×823 mobile emulation)
+         matched at scan time and the 70 KB desktop file was fetched with
+         initiatorType "link" next to the 17 KB mobile one. `pointer` and
+         `hover` are device facts the scanner knows before any viewport, so
+         `(hover: hover) and (pointer: fine)` is what keeps a phone from
+         fetching it: with this form the mobile emulation fetched the poster
+         and the mobile texture only, and a 1280×800 desktop the desktop
+         texture only (Resource Timing, same session). The price is a
+         tablet: an iPad portrait is ≥768 wide with a coarse pointer, uses the
+         desktop texture per the CSS, and gets no preload — it discovers the
+         file at style resolution as before, ~20 ms later, and fetches
+         nothing extra. Moving the slot below the viewport meta in
+         BaseLayout would let the exact complement work; that file belongs to
+         another change.
+       - `type="image/avif"` mirrors the component's image-set(): a browser
+         without AVIF ignores the preload and takes the WebP from the CSS as
+         before, and a browser with it preloads the same URL the CSS resolves
+         to — the guard against a preload the page then declines to use.
+       - No fetchpriority: the mobile poster above stays the one high-priority
+         image; this file is small and only has to beat style resolution. */
+  }
+  <link
+    slot="head"
+    rel="preload"
+    as="image"
+    href="/neural-texture-mobile.avif"
+    type="image/avif"
+    media="(max-width: 767px), ((max-height: 767px) and (pointer: coarse))"
+  />
+  <link
+    slot="head"
+    rel="preload"
+    as="image"
+    href="/neural-texture.avif"
+    type="image/avif"
+    media="(min-width: 768px) and (hover: hover) and (pointer: fine)"
+  />
+
+  {
     /*
     Phase 1.7 Navigation Revolution:
     - Header: only MenuPill (three dots) — dispatches vkv:constellation-toggle event
