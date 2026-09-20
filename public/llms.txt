@@ -1,8 +1,8 @@
 # VKVstudio
 
-> Last updated: 2026-08-24
-
 > VKVstudio is the one-engineer web/AI studio of Valerii — fixed-price engineering services for EU/UK companies (AI-visibility audits, private RAG assistants, self-hosted AI, fast Astro websites), plus a free "Lab" of LLM tools and a self-hosted AI assistant that serve as public proof of the paid work.
+
+Last updated: 2026-09-20
 
 VKVstudio is a bilingual (English/Russian) site at https://vkvstudio.com/, available at /en/ and /ru/. It has two purposes: (1) it sells the studio's fixed-price engineering services (see Services below), and (2) it hosts "the Lab" — a set of free microservices for working with large language models, kept public as verifiable proof of competence. Two of the tools run in your browser (Tokenizer, Prompt Architect); the Embedding Explorer and the Synapse assistant run on a self-hosted inference server. Text sent to the server-side tools is processed live to compute a result and is not used to train any model.
 

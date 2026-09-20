@@ -4,6 +4,7 @@ import { t, supportedLangs } from '@i18n/utils';
 import CookieConsent from '@components/ui/CookieConsent.svelte';
 import Footer from '@components/layout/Footer.astro';
 import { CONTACT_EMAIL } from '@/lib/site-config';
+import { ORIGIN_TRIAL_TOKEN } from '@/lib/webmcp/origin-trial';
 import '@styles/global.css';
 
 interface Props {
@@ -427,6 +428,14 @@ const ogImageAlt =
 
     <!-- Per-page JSON-LD (SoftwareApplication for Lab tools, BreadcrumbList, ...) -->
     {jsonLd.map((node) => <script type="application/ld+json" set:html={ldjson(node)} />)}
+
+    {
+      /* WebMCP origin trial. Emitted only once a token exists — while the
+         constant is empty there is no tag, document.modelContext never
+         appears, and every tool in src/lib/webmcp stays dormant.
+         See .system/ORIGIN-TRIAL-HOWTO.md. */
+      ORIGIN_TRIAL_TOKEN && <meta http-equiv="origin-trial" content={ORIGIN_TRIAL_TOKEN} />
+    }
   </head>
   <body>
     <!--email_off-->
@@ -464,5 +473,39 @@ const ogImageAlt =
       client:idle
     />
     <!--/email_off-->
+
+    {
+      /*
+      WebMCP: hand this page's tools to a visiting agent, if the browser has an
+      agent surface at all. Everything below the feature check is dynamically
+      imported, so a browser without the API — which today is nearly every
+      browser — downloads none of it and pays nothing on any Core Web Vital.
+
+      The locale is read from <html lang> rather than passed through
+      `define:vars`, which would force this into an inline script; keeping it a
+      plain module script lets Astro bundle and hash it like any other.
+
+      `'modelContext' in document` is a property check, not a getter call. The
+      distinction matters: the old `navigator.modelContext` spelling logs a
+      deprecation warning when touched, and Lighthouse charges Best Practices
+      points for deprecated APIs on a site whose Websites offer names a
+      Lighthouse score in the contract.
+
+      This note is a JSX comment, not an HTML one, for the same reason the
+      FAQPage note above is: an HTML comment here would ship these fifteen
+      lines into all 36 pages.
+    */
+    }
+    <script>
+      if ('modelContext' in document) {
+        const lang = document.documentElement.lang === 'ru' ? 'ru' : 'en';
+        import('@/lib/webmcp/register')
+          .then((m) => m.registerSiteTools(lang))
+          .catch(() => {
+            /* An experimental surface that fails to load must never surface to
+               a human visitor — nothing else on the page depends on it. */
+          });
+      }
+    </script>
   </body>
 </html>

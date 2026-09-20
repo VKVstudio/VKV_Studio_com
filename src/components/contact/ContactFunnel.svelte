@@ -100,6 +100,42 @@
     ru: 'Достаточно нескольких предложений.',
   };
 
+  // WebMCP declarative descriptions — what a visiting AI agent reads to
+  // understand this form. Chrome's budgets are hard: the tool name is capped
+  // at 30 characters, the description at 500, each parameter description at
+  // 150. tests/unit/webmcp-contact-form.test.ts measures all three against the
+  // strings below — against THIS SOURCE, not against rendered HTML, which is
+  // worth knowing before trusting it: the attributes reach an agent only
+  // because Astro server-renders this island, so that test also pins the
+  // contact page's client:visible directive.
+  //
+  // Deliberately NOT set: `toolautosubmit`. It makes the agent's submission a
+  // real navigation, which this site's CSP forbids outright (form-action
+  // 'none') — the agent would get no answer and the visitor would lose their
+  // answers. Without it the submission stays a dialog-method submit, which
+  // never reaches the CSP check at all. The honeypot below has no description
+  // on purpose: an agent is given no reason to fill a field whose only job is
+  // to catch scripts that fill everything.
+  const AGENT: Record<
+    'en' | 'ru',
+    { tool: string; company: string; task: string; budget: string; timeline: string }
+  > = {
+    en: {
+      tool: 'Prepare an enquiry to VKVstudio about a web or AI engineering project. Nothing is sent anywhere: the answers are composed into an email that the person reviews and sends from their own mail client, and the studio replies in writing within one business day.',
+      company: 'The company and what it does — one line is enough.',
+      task: 'The task in the person’s own words. A few sentences; what outcome they want, not a specification.',
+      budget: 'Budget band for the work. Must be one of the options offered by the field.',
+      timeline: 'How soon the work should start. Must be one of the options offered by the field.',
+    },
+    ru: {
+      tool: 'Подготовить обращение в VKVstudio о проекте по веб- или AI-разработке. Никуда ничего не отправляется: ответы складываются в письмо, которое человек проверяет и отправляет из своего почтового клиента, а студия отвечает письменно в течение одного рабочего дня.',
+      company: 'Компания и чем занимается — достаточно одной строки.',
+      task: 'Задача своими словами. Несколько предложений: какой нужен результат, а не техническое задание.',
+      budget: 'Бюджетная вилка. Должно быть одним из вариантов, предлагаемых полем.',
+      timeline: 'Когда начинать работу. Должно быть одним из вариантов, предлагаемых полем.',
+    },
+  };
+
   // The etalon CTA's magnetism (geo-audit's initGeoHeroManners, same
   // coefficient): the submit pill leans toward the cursor while hovered.
   // $effect only runs client-side, so the SSR pass never touches window.
@@ -202,6 +238,34 @@
       return;
     }
 
+    // WebMCP: an agent filled and submitted this form on a person's behalf.
+    // Two things change, and only for that path — `agentInvoked` is undefined
+    // for every human, so the branch below is unreachable in an ordinary
+    // browser and the human flow is byte-for-byte what it was.
+    //
+    // 1. The honeypot gate is skipped. An agent that fills every field it can
+    //    see is doing its job, not attacking us; punishing it with the silent
+    //    accept would swallow a real lead without a trace.
+    // 2. We answer with the composed email text instead of only swapping the
+    //    panel, so the agent has something to hand back to the person — this
+    //    form has no backend and never sends anything by itself.
+    const agentEvent = e as SubmitEvent & {
+      agentInvoked?: boolean;
+      respondWith?: (value: unknown) => void;
+    };
+    if (agentEvent.agentInvoked === true) {
+      submitted = true;
+      void focusSuccessHeading();
+      if (typeof agentEvent.respondWith === 'function') {
+        agentEvent.respondWith(
+          Promise.resolve({
+            content: [{ type: 'text', text: buildEmailText(data, lang) }],
+          })
+        );
+      }
+      return;
+    }
+
     const elapsedMs = Date.now() - mountedAt;
     if (isGateTripped(honeypot, elapsedMs)) {
       // Silent accept: a script tripped the honeypot. The panel still
@@ -225,7 +289,14 @@
        which navigates to ?website= and loses every answer (and, in production,
        is blocked outright by CSP form-action 'none'). Outside a <dialog>, a
        dialog-method submission is specified to do nothing at all. -->
-  <form class="funnel glass-panel" method="dialog" onsubmit={onSubmit} novalidate>
+  <form
+    class="funnel glass-panel"
+    method="dialog"
+    onsubmit={onSubmit}
+    novalidate
+    toolname="submit_project_brief"
+    tooldescription={AGENT[lang].tool}
+  >
     <!-- Honeypot: named for what autofill loves to fill and what a script
          loves to find, ignored by Chrome's address autofill because it
          isn't a recognized field name; removed from every human channel
@@ -247,6 +318,8 @@
       <label class="funnel__label text-mono" for="funnel-company">{labels.company}</label>
       <input
         id="funnel-company"
+        name="company"
+        toolparamdescription={AGENT[lang].company}
         class="funnel__input"
         type="text"
         bind:value={data.company}
@@ -267,6 +340,8 @@
       <p class="funnel__hint" id="funnel-task-hint">{labels.taskHint}</p>
       <textarea
         id="funnel-task"
+        name="task"
+        toolparamdescription={AGENT[lang].task}
         class="funnel__input funnel__textarea"
         bind:value={data.task}
         bind:this={taskEl}
@@ -287,6 +362,8 @@
         <label class="funnel__label text-mono" for="funnel-budget">{labels.budget}</label>
         <select
           id="funnel-budget"
+          name="budget"
+          toolparamdescription={AGENT[lang].budget}
           class="funnel__input funnel__select"
           bind:value={data.budget}
           bind:this={budgetEl}
@@ -308,6 +385,8 @@
         <label class="funnel__label text-mono" for="funnel-timeline">{labels.timeline}</label>
         <select
           id="funnel-timeline"
+          name="timeline"
+          toolparamdescription={AGENT[lang].timeline}
           class="funnel__input funnel__select"
           bind:value={data.timeline}
           bind:this={timelineEl}
