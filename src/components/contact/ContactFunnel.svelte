@@ -116,6 +116,14 @@
   // never reaches the CSP check at all. The honeypot below has no description
   // on purpose: an agent is given no reason to fill a field whose only job is
   // to catch scripts that fill everything.
+  // The field order an agent is told about when its submission fails
+  // validation, and the sentence that introduces the list.
+  const FIELD_ORDER = ['company', 'task', 'budget', 'timeline'] as const;
+  const AGENT_ERRORS: Record<'en' | 'ru', { intro: string }> = {
+    en: { intro: 'The enquiry was not accepted. Fix these answers and submit again:' },
+    ru: { intro: 'Обращение не принято. Исправьте эти ответы и отправьте снова:' },
+  };
+
   const AGENT: Record<
     'en' | 'ru',
     { tool: string; company: string; task: string; budget: string; timeline: string }
@@ -230,11 +238,39 @@
   function onSubmit(e: SubmitEvent): void {
     e.preventDefault();
 
+    // WebMCP: the same event, seen from the agent side. `agentInvoked` is
+    // undefined for every human, so nothing below changes the human flow.
+    const agentEvent = e as SubmitEvent & {
+      agentInvoked?: boolean;
+      respondWith?: (value: unknown) => void;
+    };
+    const byAgent = agentEvent.agentInvoked === true;
+    const answerAgent = (text: string): void => {
+      if (typeof agentEvent.respondWith === 'function') {
+        agentEvent.respondWith(Promise.resolve({ content: [{ type: 'text', text }] }));
+      }
+    };
+
     // Validate first, always — a tripped honeypot must never suppress
     // errors a real visitor would want to see (gate-order fix, P2).
     errors = validate(data);
     if (!isValid(errors)) {
       void focusFirstError();
+      // ...and an agent must never be left hanging here. Found by audit
+      // 2026-09-20: Chrome publishes this form's schema with `required: []`
+      // (see the `required` attributes added to the controls, which fix the
+      // contract itself), so a compliant agent that omitted a field landed on
+      // this bare `return` and got Chromium's "the site has a programming
+      // error" instead of an answer it could act on. The ordering test stayed
+      // green throughout, because it asserted the order of the guards and not
+      // that this one answers.
+      if (byAgent) {
+        answerAgent(
+          `${AGENT_ERRORS[lang].intro}\n${FIELD_ORDER.filter((f) => errors[f])
+            .map((f) => `- ${f}: ${errorText(errors[f])}`)
+            .join('\n')}`
+        );
+      }
       return;
     }
 
@@ -249,20 +285,10 @@
     // 2. We answer with the composed email text instead of only swapping the
     //    panel, so the agent has something to hand back to the person — this
     //    form has no backend and never sends anything by itself.
-    const agentEvent = e as SubmitEvent & {
-      agentInvoked?: boolean;
-      respondWith?: (value: unknown) => void;
-    };
-    if (agentEvent.agentInvoked === true) {
+    if (byAgent) {
       submitted = true;
       void focusSuccessHeading();
-      if (typeof agentEvent.respondWith === 'function') {
-        agentEvent.respondWith(
-          Promise.resolve({
-            content: [{ type: 'text', text: buildEmailText(data, lang) }],
-          })
-        );
-      }
+      answerAgent(buildEmailText(data, lang));
       return;
     }
 
@@ -309,6 +335,7 @@
         type="text"
         tabindex="-1"
         aria-hidden="true"
+        toolparamdescription="Do not fill this field. It exists to catch automated scripts."
         autocomplete="one-time-code"
         bind:value={honeypot}
       />
@@ -319,6 +346,7 @@
       <input
         id="funnel-company"
         name="company"
+        required
         toolparamdescription={AGENT[lang].company}
         class="funnel__input"
         type="text"
@@ -341,6 +369,7 @@
       <textarea
         id="funnel-task"
         name="task"
+        required
         toolparamdescription={AGENT[lang].task}
         class="funnel__input funnel__textarea"
         bind:value={data.task}
@@ -363,6 +392,7 @@
         <select
           id="funnel-budget"
           name="budget"
+          required
           toolparamdescription={AGENT[lang].budget}
           class="funnel__input funnel__select"
           bind:value={data.budget}
@@ -386,6 +416,7 @@
         <select
           id="funnel-timeline"
           name="timeline"
+          required
           toolparamdescription={AGENT[lang].timeline}
           class="funnel__input funnel__select"
           bind:value={data.timeline}

@@ -106,15 +106,44 @@ describe('ContactFunnel — declarative WebMCP', () => {
     }
   });
 
-  it('leaves the honeypot named but undescribed', () => {
-    // The honeypot exists to catch a script that fills every field it finds.
-    // Handing an agent a description of it would invite exactly the fill that
-    // trips the gate — and the gate answers with a silent accept, so a real
-    // enquiry would vanish without a trace.
+  it('tells an agent plainly not to fill the honeypot', () => {
+    // The honeypot is in the schema Chrome publishes whether we describe it or
+    // not — it is a named control, and it sorts FIRST. Leaving it undescribed
+    // (the original choice) meant an agent read a field called `website` whose
+    // only hint was the visually-hidden label "Leave this field empty": a
+    // mixed signal, and the first thing an agent learns about this studio.
+    // An explicit instruction is clearer and costs nothing, since the gate is
+    // skipped for agent submissions anyway.
     const tag = tagOf('funnel-website');
     expect(tag, 'honeypot control not found').not.toBe('');
     expect(tag).toMatch(/\bname="website"/);
-    expect(tag, 'honeypot is described to agents').not.toMatch(/toolparamdescription/);
+    expect(tag, 'honeypot is undescribed').toMatch(/\btoolparamdescription="[^"]+"/);
+    expect(tag, 'the honeypot description must say not to fill it').toMatch(
+      /toolparamdescription="[^"]*[Dd]o not fill/
+    );
+  });
+
+  it('declares all four answer fields required, so the published schema is honest', () => {
+    // Chrome synthesises the tool's inputSchema from the form. Without the
+    // `required` content attribute it publishes `"required": []` — found in the
+    // live PageSpeed report on 2026-09-20 — which invites a compliant agent to
+    // omit fields that validation then rejects. aria-required is not enough:
+    // Blink reads element.IsRequired(). The form carries `novalidate`, so this
+    // changes the contract for agents without turning on native browser bubbles
+    // for humans.
+    // The boundary has to exclude `aria-required`, which every control also
+    // carries: `\brequired\b` matches inside it, because a hyphen is not a
+    // word character. The first version of this assertion did exactly that and
+    // stayed green when the real attribute was deleted — caught by mutating it.
+    const BARE_REQUIRED = /(?:^|\s)required(?=\s|=|>|$)/m;
+    for (const field of FIELDS) {
+      const tag = tagOf(field.id);
+      expect(tag, `not required: ${field.id}`).toMatch(BARE_REQUIRED);
+      expect(tag, `aria-required alone is not enough: ${field.id}`).toMatch(/aria-required/);
+    }
+    expect(FORM_TAG, 'novalidate was removed; native bubbles would appear').toMatch(
+      /\bnovalidate\b/
+    );
   });
 
   it('never sets toolautosubmit anywhere in the markup', () => {
@@ -158,33 +187,57 @@ describe('ContactFunnel — declarative WebMCP', () => {
     }
   });
 
-  it('actually answers an agent-invoked submit', () => {
-    // The assertion an audit proved missing: deleting respondWith() used to
-    // leave this suite green, because the words appeared in the comments that
-    // explained them. Matched against comment-free CODE now, and against the
-    // CALL rather than the identifier — a form with no backend must hand the
-    // agent the composed text, or the agent has nothing to give back to the
-    // person it is acting for.
+  it('answers an agent on success with the composed email', () => {
+    // Matched against comment-free CODE and against the CALL, not the bare
+    // identifier: an earlier version of this test passed while respondWith had
+    // been deleted, because the words survived in the comments explaining them.
     expect(CODE, 'the agent branch is gone').toMatch(/agentEvent\.agentInvoked\s*===\s*true/);
     expect(CODE, 'respondWith is never CALLED').toMatch(/agentEvent\.respondWith\s*\(/);
-    expect(CODE, 'respondWith is called without the composed email').toMatch(
-      /respondWith\([\s\S]{0,200}?buildEmailText\(data, lang\)/
-    );
     expect(CODE, 'respondWith is called unguarded').toMatch(
       /typeof agentEvent\.respondWith === 'function'/
+    );
+    expect(CODE, 'the success path does not answer with the composed email').toMatch(
+      /answerAgent\(buildEmailText\(data, lang\)\)/
+    );
+  });
+
+  it('answers an agent when its submission FAILS validation', () => {
+    // The defect this test exists for (audit, 2026-09-20): the invalid branch
+    // ended in a bare `return`, so a compliant agent that omitted a field —
+    // which the published schema invited, since `required` was empty — got
+    // Chromium's "the site has a programming error" instead of the field
+    // errors. The ordering test below stayed green the whole time, because
+    // order was all it checked.
+    const invalidBlock = CODE.slice(
+      CODE.indexOf('if (!isValid(errors))'),
+      CODE.indexOf('if (byAgent) {', CODE.indexOf('if (!isValid(errors))') + 40)
+    );
+    expect(invalidBlock.length, 'the invalid-submit block was not found').toBeGreaterThan(20);
+    const failurePath = CODE.slice(
+      CODE.indexOf('if (!isValid(errors))'),
+      CODE.indexOf('// WebMCP: an agent filled')
+    );
+    expect(failurePath, 'the failure path never answers the agent').toMatch(/answerAgent\(/);
+    expect(failurePath, 'the failure path does not report which fields failed').toMatch(
+      /errors\[f\]/
     );
   });
 
   it('orders the submit guards: validate, then agent, then honeypot', () => {
-    // Order is the whole safety argument. Validation first so a real visitor's
-    // errors are never suppressed; the agent branch before the honeypot so an
-    // agent that dutifully filled every field is not silently swallowed.
-    const validation = CODE.indexOf('if (!isValid(errors))');
-    const agentBranch = CODE.indexOf('agentEvent.agentInvoked === true');
+    // Order is the whole safety argument. Validation runs first, so a real
+    // visitor's errors are never suppressed; the agent branch sits before the
+    // honeypot gate, so an agent that dutifully filled every field is not
+    // silently swallowed by the anti-script trap. Anchored on the guards
+    // themselves — `byAgent` is only a boolean read and may be computed
+    // anywhere above.
+    const validation = CODE.indexOf('errors = validate(data)');
+    const invalid = CODE.indexOf('if (!isValid(errors))');
+    const agentSuccess = CODE.indexOf('answerAgent(buildEmailText');
     const gate = CODE.indexOf('isGateTripped(honeypot');
-    expect(validation, 'validation guard not found').toBeGreaterThan(-1);
-    expect(agentBranch, 'agent branch not found').toBeGreaterThan(validation);
-    expect(gate, 'honeypot gate not found').toBeGreaterThan(agentBranch);
+    expect(validation, 'validation call not found').toBeGreaterThan(-1);
+    expect(invalid, 'invalid guard not found').toBeGreaterThan(validation);
+    expect(agentSuccess, 'agent success path not found').toBeGreaterThan(invalid);
+    expect(gate, 'honeypot gate not found').toBeGreaterThan(agentSuccess);
   });
 
   it('keeps the island server-rendered, which is the only reason any of this reaches an agent', () => {
