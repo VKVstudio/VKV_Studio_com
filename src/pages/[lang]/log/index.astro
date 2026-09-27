@@ -32,6 +32,7 @@ interface LogEntry {
   result?: string[];
   tools?: LogTool[];
   body?: string[];
+  link?: { label: string; url: string; external?: boolean };
 }
 
 interface LogContent {
@@ -449,6 +450,39 @@ const content: Record<Lang, LogContent> = {
           'A browser will happily let you build a desktop site that merely fits on a phone. Fitting and working are different things. The table of contents of this log is the most tapped spot on the page, and every row of it now stands at least forty-four pixels tall, the size of a fingertip. A number from the guidelines I knew by heart and ignored exactly where people tap the most.',
         ],
       },
+      {
+        n: '27',
+        slug: 'the-hundred-the-cache-would-not-give-us',
+        date: '2026-09-21',
+        title: 'The hundred the cache would not give us',
+        lead: 'On September 27, PageSpeed gave the live homepage four 100s and 4/4 for agentic browsing on both mobile and desktop. Six days earlier, mobile performance was in the low nineties, and the first attempt to ship the fix still served the old video. The number is nice. The route to it is more useful.',
+        body: [
+          'I started with the trace, not the score. The largest element on the first screen was text that had already arrived, but my entrance animation held it at zero opacity. Chrome waited more than two seconds to count it as painted. Starting the sequence from a faint, nonzero opacity kept the order of the reveal and cut that artificial render delay to a few hundred milliseconds. It did not make the network faster; it stopped my own choreography from hiding a ready headline.',
+          'Two other jobs were stealing time before anyone asked for them. The language switcher set a canvas font on every frame, forcing hundreds of style recalculations and about 1.9 seconds of mobile CPU time in the trace. The assistant mounted its whole terminal on the homepage, costing another 1.1 seconds of scripting even when nobody opened it. I cached the font, let the animation start in an idle slot, and moved the terminal behind a dynamic import. The interface still does the same work when someone actually uses it.',
+          'Then the video. I had encoded every frame of the hero as a keyframe because I thought that was the price of smooth scroll scrubbing. A random seek into a much smaller GOP-12 version measured 67 ms versus 72 ms for the original: indistinguishable at this scale. The file fell from 25.7 MB to 6.6 MB. The first production deploy changed nothing for desktop visitors, though. Cloudflare had a thirty-day cache rule for MP4s and kept serving the old bytes under the old filename. Only versioned video URLs made the new file reach the browser; the live server then returned the expected 206 partial response for scrubbing.',
+          'I also removed five render-blocking stylesheet requests, but repeated runs did not show a reliable FCP or LCP gain from that change. It belongs in the record, not in a victory lap. The security and accessibility work had their own checks; a single performance trick cannot explain four categories of 100.',
+          'The September 27 report records mobile LCP at 1.8 seconds, desktop at 0.4, zero layout shift on both, and 100/100/100/100 plus 4/4 on each device profile. These are Lighthouse lab results for the English homepage, not a promise that every visitor or every page gets a perfect score. PageSpeed shows no field data for this URL yet. The lesson I am keeping is smaller and harder to fake: inspect the trace, check the bytes the live edge actually returns, and measure again after the deploy.',
+        ],
+        link: {
+          label: 'PageSpeed Insights report · September 27, 2026',
+          url: 'https://pagespeed.web.dev/analysis/https-vkvstudio-com/w5la5p2ntq?form_factor=mobile',
+          external: true,
+        },
+      },
+      {
+        n: '28',
+        slug: 'a-second-address-to-be-useful',
+        date: '2026-09-27',
+        title: 'A second address to be useful',
+        lead: 'AI news is easy to find. Knowing what it means for your business is harder. I am preparing vkvstudio.pro for that second question: what changed, does it affect you, and is there anything worth doing now?',
+        body: [
+          'Another announcement does not need another breathless retelling. A business owner needs to know whether it changes how customers find them, whether it can remove real work from a team, and what it would cost to try. Sometimes the useful answer will be “not yet.” Sometimes it will be “ignore this one.” That is a better service than making every release sound urgent.',
+          'The plan for .pro is simple: start from the original source, explain the business consequence in ordinary language, and show what happened when I tested a relevant change in a real project. Where I have not tested it, I will say so. Each piece should leave you with a clear choice: act, watch, or pass. No invented case studies, no borrowed certainty.',
+          'The two addresses have different jobs. vkvstudio.pro is being built as a place to think through changes in public. vkvstudio.com is where the services, scope, and contact path already live. If a change matters to your company, I want the route from reading about it to asking for help to be short and honest.',
+          'The .pro site is still in preparation. You do not have to wait for it to bring a real question: tell me which process eats your team’s time, or where you suspect customers no longer find you. I can look at the specific problem before recommending any work.',
+        ],
+        link: { label: 'Tell me what needs fixing', url: '/en/contact/' },
+      },
     ],
     outro: [
       'That is the log for now. Every call here was a trade, and I made each one on purpose, even the ones I second-guessed later.',
@@ -865,6 +899,39 @@ const content: Record<Lang, LogContent> = {
           'Браузер охотно даст собрать десктопный сайт, который на телефоне всего лишь помещается. Помещаться и работать — разные вещи. Оглавление этого лога — самое тапаемое место страницы, и каждая его строка теперь не ниже сорока четырёх пикселей, размера подушечки пальца. Число из гайдлайнов, которое я знал наизусть и проигнорировал ровно там, где по нему тапают чаще всего.',
         ],
       },
+      {
+        n: '27',
+        slug: 'the-hundred-the-cache-would-not-give-us',
+        date: '2026-09-21',
+        title: 'Сотня, которую кэш не хотел отдавать',
+        lead: '27 сентября PageSpeed дал живой главной странице четыре сотни и 4/4 за агентный просмотр — на телефоне и на компьютере. Шестью днями раньше мобильная производительность была в начале девяностых, а после первого выката посетители всё ещё получали старое видео. Цифра приятная. Путь к ней полезнее.',
+        body: [
+          'Я начал с трассы, а не с балла. Самым крупным элементом первого экрана оказался текст, который уже загрузился, но моя входная анимация держала его на нулевой прозрачности. Chrome больше двух секунд ждал, прежде чем засчитать его отрисованным. Я оставил последовательность появления, но начал её с едва заметной ненулевой прозрачности: искусственная задержка сократилась до нескольких сотен миллисекунд. Сеть от этого быстрее не стала — я просто перестал прятать готовый заголовок собственной анимацией.',
+          'Ещё две работы отнимали время до того, как кто-либо о них просил. Переключатель языка каждый кадр задавал шрифт канвасу: сотни пересчётов стилей и около 1,9 секунды работы процессора в мобильной трассе. Ассистент разворачивал весь терминал на главной, тратя ещё 1,1 секунды на скрипты, даже если его никто не открывал. Шрифт теперь кэшируется, анимация стартует в свободное время браузера, терминал загружается отдельно. Когда человек действительно открывает чат, функция остаётся на месте.',
+          'Потом видео. Я закодировал каждый кадр первого экрана как ключевой, считая это платой за плавную прокрутку. Случайный переход к кадру в гораздо меньшем файле с ключевым кадром через каждые 12 измерялся в 67 мс против 72 мс у оригинала — на практике разницы нет. Вес упал с 25,7 до 6,6 МБ. Но первый выкат для посетителей компьютеров ничего не изменил: Cloudflare кэшировал MP4 на 30 дней и продолжал отдавать старые байты по старому имени. Только новое имя файла заставило браузер получить новую версию; живой сервер снова отвечал частичным ответом 206, нужным для прокрутки видео.',
+          'Я убрал и пять блокирующих загрузку CSS-файлов, но повторные прогоны не показали надёжного выигрыша по FCP или LCP. Это стоит записать, но не выдавать за причину победы. Безопасность и доступность проверялись отдельно; один трюк с производительностью не объясняет четыре сотни.',
+          'Отчёт 27 сентября показывает LCP 1,8 секунды на телефоне и 0,4 на компьютере, нулевые сдвиги вёрстки на обоих, 100/100/100/100 и 4/4 для каждого профиля. Это лабораторный Lighthouse для английской главной, а не обещание идеального результата каждому посетителю на каждой странице. Полевых данных по этому URL в PageSpeed пока нет. Вывод для себя оставляю скромнее: смотреть трассу, проверять байты, которые реально отдаёт живой сайт, и мерить снова после выката.',
+        ],
+        link: {
+          label: 'Отчёт PageSpeed Insights · 27 сентября 2026',
+          url: 'https://pagespeed.web.dev/analysis/https-vkvstudio-com/w5la5p2ntq?form_factor=mobile',
+          external: true,
+        },
+      },
+      {
+        n: '28',
+        slug: 'a-second-address-to-be-useful',
+        date: '2026-09-27',
+        title: 'Второй адрес — чтобы быть полезнее',
+        lead: 'Новости об AI найти легко. Сложнее понять, что они меняют именно для твоего бизнеса. Я готовлю vkvstudio.pro для второго вопроса: что произошло, касается ли это тебя и нужно ли сейчас что-то делать?',
+        body: [
+          'Очередному анонсу не нужен ещё один восторженный пересказ. Руководителю важно понять, изменится ли путь клиента к его компании, можно ли снять с команды реальную работу и во что обойдётся проверка. Иногда полезный ответ — «пока рано». Иногда — «пропусти». Это честнее, чем объявлять срочным каждый релиз.',
+          'План для .pro простой: брать первоисточник, объяснять последствия для бизнеса обычным языком и показывать, что получилось, когда я проверил подходящее изменение на реальном проекте. Если не проверял — так и писать. После материала должен оставаться выбор: действовать, наблюдать или пропустить. Без выдуманных кейсов и чужой уверенности.',
+          'У двух адресов разные задачи. vkvstudio.pro я готовлю как место, где можно открыто разбирать изменения. На vkvstudio.com уже живут услуги, рамки работ и связь со мной. Если изменение важно для твоей компании, путь от прочитанного до предметного разговора должен быть коротким и честным.',
+          'Сайт .pro ещё в подготовке. Но ждать его, чтобы принести конкретный вопрос, не нужно: расскажи, какая работа съедает время команды или где, по твоему ощущению, клиенты перестали тебя находить. Я сначала разберусь в задаче, а уже потом предложу работу, если она действительно нужна.',
+        ],
+        link: { label: 'Рассказать о своей задаче', url: '/ru/contact/' },
+      },
     ],
     outro: [
       'Вот такой лог на сейчас. Каждое решение тут было разменом, и каждое я сделал осознанно, даже те, в которых потом сомневался.',
@@ -1137,6 +1204,17 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
                     <p>{p}</p>
                   ))}
                 </div>
+              )}
+              {entry.link && (
+                <p class="log-link text-mono">
+                  <a
+                    href={entry.link.url}
+                    target={entry.link.external ? '_blank' : undefined}
+                    rel={entry.link.external ? 'noopener noreferrer' : undefined}
+                  >
+                    {entry.link.label} ↗
+                  </a>
+                </p>
               )}
             </li>
           ))
@@ -1534,6 +1612,16 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
 
   .log-body p:last-child {
     margin-bottom: 0;
+  }
+
+  .log-link {
+    margin-top: var(--space-5);
+    font-size: var(--text-sm);
+  }
+
+  .log-link a {
+    color: var(--accent-green-400);
+    text-underline-offset: 0.2em;
   }
 
   /* ── Outro ───────────────────────────────────────────────────── */
