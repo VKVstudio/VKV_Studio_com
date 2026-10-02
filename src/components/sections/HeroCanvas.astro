@@ -88,7 +88,11 @@ const { lang } = Astro.props;
       /* Same reasoning: a 64–110px decorative canvas widget is nowhere near an
         LCP candidate and does not deserve eager hydration. */
     }
-    <HeroLangSwitcher client:visible lang={lang} />
+    <HeroLangSwitcher
+      client:visible
+      lang={lang}
+      languageLabel={t(lang, 'nav.switchLanguageTo').replace('{lang}', lang === 'en' ? 'RU' : 'EN')}
+    />
 
     {/* Scroll indicator */}
     <div class="hero__scroll-indicator" id="hero-scroll-indicator">

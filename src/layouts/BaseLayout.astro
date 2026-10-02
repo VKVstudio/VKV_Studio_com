@@ -3,6 +3,7 @@ import type { Lang } from '@i18n/utils';
 import { t, supportedLangs } from '@i18n/utils';
 import CookieConsent from '@components/ui/CookieConsent.svelte';
 import Footer from '@components/layout/Footer.astro';
+import markets from '@/data/markets.json';
 import { CONTACT_EMAIL } from '@/lib/site-config';
 import { ORIGIN_TRIAL_TOKEN } from '@/lib/webmcp/origin-trial';
 import { TRUSTED_TYPES_POLICY_SCRIPT } from '@/lib/trusted-types-policy';
@@ -373,6 +374,11 @@ const ogImageAlt =
         },
         founder: { '@id': `${SITE_URL}/#person` },
         knowsLanguage: ['en', 'ru'],
+        areaServed: markets.map((market) => ({
+          '@type': 'Country',
+          name: market.en,
+          identifier: market.code,
+        })),
         description:
           'Registered sole proprietorship in Armenia building AI systems and web engineering — LLM fine-tuning, RAG, embeddings and self-hosted inference on an all-Google open-model stack.',
       })}
@@ -416,7 +422,7 @@ const ogImageAlt =
           'GSAP',
         ],
         sameAs: [
-          'https://github.com/smartbulldog-pro',
+          'https://github.com/VKVstudio',
           'https://www.linkedin.com/in/smartbulldog',
           'https://www.facebook.com/share/17uECE6UEA/',
           'https://www.instagram.com/smart_bulldog',

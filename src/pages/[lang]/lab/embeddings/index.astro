@@ -129,7 +129,7 @@ const jsonLd = [
 ];
 ---
 
-<BaseLayout title={meta.title} description={meta.description} lang={lang} jsonLd={jsonLd}>
+<BaseLayout title={meta.title} description={meta.description} lang={activeLang} jsonLd={jsonLd}>
   <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
   <InnerHeader lang={activeLang} />
   <main id="main-content" class="lab-page">

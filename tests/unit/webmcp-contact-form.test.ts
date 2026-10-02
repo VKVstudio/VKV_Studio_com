@@ -197,7 +197,7 @@ describe('ContactFunnel — declarative WebMCP', () => {
       /typeof agentEvent\.respondWith === 'function'/
     );
     expect(CODE, 'the success path does not answer with the composed email').toMatch(
-      /answerAgent\(buildEmailText\(data, lang\)\)/
+      /answerAgent\(buildEmailText\(data, lang, context\)\)/
     );
   });
 

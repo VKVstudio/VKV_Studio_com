@@ -86,7 +86,9 @@ function directive(csp: string, name: string): string[] {
 }
 
 /** The exact inline strings Astro emits: island runtime + one loader per client directive. */
-async function astroInlineScripts(): Promise<Record<string, string>> {
+async function astroInlineScripts(): Promise<
+  Record<'island' | 'load' | 'idle' | 'visible' | 'media' | 'only', string>
+> {
   const require = createRequire(import.meta.url);
   const astroDir = dirname(require.resolve('astro/package.json'));
   const load = async (rel: string): Promise<string> => {

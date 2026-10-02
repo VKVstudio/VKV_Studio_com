@@ -767,7 +767,7 @@ describe('formatters — durations agree with Russian grammar', () => {
     expect(duration(FACTS.time.website).ru).toMatch(/недель$/);
     expect(duration(FACTS.time.ragPilot).ru).toMatch(/недели$/);
     expect(duration(FACTS.time.warranty).ru).toMatch(/дней$/);
-    expect(duration(FACTS.time.introCall).ru).toMatch(/минут$/);
+    expect(FACTS.availability.communicationMode.text.ru).toContain('переписке');
   });
 
   it('English pluralises on the count, and a range is always plural', () => {
@@ -795,7 +795,7 @@ describe('formatters — durations agree with Russian grammar', () => {
 describe('formatters — scores, splits, offsets and dates', () => {
   it('a score is language-neutral and asserts its denominator', () => {
     expect(score(FACTS.site.lighthouseDesktopHome)).toEqual({ en: '99/100', ru: '99/100' });
-    expect(ratio(FACTS.site.agenticChecks)).toEqual({ en: '3/3', ru: '3/3' });
+    expect(ratio(FACTS.site.agenticChecks)).toEqual({ en: '6/6', ru: '6/6' });
     expect(() => score(FACTS.site.cls)).toThrow(FactFormatError);
   });
 

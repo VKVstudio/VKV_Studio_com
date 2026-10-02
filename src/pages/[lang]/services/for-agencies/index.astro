@@ -27,6 +27,7 @@ import InnerHeader from '@components/layout/InnerHeader.astro';
 import PageHero from '@components/blocks/PageHero.astro';
 import FaqSection from '@components/sections/FaqSection.astro';
 import ServiceCta from '@components/services/ServiceCta.astro';
+import { t } from '@i18n/utils';
 import heroArt from '@/assets/services/rung2-agencies.png';
 import { SITE_ORIGIN } from '@/data/services';
 import { faqPageNode, servicesBreadcrumb } from '@/lib/services-jsonld';
@@ -72,8 +73,8 @@ const AGENCY_FAQ: FaqItem[] = [
       ru: 'Что, если клиент попросит поговорить с инженером напрямую?',
     },
     a: {
-      en: 'That request goes through you, not around you. I join a call only if you invite me in, and I follow whatever introduction you give me — as your consultant, your engineer, or not named at all.',
-      ru: 'Такой запрос идёт через вас, а не в обход вас. Я подключаюсь к звонку только по вашему приглашению и следую той роли, в которой вы меня представите: как ваш консультант, ваш инженер — или вовсе без имени.',
+      en: t('en', 'contact.agencyClient'),
+      ru: t('ru', 'contact.agencyClient'),
     },
   },
   {
@@ -160,8 +161,7 @@ const copy = {
         },
         {
           label: 'Process',
-          value:
-            'Async-first — briefs and deliverables move as documents, replies land in writing within one business day, and calls happen when they earn a slot on the schedule.',
+          value: t('en', 'contact.agencyProcess'),
         },
         {
           label: 'Paper',
@@ -265,8 +265,7 @@ const copy = {
         },
         {
           label: 'Процесс',
-          value:
-            'Асинхронный — брифы и результаты работы передаются документами, ответ приходит письменно в течение одного рабочего дня, а звонки случаются, когда действительно заслуживают места в расписании.',
+          value: t('ru', 'contact.agencyProcess'),
         },
         {
           label: 'Бумага',
@@ -504,7 +503,11 @@ const jsonLd = [servicesBreadcrumb(lang, copy.h1, pageUrl), faqPageNode(lang, AG
 
     <FaqSection lang={lang} items={AGENCY_FAQ} id="agency-faq" />
 
-    <ServiceCta lang={lang} />
+    <ServiceCta
+      lang={lang}
+      service="for-agencies"
+      outcome={t(lang, 'services.ctaOutcomes.for-agencies')}
+    />
   </main>
 </BaseLayout>
 

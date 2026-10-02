@@ -13,6 +13,8 @@
  * there, reviewed by hand here): no "Stripe", no registry numbers, no 24/7.
  */
 
+import { t } from '@/i18n/utils';
+
 export interface FaqItem {
   q: { en: string; ru: string };
   a: { en: string; ru: string };
@@ -25,8 +27,8 @@ export const FAQ: FaqItem[] = [
       ru: 'С чего начинается работа?',
     },
     a: {
-      en: 'Two doors. If you want a low-risk first step, order the €900 AI-visibility audit — fixed scope, no call required, delivered in 5–10 business days. If your project is bigger, use the contact page: four short questions, and you get a written reply from the engineer within one business day — with an optional 30-minute call slot if you prefer talking. For everything beyond the audit, a signed contract and NDA come before any work does; the audit needs neither, since it reads only public sources.',
-      ru: 'Две двери. Хотите первый шаг с минимальным риском — закажите аудит ИИ-видимости за €900: фиксированный скоуп, без созвона, готов за 5–10 рабочих дней. Если проект крупнее — страница контакта: четыре коротких вопроса, и вы получаете письменный ответ инженера в течение одного рабочего дня; а если удобнее голосом — 30-минутный созвон по желанию. Для всего, что крупнее аудита, договор и NDA подписываются до начала работ; самому аудиту они не нужны — он опирается только на публичные источники.',
+      en: t('en', 'contact.sharedStart'),
+      ru: t('ru', 'contact.sharedStart'),
     },
   },
   {
@@ -95,8 +97,8 @@ export const FAQ: FaqItem[] = [
       ru: 'Вы работаете в европейских часах? Где вы находитесь?',
     },
     a: {
-      en: 'Gyumri, Armenia — GMT+4, which puts my working afternoon inside EU and UK business hours every single day. The workflow is async-first: briefs and deliverables live in documents, calls happen when they earn their slot. Cross-border is routine here: contracts with an English-law option, reverse-charge invoices with no VAT, communication in English.',
-      ru: 'Гюмри, Армения — GMT+4: моя вторая половина дня каждый день попадает в рабочие часы ЕС и Великобритании. Процесс устроен async-first: брифы и результаты живут в документах, созвоны случаются, когда они того стоят. Трансграничная работа здесь — обычное дело: договоры с возможностью выбрать английское право, счета без VAT по механизму reverse charge, общение на английском.',
+      en: t('en', 'contact.sharedLocation'),
+      ru: t('ru', 'contact.sharedLocation'),
     },
   },
   {

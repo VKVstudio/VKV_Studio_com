@@ -11,6 +11,7 @@
  * the Russian version short of editing the URL. The Lab pages are the ones a
  * stranger is most likely to land on directly.
  */
+import { resolveProReading } from '@/lib/pro-insights';
 import type { Lang } from '@i18n/utils';
 import { t, getAltLang } from '@i18n/utils';
 
@@ -19,6 +20,11 @@ interface Props {
 }
 
 const { lang } = Astro.props;
+const insights = resolveProReading('home', {
+  isDev: import.meta.env.DEV,
+  previewBuild: import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true',
+  localPreviewUrl: import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL,
+});
 const altLang = getAltLang(lang);
 const year = new Date().getFullYear();
 
@@ -42,11 +48,8 @@ const altHref = /^\/(en|ru)(\/|$)/.test(path)
  * get no visible change; a screen reader now announces the jump before it
  * happens instead of the user discovering a new tab afterwards.
  *
- * Wording and the "— " separator are copied verbatim from the pattern already
- * shipped in ContactFunnel.svelte (NEW_TAB_HINT, used on the Cal.com link in
- * the success panel) — one phrasing across the site, not two. Kept as a local
- * const there and here rather than an i18n key, for the same reason: it is a
- * mechanical a11y string, not editorial copy.
+ * The bilingual hint and separator announce the external destination before
+ * navigation, for both text links and aria-labeled social links.
  *
  * The two text links carry it as a `.visually-hidden` span appended to the link
  * text. The two social links CANNOT: they have `aria-label`, which replaces the
@@ -104,6 +107,18 @@ const newTab = NEW_TAB_HINT[lang];
       <a href={`/${lang}/log/`} class="footer__privacy-link">
         {t(lang, 'footer.logLink')}
       </a>
+      {
+        insights.visible &&
+          (insights.href ? (
+            <a href={insights.href} class="footer__privacy-link">
+              {insights.label[lang]}
+            </a>
+          ) : (
+            <span class="footer__privacy-link">
+              {insights.label[lang]} · {lang === 'ru' ? 'готовится' : 'in review'}
+            </span>
+          ))
+      }
       {/* Privacy policy link */}
       <a href={`/${lang}/privacy/`} class="footer__privacy-link">
         {t(lang, 'footer.privacyLink')}
@@ -121,7 +136,7 @@ const newTab = NEW_TAB_HINT[lang];
         <span class="footer__lang-arrow">→ {altLang}</span>
       </a>
       <a
-        href="https://github.com/smartbulldog-pro"
+        href="https://github.com/VKVstudio"
         target="_blank"
         rel="noopener noreferrer"
         class="footer__social-link"

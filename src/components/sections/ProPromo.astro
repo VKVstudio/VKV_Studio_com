@@ -1,0 +1,408 @@
+---
+import { t, type Lang } from '@i18n/utils';
+import { PRO_PROMO_LAUNCHED, resolveProPromo } from '@/lib/pro-promo';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const promo = resolveProPromo({
+  launched: PRO_PROMO_LAUNCHED,
+  isDev: import.meta.env.DEV,
+  previewBuild: import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true',
+  localPreviewUrl: import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL,
+});
+
+// Co-located EN/RU copy keeps the homepage integration and shared dictionaries untouched.
+const copy = {
+  en: {
+    eyebrow: '// intelligence for business',
+    heading: 'AI moves fast.',
+    hook: 'Know what matters.',
+    body: 'AI news is everywhere. VKVstudio.pro explains what it means for your business: where AI could help, what it takes, and where the limits are. When it is time to build, the next step connects to VKVstudio services.',
+    cta: 'Read VKVstudio.pro',
+    language: 'English-language insights for business decision makers.',
+    preview: 'Preview · public launch pending',
+    localPreview: t('en', 'contact.proLocalPreview'),
+    pause: t('en', 'contact.pauseMotion'),
+    rail: 'From AI news to your next move',
+    decisions: [
+      { label: 'Act', text: 'A practical opportunity to explore.' },
+      { label: 'Watch', text: 'Promising. More evidence needed.' },
+      { label: 'Skip', text: 'No clear fit for your business.' },
+    ],
+  },
+  ru: {
+    eyebrow: '// ИИ для решений в бизнесе',
+    heading: 'ИИ меняется быстро.',
+    hook: 'Пойми, что важно.',
+    body: 'Новостей об ИИ много. VKVstudio.pro объясняет, что они значат для твоего бизнеса: где ИИ может помочь, что потребуется и какие есть ограничения. Когда пора внедрять — следующий шаг связан с услугами VKVstudio.',
+    cta: 'Читать VKVstudio.pro',
+    language: 'Материалы на английском для руководителей бизнеса.',
+    preview: 'Превью · публичный запуск ожидается',
+    localPreview: t('ru', 'contact.proLocalPreview'),
+    pause: t('ru', 'contact.pauseMotion'),
+    rail: 'От новости об ИИ к следующему шагу',
+    decisions: [
+      { label: 'Действовать', text: 'Есть практическая возможность для проверки.' },
+      { label: 'Наблюдать', text: 'Перспективно. Нужны новые данные.' },
+      { label: 'Пропустить', text: 'Пока нет ясной пользы для твоего бизнеса.' },
+    ],
+  },
+} satisfies Record<
+  Lang,
+  {
+    eyebrow: string;
+    heading: string;
+    hook: string;
+    body: string;
+    cta: string;
+    language: string;
+    preview: string;
+    localPreview: string;
+    pause: string;
+    rail: string;
+    decisions: Array<{ label: string; text: string }>;
+  }
+>;
+const c = copy[lang];
+---
+
+{
+  promo.visible && (
+    <section class="pro-promo" id="pro" aria-labelledby="pro-promo-heading">
+      <div class="container">
+        <div class="pro-promo__panel">
+          <div class="pro-promo__copy">
+            <p class="pro-promo__eyebrow text-mono">{c.eyebrow}</p>
+            <h2 id="pro-promo-heading" class="pro-promo__heading">
+              {c.heading} <span>{c.hook}</span>
+            </h2>
+            <p class="pro-promo__body">{c.body}</p>
+            <div class="pro-promo__action">
+              {promo.href ? (
+                <a
+                  class="pro-promo__cta"
+                  href={promo.href}
+                  aria-describedby={!PRO_PROMO_LAUNCHED ? 'pro-promo-preview' : undefined}
+                >
+                  <span translate="no">{c.cta}</span>
+                  <span class="pro-promo__arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </a>
+              ) : (
+                <>
+                  <button
+                    class="pro-promo__cta"
+                    type="button"
+                    disabled
+                    aria-describedby="pro-promo-preview"
+                  >
+                    <span translate="no">{c.cta}</span>
+                    <span aria-hidden="true">↗</span>
+                  </button>
+                </>
+              )}
+              {!PRO_PROMO_LAUNCHED && (
+                <p class="pro-promo__preview" id="pro-promo-preview">
+                  {promo.href ? c.localPreview : c.preview}
+                </p>
+              )}
+              <label class="pro-promo__motion">
+                <input type="checkbox" />
+                {c.pause}
+              </label>
+              <p class="pro-promo__language">{c.language}</p>
+            </div>
+          </div>
+
+          <aside class="pro-promo__signal" aria-labelledby="pro-promo-rail">
+            <p class="pro-promo__brand text-mono" translate="no">
+              VKVstudio.pro
+            </p>
+            <h3 id="pro-promo-rail" class="pro-promo__rail-heading">
+              {c.rail}
+            </h3>
+            <ul class="pro-promo__decisions">
+              {c.decisions.map((decision, i) => (
+                <li>
+                  <span class="pro-promo__index text-mono" aria-hidden="true">
+                    0{i + 1}
+                  </span>
+                  <div>
+                    <p class="pro-promo__decision">{decision.label}</p>
+                    <p class="pro-promo__reason">{decision.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .pro-promo {
+    padding-top: var(--space-16);
+    scroll-margin-top: var(--space-20);
+  }
+
+  .pro-promo .container {
+    padding-inline: max(var(--space-4), env(safe-area-inset-left, 0px))
+      max(var(--space-4), env(safe-area-inset-right, 0px));
+  }
+
+  .pro-promo__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    gap: var(--space-12);
+    padding: var(--space-12);
+    background: var(--bg-graphite);
+    border: 1px solid var(--border-subtle);
+    border-top: 2px solid var(--accent-green-300);
+    border-radius: var(--radius-lg);
+  }
+
+  .pro-promo__copy,
+  .pro-promo__signal {
+    min-width: 0;
+  }
+
+  .pro-promo__eyebrow {
+    margin-bottom: var(--space-5);
+    color: var(--accent-green-300);
+  }
+
+  .pro-promo__heading {
+    font-size: var(--text-h1);
+    text-wrap: balance;
+    margin-bottom: var(--space-6);
+  }
+
+  .pro-promo__heading span {
+    display: block;
+    color: var(--accent-green-300);
+  }
+
+  .pro-promo__body {
+    max-width: 58ch;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-8);
+  }
+
+  .pro-promo__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    min-height: var(--space-12);
+    padding: var(--space-3) var(--space-5);
+    border: 1px solid var(--accent-green-300);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    background: var(--bg-obsidian);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+    touch-action: manipulation;
+  }
+
+  a.pro-promo__cta:hover,
+  a.pro-promo__cta:active {
+    color: var(--accent-green-300);
+    background: var(--bg-slate);
+  }
+
+  .pro-promo__cta:focus-visible {
+    outline: 2px solid var(--accent-green-300);
+    outline-offset: var(--space-1);
+  }
+
+  .pro-promo__cta:disabled {
+    cursor: not-allowed;
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+  }
+
+  .pro-promo__language,
+  .pro-promo__preview {
+    margin-top: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  .pro-promo__signal {
+    position: relative;
+    align-self: center;
+    padding-left: var(--space-8);
+    border-left: 1px solid var(--border-default);
+  }
+
+  .pro-promo__brand {
+    color: var(--text-secondary);
+    text-transform: none;
+    margin-bottom: var(--space-3);
+  }
+
+  .pro-promo__rail-heading {
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    text-wrap: balance;
+    margin-bottom: var(--space-6);
+  }
+
+  .pro-promo__decisions {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .pro-promo__decisions li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .pro-promo__index {
+    padding-top: var(--space-1);
+    color: var(--accent-green-300);
+  }
+
+  .pro-promo__decision {
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-base);
+    margin-bottom: var(--space-1);
+  }
+
+  .pro-promo__reason {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  @media (max-width: 767px) {
+    .pro-promo {
+      padding-top: var(--space-10);
+    }
+
+    .pro-promo__panel {
+      grid-template-columns: 1fr;
+      gap: var(--space-8);
+      padding: var(--space-6);
+    }
+
+    .pro-promo__signal {
+      padding-left: 0;
+      padding-top: var(--space-6);
+      border-left: 0;
+      border-top: 1px solid var(--border-default);
+    }
+  }
+
+  .pro-promo__motion {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    margin-top: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .pro-promo__motion input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-green-300);
+  }
+  .pro-promo:has(.pro-promo__motion input:checked) *,
+  .pro-promo:has(.pro-promo__motion input:checked) *::before {
+    animation-play-state: paused;
+    transition: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pro-promo__motion {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .pro-promo__signal::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 -1px;
+      width: 2px;
+      background: var(--accent-green-300);
+      transform-origin: top;
+      animation: pro-signal-trace 8s ease-in-out infinite;
+    }
+    @keyframes pro-signal-trace {
+      0%,
+      100% {
+        transform: scaleY(0.15);
+        opacity: 0.35;
+      }
+      50% {
+        transform: scaleY(1);
+        opacity: 1;
+      }
+    }
+    @media (max-width: 767px) {
+      .pro-promo__signal::before {
+        inset: -1px 0 auto;
+        width: auto;
+        height: 2px;
+        transform-origin: left;
+        animation-name: pro-signal-trace-mobile;
+      }
+      @keyframes pro-signal-trace-mobile {
+        0%,
+        100% {
+          transform: scaleX(0.15);
+          opacity: 0.35;
+        }
+        50% {
+          transform: scaleX(1);
+          opacity: 1;
+        }
+      }
+    }
+    a.pro-promo__cta {
+      transition: var(--transition-colors);
+    }
+
+    .pro-promo__arrow {
+      transition: transform var(--duration-normal) var(--ease-out);
+    }
+
+    a.pro-promo__cta:hover .pro-promo__arrow {
+      transform: translate(var(--space-1), calc(-1 * var(--space-1)));
+    }
+
+    /* Existing build.log reveal idiom; unsupported browsers keep visible content. */
+    @supports (animation-timeline: view()) {
+      .pro-promo__panel {
+        animation: pro-promo-reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 45%;
+      }
+
+      @keyframes pro-promo-reveal {
+        from {
+      opacity: 1;
+          transform: translateY(var(--space-6));
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+    }
+  }
+</style>

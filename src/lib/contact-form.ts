@@ -1,22 +1,10 @@
-/**
- * Pure logic behind the /contact/ funnel — no DOM access anywhere, so it is
- * testable without jsdom and reusable from any component that ends up
- * rendering the form.
- *
- * CSP on every page ships `form-action 'none'`, and there is no backend this
- * frontend trusts to receive a submit (see CLAUDE.md: the frontend has zero
- * build-time dependency on the inference server; this form has none either).
- * So there is no submit handler — validation runs client-side and the four
- * answers become two pre-filled links instead of a POST:
- *
- *  - `mailto:` body — PRIMARY path. The owner freezes on spoken English, so
- *    a written, asynchronous answer is the funnel's actual strength, not a
- *    fallback for buyers who "couldn't get a call".
- *  - Cal.com `notes` param — SECONDARY path, for buyers who want to hear a
- *    human before they commit. See CAL_BOOKING_URL's own doc comment in
- *    site-config.ts for why it must stay secondary in the UI too.
- */
-import { CAL_BOOKING_URL, CONTACT_EMAIL } from './site-config';
+/** Pure written intake: validate locally and prepare a user-controlled email draft. */
+import { z } from 'zod';
+import { CONTACT_EMAIL } from './site-config';
+import { contactContextLines, type ContactContext } from './contact-context';
+
+// Avoid Zod's eval capability probe before constructing any object schema.
+z.config({ jitless: true });
 
 export interface ContactFormData {
   company: string;
@@ -83,15 +71,14 @@ const COMPANY_MAX_LEN = 200;
 // asking what the enquiry is actually about.
 const TASK_MIN_LEN = 20;
 const TASK_MAX_LEN = 2000;
-const CAL_NOTES_TASK_EXCERPT_LEN = 200;
 
 /**
  * Real mail clients start failing (silently truncating or refusing to open)
  * `mailto:` links somewhere around 2000 total characters, and percent-encoded
  * Cyrillic runs several times its source length — a 2000-char RU task can
  * blow past that on its own. This bounds only the `subject=...&body=...`
- * query portion; buildMailtoUrl shrinks the task (never subject/company/
- * budget/timeline) until the encoded query fits under it.
+ * query portion; buildMailtoUrl shortens the task and, only if needed, the
+ * company. The full draft remains available for copying and selection.
  */
 export const MAILTO_QUERY_MAX = 1800;
 
@@ -112,33 +99,31 @@ const TRUNCATION_MARKER = '…';
  */
 export const MIN_FILL_MS = 3000;
 
+const formSchema = z.object({
+  company: z.string().trim().min(1).max(COMPANY_MAX_LEN),
+  task: z.string().trim().min(TASK_MIN_LEN).max(TASK_MAX_LEN),
+  budget: z.enum(['audit-900', 'under-5k', '5k-10k', '10k-plus', 'monthly-retainer', 'not-sure']),
+  timeline: z.enum(['asap', 'this-quarter', 'exploring']),
+});
+
 export function validate(data: ContactFormData): FieldErrors {
+  const result = formSchema.safeParse(data);
+  if (result.success) return {};
   const errors: FieldErrors = {};
-
-  const company = data.company.trim();
-  if (company.length === 0) {
-    errors.company = 'required';
-  } else if (company.length > COMPANY_MAX_LEN) {
-    errors.company = 'too-long';
+  for (const issue of result.error.issues) {
+    const field = issue.path[0];
+    if (field === 'company')
+      errors.company = data.company.trim().length === 0 ? 'required' : 'too-long';
+    if (field === 'task')
+      errors.task =
+        data.task.trim().length === 0
+          ? 'required'
+          : data.task.trim().length < TASK_MIN_LEN
+            ? 'too-short'
+            : 'too-long';
+    if (field === 'budget') errors.budget = 'required';
+    if (field === 'timeline') errors.timeline = 'required';
   }
-
-  const task = data.task.trim();
-  if (task.length === 0) {
-    errors.task = 'required';
-  } else if (task.length < TASK_MIN_LEN) {
-    errors.task = 'too-short';
-  } else if (task.length > TASK_MAX_LEN) {
-    errors.task = 'too-long';
-  }
-
-  if (data.budget === '') {
-    errors.budget = 'required';
-  }
-
-  if (data.timeline === '') {
-    errors.timeline = 'required';
-  }
-
   return errors;
 }
 
@@ -182,10 +167,8 @@ const FIELD_LABELS = {
 
 /**
  * Collapses embedded CR/LF runs to a single space and trims. Applied to
- * values that flow into single-line contexts (a subject line, a Cal.com
- * `notes` summary) so a company name or task excerpt carrying an embedded
- * newline can never smuggle extra lines into a mailto subject or the Cal
- * URL. Newlines a visitor intentionally typed inside the task story are
+ * values that flow into single-line contexts (the email subject) so a company name or task excerpt carrying an embedded
+ * newline can never smuggle extra lines into an email subject. Newlines a visitor intentionally typed inside the task story are
  * left alone in the actual letter BODY (letterBody below) — this only
  * guards values meant to render as one line.
  */
@@ -193,10 +176,17 @@ function singleLine(value: string): string {
   return value.replace(/[\r\n]+/g, ' ').trim();
 }
 
+function wellFormed(value: string): string {
+  return value.replace(
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
+    '\uFFFD'
+  );
+}
+
 /**
  * Slices to at most `maxLength` characters without ever landing mid UTF-16
  * surrogate pair (an emoji in the task, say) — handing encodeURIComponent a
- * lone surrogate throws a URIError, which would break the mailto/Cal link
+ * lone surrogate throws a URIError, which would break the mailto link
  * builders on otherwise perfectly valid input. Trims trailing whitespace
  * the cut leaves behind.
  */
@@ -213,17 +203,16 @@ function letterSubject(company: string, lang: 'en' | 'ru'): string {
   return lang === 'ru' ? `Запрос по проекту — ${company}` : `Project inquiry — ${company}`;
 }
 
-// Task last (matches buildCalUrl's summary order below): company/budget/
-// timeline read as quick context, the free-text task is the substantive
-// part a reader lands on last — and, not incidentally, the one line
-// buildMailtoUrl's truncation marker can land at the true end of.
+// The task is last so a shortened mailto body ends with its truncation marker.
 function letterBody(
   company: string,
   task: string,
   data: ContactFormData,
-  lang: 'en' | 'ru'
+  lang: 'en' | 'ru',
+  context: ContactContext
 ): string {
   return [
+    ...contactContextLines(context, lang),
     `${FIELD_LABELS.company[lang]}: ${company}`,
     `${FIELD_LABELS.budget[lang]}: ${budgetLabel(data.budget, lang)}`,
     `${FIELD_LABELS.timeline[lang]}: ${timelineLabel(data.timeline, lang)}`,
@@ -238,26 +227,33 @@ function letterBody(
  * first and the whole string is run through `encodeURIComponent` once,
  * which every client can parse back correctly.
  *
- * The task is the only part ever shortened, and only when the fully encoded
- * query would exceed MAILTO_QUERY_MAX (see its doc comment). When that
- * happens the cut task keeps a visible `…` marker — the untruncated letter
- * always remains one click away via buildEmailText()'s "copy the full text"
- * escape hatch in the success panel.
+ * The task is shortened first. A long encoded company may also need a cut
+ * after that; fixed service/briefing context is retained. Every cut has a
+ * visible marker, and buildEmailText keeps the full draft available.
  */
-export function buildMailtoUrl(data: ContactFormData, lang: 'en' | 'ru'): string {
-  const company = singleLine(data.company.trim());
-  const subject = letterSubject(company, lang);
-  const subjectParam = `subject=${encodeURIComponent(subject)}`;
-
+export function buildMailtoUrl(
+  data: ContactFormData,
+  lang: 'en' | 'ru',
+  context: ContactContext = {}
+): string {
+  let company = wellFormed(singleLine(data.company.trim()));
   const queryFor = (task: string): string =>
-    `${subjectParam}&body=${encodeURIComponent(letterBody(company, task, data, lang))}`;
+    `subject=${encodeURIComponent(letterSubject(company, lang))}&body=${encodeURIComponent(letterBody(company, task, data, lang, context))}`;
 
-  let task = data.task.trim();
+  let task = wellFormed(data.task.trim());
   if (queryFor(task).length > MAILTO_QUERY_MAX) {
     while (task.length > 0 && queryFor(`${task}${TRUNCATION_MARKER}`).length > MAILTO_QUERY_MAX) {
       task = safeSlice(task, task.length - TASK_SHRINK_STEP);
     }
     task = `${task}${TRUNCATION_MARKER}`;
+  }
+  if (queryFor(task).length > MAILTO_QUERY_MAX) {
+    const originalCompany = company;
+    while (company.length > 0 && queryFor(task).length > MAILTO_QUERY_MAX) {
+      company = safeSlice(company.replace(/…$/, ''), company.length - TASK_SHRINK_STEP);
+      company = company ? `${company}${TRUNCATION_MARKER}` : '';
+    }
+    if (company === '' && originalCompany) company = TRUNCATION_MARKER;
   }
 
   return `mailto:${CONTACT_EMAIL}?${queryFor(task)}`;
@@ -270,33 +266,14 @@ export function buildMailtoUrl(data: ContactFormData, lang: 'en' | 'ru'): string
  * MAILTO_QUERY_MAX); this is what the success panel's "copy the full text"
  * button hands to the clipboard so nothing a visitor wrote is ever lost.
  */
-export function buildEmailText(data: ContactFormData, lang: 'en' | 'ru'): string {
+export function buildEmailText(
+  data: ContactFormData,
+  lang: 'en' | 'ru',
+  context: ContactContext = {}
+): string {
   const company = singleLine(data.company.trim());
   const task = data.task.trim();
   const subject = letterSubject(company, lang);
-  const body = letterBody(company, task, data, lang);
+  const body = letterBody(company, task, data, lang, context);
   return `${subject}\n\n${body}`;
-}
-
-/**
- * Builds the SECONDARY conversion link. `CAL_BOOKING_URL` is a bare page URL
- * today, but the `?`/`&` check keeps this correct if it ever grows a query
- * string of its own (an embed or UTM param) — one broken booking link is not
- * worth saving one branch.
- */
-export function buildCalUrl(data: ContactFormData, lang: 'en' | 'ru'): string {
-  const company = singleLine(data.company.trim());
-  const taskExcerpt = safeSlice(singleLine(data.task.trim()), CAL_NOTES_TASK_EXCERPT_LEN);
-
-  const summary = [
-    company,
-    budgetLabel(data.budget, lang),
-    timelineLabel(data.timeline, lang),
-    taskExcerpt,
-  ]
-    .filter((part) => part.length > 0)
-    .join(' · ');
-
-  const separator = CAL_BOOKING_URL.includes('?') ? '&' : '?';
-  return `${CAL_BOOKING_URL}${separator}notes=${encodeURIComponent(summary)}`;
 }

@@ -6,7 +6,7 @@
  * - Removed: all text nav links (HOME/LAB/STACK/ABOUT/CONTACT)
  * - Removed: language switcher (moved to footer)
  * - Removed: hamburger menu (replaced by ConstellationNav overlay)
- * - Added: MenuPill (three neuron dots) — appears at scroll 40%, opens ConstellationNav
+ * - Added: MenuPill (three neuron dots) — appears when #about enters the viewport, opens ConstellationNav
  * - Logo slot is now empty (VKVLogo.svelte handles its own positioning)
  *
  * ConstellationNav is rendered in index.astro (not here) to avoid
@@ -28,6 +28,7 @@ const { lang } = Astro.props;
   id="menu-pill-btn"
   aria-label={lang === 'ru' ? 'Открыть меню навигации' : 'Open navigation menu'}
   aria-expanded="false"
+  inert
 >
   <span class="menu-dot"></span>
   <span class="menu-dot"></span>
@@ -166,48 +167,114 @@ const { lang } = Astro.props;
 
 <script>
   /**
-   * MenuPill scroll visibility + ConstellationNav toggle
-   * Visible from Career Arc (#about) onwards — hidden during hero
+   * MenuPill visibility + ConstellationNav toggle.
+   * Visible once #about enters the viewport, including after it exits above.
    */
+  const runtime = window as Window & { __vkvMenuPillCleanup?: () => void };
+  runtime.__vkvMenuPillCleanup?.();
 
-  const menuPill = document.getElementById('menu-pill-btn');
-  const aboutEl = document.getElementById('about');
+  const lifecycle = new AbortController();
+  let disposePill: (() => void) | undefined;
 
-  // Show pill only when #about section top has entered the viewport.
-  //
-  // `inert` moves with the class, and that is the point: the pill is hidden with
-  // opacity + pointer-events, which stops the MOUSE and does nothing about the
-  // keyboard. It stayed in the tab order as an invisible stop right after the
-  // skip link, and it still activated — pointer-events:none does not block
-  // keyboard activation — so a sighted keyboard user tabbing into the page lost
-  // focus into nothing and could open the nav by pressing Enter on it.
-  // Making the hidden state truly inert is the fix; painting a focus ring on
-  // something invisible would only make the dead end visible.
-  function updatePillVisibility(): void {
-    if (!menuPill || !aboutEl) return;
-    const aboutTop = aboutEl.getBoundingClientRect().top;
-    const shown = aboutTop < window.innerHeight;
-    menuPill.classList.toggle('visible', shown);
-    menuPill.inert = !shown;
+  function stopMenuPill(): void {
+    disposePill?.();
+    disposePill = undefined;
   }
 
-  window.addEventListener('scroll', updatePillVisibility, { passive: true });
-  updatePillVisibility();
+  function initMenuPill(): void {
+    stopMenuPill();
+    const menuPill = document.getElementById('menu-pill-btn');
+    const aboutEl = document.getElementById('about');
+    if (!menuPill || !aboutEl) return;
 
-  // ── Toggle ConstellationNav ──────────────────────────────────
-  // The ConstellationNav Svelte component listens to a custom event
-  menuPill?.addEventListener('click', () => {
-    const isExpanded = menuPill.getAttribute('aria-expanded') === 'true';
-    const newState = !isExpanded;
-    menuPill.setAttribute('aria-expanded', String(newState));
-    // Dispatch event for ConstellationNav to pick up
-    window.dispatchEvent(
-      new CustomEvent('vkv:constellation-toggle', { detail: { open: newState } })
-    );
-  });
+    // Hidden navigation must also stay out of the keyboard focus order.
+    menuPill.classList.remove('visible');
+    menuPill.inert = true;
+    const events = new AbortController();
+    let observer: IntersectionObserver | undefined;
+    let refreshFrame: number | null = null;
+    let lastIntersecting = false;
+    let shown = false;
+    let disposed = false;
 
-  // Listen for ConstellationNav close events (ESC, click outside, etc.)
-  window.addEventListener('vkv:constellation-close', () => {
-    menuPill?.setAttribute('aria-expanded', 'false');
-  });
+    function setVisibility(next: boolean): void {
+      if (disposed || next === shown) return;
+      shown = next;
+      menuPill!.classList.toggle('visible', shown);
+      menuPill!.inert = !shown;
+    }
+
+    function refreshVisibility(): void {
+      if (disposed || !observer || refreshFrame !== null) return;
+      refreshFrame = requestAnimationFrame((): void => {
+        refreshFrame = null;
+        if (disposed || !observer) return;
+        // A jump can move #about from below to above without intersecting.
+        // Re-observing requests fresh asynchronous geometry, never a layout read.
+        observer.takeRecords();
+        observer.unobserve(aboutEl!);
+        observer.observe(aboutEl!);
+      });
+    }
+
+    function onScroll(): void {
+      if (!lastIntersecting) refreshVisibility();
+    }
+
+    if (typeof IntersectionObserver === 'function') {
+      observer = new IntersectionObserver((entries): void => {
+        if (disposed) return;
+        for (const entry of entries) {
+          if (entry.target !== aboutEl) continue;
+          lastIntersecting = entry.isIntersecting;
+          const viewportBottom = entry.rootBounds?.bottom ?? window.innerHeight;
+          setVisibility(entry.boundingClientRect.top < viewportBottom);
+        }
+      }, {
+        // Also report positive area after an exact zero-area boundary contact.
+        threshold: [0, Number.EPSILON],
+      });
+      observer.observe(aboutEl);
+      window.addEventListener('scroll', onScroll, { passive: true, signal: events.signal });
+      window.addEventListener('resize', refreshVisibility, { signal: events.signal });
+      window.addEventListener('pageshow', refreshVisibility, { signal: events.signal });
+      window.addEventListener('hashchange', refreshVisibility, { signal: events.signal });
+      window.addEventListener('popstate', refreshVisibility, { signal: events.signal });
+    } else {
+      // Keep navigation usable in browsers without the visibility observer.
+      setVisibility(true);
+    }
+
+    menuPill.addEventListener('click', (): void => {
+      const isExpanded = menuPill.getAttribute('aria-expanded') === 'true';
+      const newState = !isExpanded;
+      menuPill.setAttribute('aria-expanded', String(newState));
+      window.dispatchEvent(
+        new CustomEvent('vkv:constellation-toggle', { detail: { open: newState } })
+      );
+    }, { signal: events.signal });
+
+    window.addEventListener('vkv:constellation-close', (): void => {
+      menuPill.setAttribute('aria-expanded', 'false');
+    }, { signal: events.signal });
+
+    disposePill = (): void => {
+      if (disposed) return;
+      disposed = true;
+      observer?.disconnect();
+      if (refreshFrame !== null) cancelAnimationFrame(refreshFrame);
+      events.abort();
+    };
+  }
+
+  function cleanup(): void {
+    stopMenuPill();
+    lifecycle.abort();
+    if (runtime.__vkvMenuPillCleanup === cleanup) delete runtime.__vkvMenuPillCleanup;
+  }
+
+  runtime.__vkvMenuPillCleanup = cleanup;
+  document.addEventListener('astro:before-swap', stopMenuPill, { signal: lifecycle.signal });
+  document.addEventListener('astro:page-load', initMenuPill, { signal: lifecycle.signal });
+  initMenuPill();
 </script>

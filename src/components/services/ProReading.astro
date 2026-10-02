@@ -1,0 +1,33 @@
+---
+import { resolveProReading, type ProReadingId } from '@/lib/pro-insights';
+import type { Lang } from '@i18n/utils';
+interface Props {
+  readingId: ProReadingId;
+  lang: Lang;
+  class?: string;
+}
+const { readingId, lang, class: className } = Astro.props;
+const reading = resolveProReading(readingId, {
+  isDev: import.meta.env.DEV,
+  previewBuild: import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true',
+  localPreviewUrl: import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL,
+});
+const pending =
+  lang === 'ru'
+    ? 'Редакционная подготовка; ссылка откроется после публикации.'
+    : 'In editorial preparation; the link opens after publication.';
+---
+
+{
+  reading.visible && (
+    <p class={className}>
+      {reading.href ? (
+        <a href={reading.href}>{reading.label[lang]} ↗</a>
+      ) : (
+        <span>
+          {reading.label[lang]} · {pending}
+        </span>
+      )}
+    </p>
+  )
+}

@@ -1,19 +1,5 @@
 ---
-/**
- * /contact/ — the funnel. Twenty pages already point here ("Start a
- * conversation"), and the site FAQ promises "four short questions" — this
- * page IS that promise. Written-first by design: the deliverable of the
- * form is a written reply from the engineer within one business day; the
- * 30-minute call is the optional second door (Cal.com link-out, never an
- * embed — CSP and the Lighthouse-100 budget both say no third-party
- * scripts).
- *
- * The form has no backend on purpose (CSP form-action 'none'): answers
- * become a prefilled email in the visitor's OWN mail client. Nothing is
- * collected, nothing can leak — stated on the page, because for a buyer
- * being sold "your data never leaves your infrastructure", a contact form
- * that provably cannot leak is proof of worldview, not a limitation.
- */
+/** Written enquiry: prepare a draft locally, then send from your own mail app. */
 import { Image, Picture, getImage } from 'astro:assets';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import InnerHeader from '@components/layout/InnerHeader.astro';
@@ -22,7 +8,8 @@ import FaqSection from '@components/sections/FaqSection.astro';
 import ContactFunnel from '@components/contact/ContactFunnel.svelte';
 import portrait from '@/assets/people/valerii-lens.png';
 import heroArt from '@/assets/contact/contact-hero.png';
-import { CAL_BOOKING_URL, CONTACT_EMAIL } from '@/lib/site-config';
+import { CONTACT_EMAIL } from '@/lib/site-config';
+import { resolveLocalProPreview } from '@/lib/pro-promo';
 import { SITE_ORIGIN } from '@/data/services';
 import { breadcrumbNode, faqPageNode } from '@/lib/services-jsonld';
 import type { FaqItem } from '@/data/faq';
@@ -35,20 +22,16 @@ export const getStaticPaths = (() => {
 }) satisfies GetStaticPaths;
 
 const { lang } = Astro.params as { lang: Lang };
+const localPreviewUrl =
+  import.meta.env.DEV || import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true'
+    ? resolveLocalProPreview(import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL)
+    : null;
 
-// This page's own mini-FAQ (Princeton GEO: FAQPage markup on a page that
-// already answers these questions measurably lifts AI-citation odds). No
-// aggregateRating, ever — see services-jsonld.ts's house rule.
+// The visible questions and FAQPage use the same bilingual answers.
 const CONTACT_FAQ: FaqItem[] = [
   {
-    q: {
-      en: 'Do I need to book a call first?',
-      ru: 'Нужно ли сначала записываться на созвон?',
-    },
-    a: {
-      en: 'No. The funnel is written-first: four short questions produce a written reply from the engineer within one business day. A 30-minute call is optional and appears only after you submit the form, or you can book one anytime through the Cal.com link.',
-      ru: 'Нет. Воронка построена вокруг письма: четыре коротких вопроса — и вы получаете письменный ответ инженера в течение одного рабочего дня. 30-минутный созвон необязателен и появляется только после отправки формы, либо вы можете записаться на него в любой момент по ссылке Cal.com.',
-    },
+    q: { en: t('en', 'contact.processQuestion'), ru: t('ru', 'contact.processQuestion') },
+    a: { en: t('en', 'contact.processAnswer'), ru: t('ru', 'contact.processAnswer') },
   },
   {
     q: {
@@ -71,14 +54,8 @@ const CONTACT_FAQ: FaqItem[] = [
     },
   },
   {
-    q: {
-      en: 'What happens after I send the form?',
-      ru: 'Что происходит после отправки формы?',
-    },
-    a: {
-      en: 'You get an honest, written read on fit, approach and budget within one business day — not a sales pitch. If the project is not a good fit, that is what the reply will say, and why.',
-      ru: 'В течение одного рабочего дня вы получаете честную письменную оценку задачи, подхода и бюджета — а не рекламный питч. Если проект не подходит, в ответе так и будет написано и объяснено, почему.',
-    },
+    q: { en: t('en', 'contact.draftQuestion'), ru: t('ru', 'contact.draftQuestion') },
+    a: { en: t('en', 'contact.draftAnswer'), ru: t('ru', 'contact.draftAnswer') },
   },
 ];
 
@@ -88,15 +65,11 @@ const copy = {
     description:
       'Hire an AI/web engineer directly — no sales inbox. You get a written reply within one business day: an honest read on fit, approach and budget.',
     h1: 'Start the conversation in writing',
-    lede: 'Four short answers — that is the whole form. You get a written reply from the engineer himself within one business day: an honest read on fit, approach and budget. No call required; if you want one anyway, the calendar link appears after the form.',
+    lede: t('en', 'contact.lede'),
     formHeading: 'four questions',
     directPre: 'Prefer plain email? Write to ',
     directPost: ' — same promise, same person.',
-    calPre: 'Prefer to talk it through first? ',
-    calLink: 'Book a 30-minute call',
-    calPost: ' — anytime, no form required; the same person answers.',
-    answerer:
-      'Your answers land with Valerii — the engineer who does the work: RAG assistants, self-hosted AI, AI-visibility audits and Astro sites — not a sales inbox.',
+    answerer: t('en', 'contact.answerer'),
     answererAlt: 'Valerii Karpov, the engineer who replies, holding a lens to his eye',
     backendNote:
       'This form has no backend by design: your answers become an email in your own mail client, and nothing is sent or stored until you press Send there.',
@@ -119,10 +92,8 @@ const copy = {
       successBody:
         'The button opens the draft in your own mail client — nothing is sent until you press Send there. This form has no backend, by design: your answers exist only in this tab and in the email you control. Send it, and a written reply lands within one business day. If no mail app opens, use the address below the form — same email, same promise.',
       openMail: 'Open the email draft',
-      orCal: 'Or book a 30-minute call instead',
       editAnswers: 'Edit your answers',
-      replyPromise:
-        'A written reply within one business day — EU hours, GMT+4. Contract and NDA before any work beyond the audit.',
+      replyPromise: t('en', 'contact.replyPromise'),
       errors: {
         required: 'This one is needed to answer you properly.',
         'too-short': 'Add a sentence or two — enough to answer in writing.',
@@ -135,15 +106,11 @@ const copy = {
     description:
       'Напишите инженеру напрямую — без отдела продаж. Письменный ответ в течение одного рабочего дня: честная оценка задачи, подхода и бюджета.',
     h1: 'Начните разговор с письма',
-    lede: 'Четыре коротких ответа — это вся форма. Вы получаете письменный ответ самого инженера в течение одного рабочего дня: честную оценку задачи, подхода и бюджета. Созвон не обязателен; если он всё же нужен — ссылка на календарь появится после формы.',
+    lede: t('ru', 'contact.lede'),
     formHeading: 'четыре вопроса',
     directPre: 'Привычнее написать напрямую? Пишите на ',
     directPost: ' — обещание то же, человек тот же.',
-    calPre: 'Хотите сначала обсудить голосом? ',
-    calLink: 'Забронируйте 30-минутный созвон',
-    calPost: ' — в любое время, без формы; отвечает тот же человек.',
-    answerer:
-      'Ваши ответы попадают к Валерию — инженеру, который делает работу: RAG-ассистенты, self-hosted AI, аудиты ИИ-видимости и сайты на Astro, — а не в отдел продаж.',
+    answerer: t('ru', 'contact.answerer'),
     answererAlt: 'Валерий Карпов — инженер, который ответит, — с лупой у глаза',
     backendNote:
       'У этой формы намеренно нет бэкенда: ответы превращаются в письмо в вашем почтовом клиенте, и ничего не отправляется и не сохраняется, пока вы сами не нажмёте «Отправить».',
@@ -171,10 +138,8 @@ const copy = {
       successBody:
         'Кнопка откроет черновик в вашем почтовом клиенте — ничего не отправится, пока вы сами не нажмёте «Отправить». Бэкенда у формы нет, намеренно: ваши ответы существуют только в этой вкладке и в письме, которым управляете вы. Отправьте — и письменный ответ придёт в течение одного рабочего дня. Если почтовый клиент не открылся, напишите на адрес под формой — то же письмо, то же обещание.',
       openMail: 'Открыть черновик письма',
-      orCal: 'Или выбрать время для 30-минутного созвона',
       editAnswers: 'Изменить ответы',
-      replyPromise:
-        'Письменный ответ в течение одного рабочего дня — часы ЕС, GMT+4. Договор и NDA — до начала работ, кроме аудита.',
+      replyPromise: t('ru', 'contact.replyPromise'),
       errors: {
         required: 'Без этого не получится ответить предметно.',
         'too-short': 'Ещё предложение-два — чтобы ответить письменно и по делу.',
@@ -348,7 +313,12 @@ const jsonLd = [
           />
           <p class="contact-answerer__text">{copy.answerer}</p>
         </div>
-        <ContactFunnel client:visible lang={lang} labels={copy.labels} />
+        <ContactFunnel
+          client:visible
+          lang={lang}
+          labels={copy.labels}
+          localPreviewUrl={localPreviewUrl}
+        />
         {
           /* The strongest trust claim on the page ("no backend, by design")
              previously lived only inside the Svelte success panel — serialized
@@ -359,18 +329,6 @@ const jsonLd = [
         <p class="contact-direct js-contact-reveal">{copy.backendNote}</p>
         <p class="contact-direct js-contact-reveal">
           {copy.directPre}<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>{copy.directPost}
-        </p>
-        {
-          /* The FAQ below promises a booking link works "anytime" — not
-             only after the form is submitted. This is that link: same
-             CAL_BOOKING_URL the success panel uses, visible before anyone
-             fills anything in, styled no louder than the plain-email
-             fallback above it (secondary door, per site-config.ts). */
-        }
-        <p class="contact-direct js-contact-reveal">
-          {copy.calPre}<a href={CAL_BOOKING_URL} target="_blank" rel="noopener noreferrer"
-            >{copy.calLink}</a
-          >{copy.calPost}
         </p>
         <p class="contact-direct js-contact-reveal">
           {copy.linksLinePre}<a href={`/${lang}/services/`}>{copy.linksLineLadder}</a>
@@ -383,6 +341,12 @@ const jsonLd = [
     <FaqSection lang={lang} items={CONTACT_FAQ} id="contact-faq" />
   </main>
 </BaseLayout>
+
+<script>
+  import { initServiceContactLinks } from '@/scripts/contact-navigation';
+  initServiceContactLinks();
+  document.addEventListener('astro:page-load', initServiceContactLinks);
+</script>
 
 <script>
   // The homepage scroll engine (etalon manners): Lenis smooths the wheel;
@@ -531,7 +495,7 @@ const jsonLd = [
 
       document.querySelectorAll<HTMLElement>('.js-contact-reveal').forEach((el) => {
         // A keyboard user can reach these before the scroll trigger fires —
-        // and four of the six carry real links (the address, the booking
+        // and the supporting paragraphs carry real links (the address,
         // link, /services/, /trust/). Landing focus on an invisible target
         // is a trap, so focus fast-forwards the element's own tween. Four
         // other pages already do this; the recipe copied here came from the

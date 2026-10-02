@@ -578,14 +578,14 @@ export const PROOF_STRIP: ProofItem[] = [
     },
   },
   {
-    value: { en: '3/3', ru: '3/3' },
+    value: { en: '6/6', ru: '6/6' },
     label: {
       en: 'Lighthouse agentic browsing',
       ru: 'агентный просмотр в Lighthouse',
     },
     qualifier: {
-      en: "all three checks Google's agent audit runs — run it here yourself",
-      ru: 'все три проверки агентного аудита Google — прогоните сами',
+      en: 'local contact-page audit, Lighthouse 13.5 with native WebMCP enabled; the tool inventory is a separate informational row',
+      ru: 'локальный аудит страницы контакта, Lighthouse 13.5 с включённым native WebMCP; список инструментов — отдельная информационная строка',
     },
   },
   {

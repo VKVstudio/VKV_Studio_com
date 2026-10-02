@@ -187,8 +187,9 @@ export function initBrainMorph(config: BrainMorphConfig): BrainMorphInstance {
   // video-independent synapse-text ready image is drawn onto it.
   const isMobile = window.matchMedia('(max-width: 767px)').matches;
 
-  const ctx = canvas.getContext('2d', { alpha: false });
-  if (!ctx) return { destroy: () => {} };
+  const context = canvas.getContext('2d', { alpha: false });
+  if (!context) return { destroy: () => {} };
+  const ctx = context;
 
   resizeCanvas(canvas);
 

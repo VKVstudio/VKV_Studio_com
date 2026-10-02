@@ -10,9 +10,11 @@
 import type { Lang } from '@i18n/utils';
 import { t } from '@i18n/utils';
 import { CONTACT_EMAIL } from '@/lib/site-config';
+import { buildContactHref, readContactContext, type ContactService } from '@/lib/contact-context';
 
 interface Props {
   lang: Lang;
+  service?: ContactService;
   /**
    * Optional per-page "what happens next" line — the specific outcome a
    * buyer on THIS page gets, not the generic close every other page also
@@ -24,7 +26,10 @@ interface Props {
   outcome?: string;
 }
 
-const { lang, outcome } = Astro.props;
+const { lang, outcome, service: selectedService } = Astro.props;
+const pageService = Astro.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
+const service = selectedService ?? readContactContext(`?service=${pageService}`).service;
+const contactHref = buildContactHref(lang, { service });
 ---
 
 <section class="service-cta">
@@ -34,7 +39,12 @@ const { lang, outcome } = Astro.props;
       <p class="service-cta__sub">{t(lang, 'services.ctaSub')}</p>
       {outcome && <p class="service-cta__outcome">{outcome}</p>}
       <div class="service-cta__actions">
-        <a href={`/${lang}/contact/`} class="service-cta__primary">
+        <a
+          href={contactHref}
+          data-contact-service={service ?? ''}
+          data-contact-lang={lang}
+          class="service-cta__primary"
+        >
           {t(lang, 'services.contactCta')}
           <span aria-hidden="true">→</span>
         </a>
@@ -52,6 +62,12 @@ const { lang, outcome } = Astro.props;
     </div>
   </div>
 </section>
+
+<script>
+  import { initServiceContactLinks } from '@/scripts/contact-navigation';
+  initServiceContactLinks();
+  document.addEventListener('astro:page-load', initServiceContactLinks);
+</script>
 
 <style>
   .service-cta {
@@ -139,12 +155,7 @@ const { lang, outcome } = Astro.props;
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 30%,
-      hsla(0, 0%, 100%, 0.2) 50%,
-      transparent 70%
-    );
+    background: linear-gradient(105deg, transparent 30%, var(--border-strong) 50%, transparent 70%);
     background-size: 250% 100%;
     pointer-events: none;
   }
@@ -169,7 +180,7 @@ const { lang, outcome } = Astro.props;
     box-shadow:
       0 0 20px var(--accent-glow-strong),
       0 0 60px var(--accent-glow),
-      inset 0 0 20px hsla(155, 70%, 70%, 0.15);
+      inset 0 0 20px var(--accent-glow);
     border-color: var(--accent-green-100);
   }
 

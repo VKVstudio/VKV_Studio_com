@@ -1,0 +1,17 @@
+{
+  "specVersion": "1.0",
+  "entries": [
+    {
+      "identifier": "urn:air:vkvstudio.com:skills:vkvstudio-services",
+      "displayName": "Read VKVstudio services",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "https://vkvstudio.com/agent-skills/vkvstudio-services/SKILL.md",
+      "description": "Read VKVstudio public services, scope, evidence and process pages to prepare a source-linked answer and a written next step. Use when evaluating an engineering service or project enquiry.",
+      "representativeQueries": [
+        "Which VKVstudio service matches a stated engineering need?",
+        "What do the published scope and process pages say about a project?",
+        "How can I prepare a written project question with source links?"
+      ]
+    }
+  ]
+}

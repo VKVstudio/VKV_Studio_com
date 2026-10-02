@@ -5,15 +5,14 @@
    * Visible only while the hero title is in the viewport.
    * No branches — just the eclipsing binary animation.
    */
-  import { getAltLang, t } from '@i18n/utils';
-
   interface Props {
     lang: 'en' | 'ru';
+    languageLabel: string;
   }
 
-  let { lang }: Props = $props();
+  let { lang, languageLabel }: Props = $props();
 
-  const altLang = getAltLang(lang);
+  const altLang = lang === 'en' ? 'ru' : 'en';
 
   /* ── State ─────────────────────────────────────────── */
   let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -553,7 +552,7 @@
   role="button"
   tabindex={visible ? 0 : -1}
   inert={!visible}
-  aria-label={t(lang, 'nav.switchLanguageTo').replace('{lang}', altLang.toUpperCase())}
+  aria-label={languageLabel}
 >
   <canvas bind:this={canvasEl} class="hero-lang__canvas" aria-hidden="true"></canvas>
 </div>

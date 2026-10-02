@@ -140,12 +140,46 @@
     "subtitle": "Have a complex problem that needs a systems thinker? I build systems that keep running when nobody is watching.",
     "email_label": "Send a message",
     "github_label": "View code",
-    "linkedin_label": "Connect"
+    "linkedin_label": "Connect",
+    "contextService": "Service",
+    "contextBriefing": "AI briefing (EN)",
+    "contextNote": "This context will be included in your email draft. You choose what to send.",
+    "contextServices": {
+      "websites": "Astro websites / existing-site task",
+      "rag-pilot": "Document RAG pilot",
+      "on-prem-ai": "Self-hosted AI / readiness",
+      "geo-audit": "AI visibility audit",
+      "for-agencies": "Agency engineering support"
+    },
+    "copyText": "Copy the full text",
+    "copied": "Copied",
+    "copyFailed": "Copy was unavailable. Select the draft text below, or open it in your mail app.",
+    "draftText": "Full email draft",
+    "directLabel": "Or write directly:",
+    "lede": "Four short answers prepare an email draft. Send it from your own mail client to get a written assessment of fit, approach and budget within one business day. Questions, scope, proposal and agreement all stay in writing.",
+    "answerer": "After you send the email, Valerii — the engineer who does the work — reads it himself: RAG assistants, self-hosted AI, AI-visibility audits and Astro sites.",
+    "replyPromise": "After you send the email: a written reply within one business day — EU hours, GMT+4. Questions, scope and agreement in writing; contract and NDA before work beyond the audit.",
+    "processQuestion": "How do we agree the project?",
+    "processAnswer": "Send your draft email. The engineer replies in writing within one business day, asks any scope questions and provides a written assessment or proposal. Scope, acceptance criteria, contract and approval are agreed by correspondence.",
+    "draftQuestion": "What happens when I prepare the email?",
+    "draftAnswer": "The form prepares a draft only. Open it in your mail app or copy the full text; review it and send it yourself. Nothing is submitted by this site. After you send it, you receive an honest written assessment of fit, approach and budget within one business day.",
+    "sharedStart": "Start by email. For a low-risk first step, discuss the €900 AI-visibility audit — fixed scope, delivered in 5–10 business days. For a larger project, four short questions prepare your email draft. After you send it, the engineer replies in writing within one business day. Questions, proposal, scope and agreement are handled by correspondence. A signed contract and NDA precede work beyond the audit; the public-source audit needs neither.",
+    "sharedLocation": "Gyumri, Armenia — GMT+4. My working afternoon overlaps EU and UK business hours. Briefs, questions, deliverables, scope and approval move through correspondence. Cross-border contracts have an English-law option; invoices carry no VAT under the published terms, and communication is in writing.",
+    "trustLede": "Contract and NDA before any work beyond the audit, milestone payments, typically 30/40/30, your data stays on your infrastructure, a 30-day post-launch warranty, liability capped at fees paid — all in writing, before scope and contract are agreed. If an answer is missing, ask — it gets added to this page.",
+    "trustAnnexes": "On request, before any contract and under NDA if you prefer, within two business days: the DPA, the SCC annexes, a written description of the Article 32 measures, the sub-processor list, the incident-notification procedure with its timings, and an importer information pack — the factual material on the Armenian legal regime and a log of government access requests. Annexes for your engagement follow written scope agreement. Due-diligence questions, NDA, DPA and contract review are handled by correspondence.",
+    "agencyClient": "That request goes through you. Client questions, scope and approvals stay in writing through your agency, under the role and visibility you agree with your client.",
+    "agencyProcess": "Written throughout — briefs, questions, scope, deliverables and approval move as documents. Replies arrive in writing within one business day.",
+    "mockClosing": "EU and UK business hours. Questions, scope, proposal and agreement all stay in writing.",
+    "geoCta": "Discuss the audit — €900",
+    "geoOrderNote": "Report in 5–10 business days after written scope agreement · written reply within one business day.",
+    "geoFirstStep": "Share your domain, two or three competitors, target market and query language. We agree the buyer questions and public sources in writing before measurement. No account access or customer data is needed.",
+    "proLocalPreview": "Local preview · not published",
+    "pauseMotion": "Pause motion"
   },
   "services": {
     "eyebrow": "// services",
     "teaserHeading": "Start small. Scale on proof.",
-    "teaserSub": "Fixed prices, itemized scope, a monthly engine when you want one. No hourly billing, no discovery-call gate.",
+    "teaserSub": "Fixed prices, itemized scope, a monthly engine when you want one. Written questions, a written proposal and agreement.",
     "allServices": "All services & pricing",
     "includedLabel": "What's included",
     "notIncludedLabel": "Not included",
@@ -155,8 +189,8 @@
     "retainerEyebrow": "// monthly",
     "proofEyebrow": "// proof",
     "detailsCta": "Details",
-    "contactCta": "Start a conversation",
-    "emailFallback": "Prefer email?",
+    "contactCta": "Discuss your project by email",
+    "emailFallback": "Or write directly:",
     "trustLine": "Contract & NDA before any work beyond the audit · milestone payments, typically 30/40/30 · 30-day warranty · registered business, Armenia · GMT+4, EU hours",
     "trustLink": "Trust & Process",
     "termsHeading": "How engagements work",
@@ -164,8 +198,13 @@
     "ctaSub": "Write two sentences about what you're trying to do. You'll get a straight answer — including \"you don't need me for this\" when that's the truth.",
     "ctaOutcomes": {
       "trust": "Want the registration certificate before you send anything confidential? Ask — it comes back the same business day, under NDA if you prefer.",
-      "geoAudit": "Order the audit — €900 · report in 5–10 business days · order confirmed within one business day · no call, no forms, no pitch.",
-      "geoMethodology": "Order the audit — €900 · report in 5–10 business days · order confirmed within one business day · no call, no forms, no pitch."
+      "geoAudit": "Discuss the €900 audit by email. Agree the domain, competitors, market, query language and public sources before measurement.",
+      "geoMethodology": "Discuss the €900 audit by email. Agree the domain, competitors, market, query language and public sources before measurement.",
+      "websites": "Describe the URL, device and result you need. We assess fit in writing before agreeing a build or changes to an existing site.",
+      "rag-pilot": "Describe one document task, the corpus, languages and constraints. We agree the scope and acceptance test in writing; confidential documents can wait until the agreement.",
+      "on-prem-ai": "Describe the workload, languages, hardware and data boundary. We assess readiness and agree the next step in writing.",
+      "for-agencies": "Share the brief and your client-facing boundary. Scope, handoffs, review and approval stay in writing through your agency.",
+      "geo-audit": "Discuss the €900 audit by email. Agree the domain, competitors, market, query language and public sources before measurement."
     }
   },
   "footer": {
@@ -680,5 +719,14 @@
   "faq": {
     "eyebrow": "Questions",
     "heading": "What people ask"
+  },
+  "buildLog": {
+    "localBridges": {
+      "title": "From a briefing to a letter",
+      "lead": "I restored motion in the local previews and made the route from an AI briefing to a project enquiry stay in writing.",
+      "motion": "The .pro preview has its orbit and scan again; the .com promo has a quiet signal trace. Motion can be paused, and the system's reduced-motion preference is respected. The public launch gates remain closed.",
+      "intake": "The article and selected service now reach the email draft, including after a language switch. The form prepares text; the reader reviews it and sends it from their own mail app. Questions, scope, proposal, contract and approval all use correspondence.",
+      "validation": "I checked the builds and local browser paths. Public release and real enquiry delivery each need their own later verification."
+    }
   }
 }

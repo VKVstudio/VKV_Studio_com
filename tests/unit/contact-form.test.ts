@@ -11,13 +11,13 @@ import {
   MIN_FILL_MS,
   buildMailtoUrl,
   buildEmailText,
-  buildCalUrl,
   MAILTO_QUERY_MAX,
   BUDGET_OPTIONS,
   TIMELINE_OPTIONS,
   type ContactFormData,
 } from '@/lib/contact-form';
-import { CAL_BOOKING_URL, CONTACT_EMAIL } from '@/lib/site-config';
+import { CONTACT_EMAIL } from '@/lib/site-config';
+import { readContactContext } from '@/lib/contact-context';
 
 const validTask = 'We need a RAG assistant over our internal policy docs.'; // > 20 chars
 
@@ -244,51 +244,49 @@ describe('buildEmailText', () => {
   });
 });
 
-describe('buildCalUrl', () => {
-  it('starts with the configured Cal.com booking URL', () => {
-    const url = buildCalUrl(baseData(), 'en');
-    expect(url.startsWith(CAL_BOOKING_URL)).toBe(true);
-    expect(url.startsWith(`${CAL_BOOKING_URL}?notes=`)).toBe(true);
+describe('written service context', () => {
+  const context = readContactContext(
+    '?service=rag-pilot&source=pro&briefing=agents-api-still-needs-a-boundary'
+  );
+
+  it('retains the specific service and briefing in the draft and full text', () => {
+    const url = buildMailtoUrl(baseData(), 'en', context);
+    const text = buildEmailText(baseData(), 'en', context);
+    const body = new URL(url).searchParams.get('body') ?? '';
+    for (const value of [
+      'Document RAG pilot',
+      'https://vkvstudio.pro/briefings/agents-api-still-needs-a-boundary/',
+    ]) {
+      expect(body).toContain(value);
+      expect(text).toContain(value);
+    }
   });
 
-  it('encodes the notes summary', () => {
-    const url = buildCalUrl(baseData({ company: 'Acme & Sons' }), 'en');
-    expect(url).toContain(encodeURIComponent('Acme & Sons'));
-    expect(url).not.toContain('Acme & Sons');
+  it('bounds Cyrillic company/task with briefing context without losing the full draft', () => {
+    const data = baseData({ company: 'Ж'.repeat(200), task: 'Ж'.repeat(2000) });
+    const url = buildMailtoUrl(data, 'ru', context);
+    expect(url.slice(url.indexOf('?') + 1).length).toBeLessThanOrEqual(MAILTO_QUERY_MAX);
+    expect(new URL(url).searchParams.get('body')).toContain('agents-api-still-needs-a-boundary');
+    expect(buildEmailText(data, 'ru', context)).toContain(data.company);
+    expect(buildEmailText(data, 'ru', context)).toContain(data.task);
   });
 
-  it('truncates the task to the first 200 chars in the notes summary', () => {
-    const task = `${'x'.repeat(250)} rest of the sentence that should be cut off`;
-    const url = buildCalUrl(baseData({ task }), 'en');
-    const decoded = decodeURIComponent(url.split('notes=')[1] ?? '');
-    expect(decoded).toContain('x'.repeat(200));
-    expect(decoded).not.toContain('x'.repeat(201));
+  it('handles a lone surrogate in user text without breaking mailto encoding', () => {
+    expect(() =>
+      buildMailtoUrl(
+        baseData({ company: '\ud800Company', task: `A valid task description \ud800` }),
+        'en',
+        context
+      )
+    ).not.toThrow();
   });
 
-  it('includes company, budget label, and timeline label in the summary', () => {
-    const url = buildCalUrl(
-      baseData({ company: 'Acme Ltd', budget: 'audit-900', timeline: 'asap' }),
-      'en'
-    );
-    const decoded = decodeURIComponent(url.split('notes=')[1] ?? '');
-    expect(decoded).toContain('Acme Ltd');
-    expect(decoded).toContain(BUDGET_OPTIONS.find((o) => o.value === 'audit-900')!.en);
-    expect(decoded).toContain(TIMELINE_OPTIONS.find((o) => o.value === 'asap')!.en);
-  });
-
-  it('never smuggles CR/LF from the company field into the encoded notes param', () => {
-    const url = buildCalUrl(baseData({ company: 'Acme\r\nBcc: evil@example.com' }), 'en');
-    expect(url).not.toContain('%0D%0A');
-  });
-
-  it('collapses CR/LF from the task excerpt too', () => {
-    const url = buildCalUrl(
-      baseData({ task: 'Line one\r\nLine two, still part of the same task.' }),
-      'en'
-    );
-    expect(url).not.toContain('%0D%0A');
-    const decoded = decodeURIComponent(url.split('notes=')[1] ?? '');
-    expect(decoded).toContain('Line one Line two');
+  it('rejects values that are not offered by the budget and timeline controls', () => {
+    const invalid = { ...baseData(), budget: 'arbitrary', timeline: 'tomorrow' };
+    expect(validate(invalid as ContactFormData)).toMatchObject({
+      budget: 'required',
+      timeline: 'required',
+    });
   });
 });
 

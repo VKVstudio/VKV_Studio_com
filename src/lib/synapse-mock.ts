@@ -1,3 +1,5 @@
+import { t } from '@/i18n/utils';
+
 /**
  * synapse-mock.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -186,8 +188,7 @@ const RESPONSE_MAP: MockEntry[] = [
       'guarantees live at /en/services/.\n\n' +
       'Ready to talk? /en/contact/ is four short questions — the engineer replies in writing ' +
       'within one business day. He works from GMT+4, and that working afternoon overlaps ' +
-      'EU and UK business hours every working day. A 30-minute call exists too, but it is ' +
-      'the option, not the entrance.',
+      t('en', 'contact.mockClosing'),
     ru:
       'Цены здесь публичные — читать их можно без созвона-знакомства.\n\n' +
       '```\n€900           — аудит видимости в ИИ-поиске · фикс · 5–10 рабочих дней\n' +
@@ -200,8 +201,7 @@ const RESPONSE_MAP: MockEntry[] = [
       '/ru/services/.\n\n' +
       'Готовы к разговору? /ru/contact/ — четыре коротких вопроса, инженер отвечает письменно ' +
       'в течение одного рабочего дня. Он работает из GMT+4, и вторая половина его рабочего дня ' +
-      'каждый рабочий день пересекается с рабочими часами ЕС и Великобритании. 30-минутный ' +
-      'созвон тоже существует, но это опция, а не входная дверь.',
+      t('ru', 'contact.mockClosing'),
   },
   {
     keywords: ['stack', 'стек', 'технологии', 'built', 'написан', 'frontend'],

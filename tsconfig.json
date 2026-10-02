@@ -4,14 +4,15 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@layouts/*": ["src/layouts/*"],
-      "@i18n/*": ["src/i18n/*"],
-      "@scripts/*": ["src/scripts/*"],
-      "@styles/*": ["src/styles/*"]
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@layouts/*": ["./src/layouts/*"],
+      "@i18n/*": ["./src/i18n/*"],
+      "@scripts/*": ["./src/scripts/*"],
+      "@styles/*": ["./src/styles/*"]
     }
-  }
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "tests/**/*.ts", "*.config.ts"],
+  "exclude": ["node_modules", "node_modules.*", ".system", "dist"]
 }

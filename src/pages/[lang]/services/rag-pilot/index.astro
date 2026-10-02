@@ -13,6 +13,7 @@
  * documents, and they never leave your side.
  */
 import { Picture, getImage } from 'astro:assets';
+import ProReading from '@components/services/ProReading.astro';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import ServiceRungLayout from '@components/services/ServiceRungLayout.astro';
 import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
@@ -80,6 +81,7 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
 >
   <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
   <ServiceRungLayout lang={lang} rung={rung} faqItems={faq} hideHeader>
+    <ProReading slot="rag-comparison" readingId="ragComparison" lang={lang} class="faq__a" />
     <Fragment slot="hero">
       <header class="rag-hero">
         {

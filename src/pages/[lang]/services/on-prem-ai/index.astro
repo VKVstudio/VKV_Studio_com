@@ -22,6 +22,7 @@
  * is visible.
  */
 import { getImage } from 'astro:assets';
+import ProReading from '@components/services/ProReading.astro';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHero from '@components/blocks/PageHero.astro';
 import ServiceRungLayout from '@components/services/ServiceRungLayout.astro';
@@ -129,6 +130,7 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
 >
   <link slot="head" rel="preload" as="image" imagesrcset={heroImagesrcset} imagesizes="100vw" />
   <ServiceRungLayout lang={lang} rung={rung} faqItems={faq} hideHeader>
+    <ProReading slot="safe-step" readingId="localModel" lang={lang} class="rung-guarantee__text" />
     <Fragment slot="hero">
       {
         /* `eyebrow` is passed RAW: PageHero strips the leading `// ` and

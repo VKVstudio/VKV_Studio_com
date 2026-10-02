@@ -80,7 +80,7 @@ const COPY: Record<Lang, TrustCopy> = {
       'Contract and NDA before any work beyond the audit, milestone payments, typically 30/40/30, your data stays on your infrastructure, a 30-day warranty and a written liability cap.',
     heroEyebrow: 'trust',
     h1: 'Trust & Process',
-    lede: 'Contract and NDA before any work beyond the audit, milestone payments, typically 30/40/30, your data stays on your infrastructure, a 30-day post-launch warranty, liability capped at fees paid — all in writing, before the first call. If an answer is missing, ask — it gets added to this page.',
+    lede: t('en', 'contact.trustLede'),
     faceLabel: '// who answers for these words',
     faceName: 'Valerii Karpov',
     faceLine:
@@ -132,7 +132,7 @@ const COPY: Record<Lang, TrustCopy> = {
         body: "Your documents and databases stay on infrastructure registered to you; nothing is copied to my systems and nothing trains a model. What crosses a border is my access — I work from Armenia, which is not on the European Commission's adequacy list, and the EDPB's Guidelines 05/2021 (v2.0, 14 February 2023, section 2.2, page 8) treat remote access from a third country as a transfer even when the data itself never moves. I put that on the table before your DPO has to.",
         bodyMore: [
           "Then the choice is yours, before signing. Either the engagement runs with no access to production data on my side — build, tuning and the acceptance test on a synthetic or anonymised corpus, with your own people running anything that touches live records — or you grant named, time-boxed, revocable access and we paper it: an Article 28 data-processing agreement plus the Commission's Standard Contractual Clauses, Module Two, with completed annexes. For UK data, the corresponding UK instrument.",
-          'On request, before any contract and under NDA if you prefer, within two business days: the DPA, the SCC annexes, a written description of the Article 32 measures, the sub-processor list, the incident-notification procedure with its timings, and an importer information pack — the factual material on the Armenian legal regime and a log of government access requests. Annexes filled in for your specific engagement follow a scoping call.',
+          t('en', 'contact.trustAnnexes'),
           'What I do not have, plainly: no ISO 27001 or SOC 2 certification, no professional indemnity insurance as standard, no EU establishment. If one of those is a hard requirement in your procurement, say so in your first message and we both save a month. Your DPO classifies the arrangement; my job is to hand over everything they need to finish that in an afternoon.',
         ],
       },
@@ -174,7 +174,7 @@ const COPY: Record<Lang, TrustCopy> = {
       'Договор и NDA до начала работ, кроме аудита, оплата по этапам, обычно 30/40/30, ваши данные остаются на вашей инфраструктуре, 30 дней гарантии и письменный предел ответственности.',
     heroEyebrow: 'доверие',
     h1: 'Доверие и процесс',
-    lede: 'Договор и NDA — до начала работ, кроме аудита, оплата по этапам, обычно 30/40/30, ваши данные не покидают вашу инфраструктуру, 30 дней гарантии после запуска, ответственность ограничена суммой, которую вы заплатили, — всё письменно, до первого звонка. Если какого-то ответа здесь нет — спросите, и он появится на этой странице.',
+    lede: t('ru', 'contact.trustLede'),
     faceLabel: '// кто отвечает за эти слова',
     faceName: 'Валерий Карпов',
     faceLine:
@@ -214,7 +214,7 @@ const COPY: Record<Lang, TrustCopy> = {
         body: 'Ваши документы и базы остаются на инфраструктуре, оформленной на вас: копий в моих системах нет, на обучение моделей ничего не уходит. Границу пересекает другое — мой доступ. Я работаю из Армении, которой нет в списке стран с решением Еврокомиссии об адекватности, а Руководящие указания EDPB 05/2021 (версия 2.0 от 14 февраля 2023, раздел 2.2, стр. 8) рассматривают удалённый доступ из третьей страны как передачу — даже когда сами данные никуда не перемещаются. Я выкладываю это на стол раньше, чем спросит ваш DPO.',
         bodyMore: [
           'Дальше выбор за вами, до подписания. Либо проект идёт без моего доступа к продуктивным данным — сборка, дообучение и приёмочный тест на синтетическом или обезличенном корпусе, а всё, что касается живых записей, запускают ваши сотрудники. Либо вы выдаёте именной, ограниченный по времени и отзываемый доступ, и мы оформляем его документами: соглашение об обработке по статье 28 GDPR плюс Стандартные договорные условия Еврокомиссии, Модуль 2, с заполненными приложениями. Для британских данных — соответствующий британский инструмент.',
-          'По запросу, до всякого договора и под NDA, если так удобнее, в течение двух рабочих дней: DPA, приложения к SCC, письменное описание мер по статье 32, список субобработчиков, порядок уведомления об инцидентах со сроками и информационный пакет импортёра — фактические материалы по армянскому правовому режиму и журнал запросов государственных органов на доступ. Приложения, заполненные под вашу конкретную сделку, — после звонка о согласовании объёма.',
+          t('ru', 'contact.trustAnnexes'),
           'Чего у меня нет — говорю прямо: нет сертификации ISO 27001 или SOC 2, нет страхования профессиональной ответственности по умолчанию, нет представительства в ЕС. Если что-то из этого — жёсткое требование вашего отдела закупок, скажите об этом в первом письме, и мы оба сэкономим месяц. Квалификацию схемы определяет ваш DPO; моя задача — передать ему всё, чтобы он закрыл вопрос за полдня.',
         ],
       },

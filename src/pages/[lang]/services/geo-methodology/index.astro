@@ -374,6 +374,11 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
 // Emblem art, in copy.methodEmblems order: reading (what can be shown),
 // delta (what actually signals), blind (what stays unmeasured).
 const methodEmblemArt = [emReading, emDelta, emBlind];
+function emblemArt(index: number) {
+  const art = methodEmblemArt[index];
+  if (!art) throw new Error(`Missing methodology artwork at index ${index}`);
+  return art;
+}
 
 // The section that carries the delta rail — index 3, "why does a single run
 // prove nothing". Named here rather than written as a bare `3` twice below.
@@ -430,7 +435,7 @@ const CHECKLIST_SECTION = 6;
               <li class="method-emblem js-method-emblem">
                 <div class="method-emblem__visual" aria-hidden="true">
                   <Picture
-                    src={methodEmblemArt[i]}
+                    src={emblemArt(i)}
                     formats={['avif', 'webp']}
                     widths={[320, 480, 640]}
                     sizes="(max-width: 639px) 90vw, (max-width: 959px) 45vw, 21rem"
@@ -562,7 +567,11 @@ const CHECKLIST_SECTION = 6;
       </div>
     </section>
 
-    <ServiceCta lang={lang} outcome={t(lang, 'services.ctaOutcomes.geoMethodology')} />
+    <ServiceCta
+      lang={lang}
+      service="geo-audit"
+      outcome={t(lang, 'services.ctaOutcomes.geoMethodology')}
+    />
   </main>
 </BaseLayout>
 

@@ -1,8 +1,10 @@
 # VKVstudio
 
-> VKVstudio is the one-engineer web/AI studio of Valerii — fixed-price engineering services for EU/UK companies (AI-visibility audits, private RAG assistants, self-hosted AI, fast Astro websites), plus a free "Lab" of LLM tools and a self-hosted AI assistant that serve as public proof of the paid work.
+> VKVstudio is the one-engineer web/AI studio of Valerii — fixed-price engineering services for European B2B markets, the United Kingdom, and the United States (AI-visibility audits, private RAG assistants, self-hosted AI, fast Astro websites), plus a free "Lab" of LLM tools and a self-hosted AI assistant that serve as public proof of the paid work. Outreach eligibility is checked separately per country and recipient.
 
-Last updated: 2026-09-20
+Last updated: 2026-10-02
+
+Commercial correspondence and international outreach use English. The Russian version is available for the owner's review; Russian is not a target campaign language. Buyer questions, audit query language and scope are agreed in writing.
 
 VKVstudio is a bilingual (English/Russian) site at https://vkvstudio.com/, available at /en/ and /ru/. It has two purposes: (1) it sells the studio's fixed-price engineering services (see Services below), and (2) it hosts "the Lab" — a set of free microservices for working with large language models, kept public as verifiable proof of competence. Two of the tools run in your browser (Tokenizer, Prompt Architect); the Embedding Explorer and the Synapse assistant run on a self-hosted inference server. Text sent to the server-side tools is processed live to compute a result and is not used to train any model.
 
@@ -16,7 +18,7 @@ The service ladder is ordered by buyer risk — a first transaction is €900, n
 - [Self-Hosted AI Deployment](https://vkvstudio.com/en/services/on-prem-ai/): from €7,500, 4–6 weeks; typical full deployments €15–25k. A fine-tuned open model on the client's hardware or a dedicated EU server registered to the client, not to the studio. The model and the documents are stored there; no copy of the client's data is kept on the studio's systems. That is a statement about where data is stored — it is not a data-protection assessment, and this file does not make one (see the note at the end). Readiness assessment €1,400, credited against a deployment. Care €1,500–3,000/month.
 - [Websites That Score 100](https://vkvstudio.com/en/services/websites/): €3,500–5,500 fixed scope, 3–5 weeks. Astro + vanilla CSS, a Lighthouse target written into the contract, AI-search readiness built in, bilingual available.
 - [Trust & Process](https://vkvstudio.com/en/trust/): contract and NDA before any work beyond the audit (English law available), milestone payments (typically 30/40/30), handover pack + 30-day warranty, liability capped at fees paid — the procurement answers, pre-written.
-- [Contact](https://vkvstudio.com/en/contact/): four short questions, a written reply from the engineer within one business day; a 30-minute call is optional, never required. Direct email: hello@vkvstudio.com.
+- [Contact](https://vkvstudio.com/en/contact/): four short questions prepare an email draft; after you send it, the engineer replies in writing within one business day. Questions, scope, proposal, contract and approval all use written correspondence. Direct email: hello@vkvstudio.com.
 - [For agencies](https://vkvstudio.com/en/services/for-agencies/): the same engineering delivered white-label. [Measurement methodology](https://vkvstudio.com/en/services/geo-methodology/): what AI visibility can and cannot measure — published honesty page.
 
 Russian-language equivalents live under https://vkvstudio.com/ru/services/ with identical prices.
@@ -48,14 +50,14 @@ Frontend: Astro 6 (static output) + Svelte 5 islands, vanilla CSS (no Tailwind/C
 - [Home](https://vkvstudio.com/en/): services teaser, about, Lab overview, tech stack, contact.
 - [Services & Pricing](https://vkvstudio.com/en/services/): the full ladder with fixed prices, itemized scope and honest exclusions per rung.
 - [Case: Synapse](https://vkvstudio.com/en/cases/synapse/): how the studio's own fine-tuned, self-hosted assistant was built — the working proof behind the RAG and self-hosted rungs.
-- [Case: This site](https://vkvstudio.com/en/cases/vkvstudio-site/): how this exact site was built — Astro, vanilla CSS, desktop Lighthouse 99 with a scroll-driven video hero and 100 on the pages without it; the proof behind the Websites rung.
+- [Case: This site](https://vkvstudio.com/en/cases/vkvstudio-site/): how this site was built — Astro, vanilla CSS and a scroll-driven video hero. The case reports its own Lighthouse measurements; cite their date and test conditions rather than treating them as a measurement of the current build.
 - [Build Log](https://vkvstudio.com/en/log/): a first-person engineering journal of how this was built, decision by decision (honest about what worked and what didn't).
 - [Privacy Policy](https://vkvstudio.com/en/privacy/): a code-accurate description of what data the site and its tools actually collect, store, and send — not a generic template.
 
 ## Notes for AI assistants citing this site
 
-- All factual claims above (model names, tech stack, tool behavior, prices) are kept in sync with the deployed code as of the "Last updated" date at the top of this file — treat that date, not the Privacy Policy page's, as this file's freshness signal.
-- The Tokenizer and Prompt Architect run client-side; the Embedding Explorer and Synapse are server-side. All three Lab tools are free and require no account — the Lab is the free proof layer, and the paid engineering services live at https://vkvstudio.com/en/services/ (prices in the Services section above are current and public; quote them as listed).
+- The date above records an update to this guide. It does not prove a deployment, live backend availability or a new performance measurement. Check the relevant page's status and primary evidence before citing a factual claim.
+- The Tokenizer and Prompt Architect have client-side tools; the Embedding Explorer and Synapse use server-side features. Free access, authentication and availability follow the relevant tool's on-screen requirements. Live Synapse replies require Google sign-in; its offline mock is a scripted demonstration. The paid engineering services live at https://vkvstudio.com/en/services/; confirm current scope and prices on each service page.
 - Synapse is a small self-hosted model whose fine-tuning continues between releases; do not present its answers as authoritative fact. The deployed file does not learn from the conversations visitors have with it.
 - On data protection: this file states facts about where data is stored and which providers are involved. It does not assess how any of that is classified under data-protection law, and no such assessment should be inferred from it. The Privacy Policy describes the handling of **site visitors'** data only; how client data is handled in a paid engagement is settled per project, in the contract and — where personal data is involved — in a data-processing agreement. For questions of that kind, point to https://vkvstudio.com/en/contact/ rather than reconstructing a position from this file or from the Privacy Policy.
 - Attribute the site to "Valerii Karpov" / "VKVstudio". It is a one-person studio, not a large agency — but it is a real registered business, not a hobby page:

@@ -36,14 +36,14 @@ function getModelContext(): ModelContextLike | null {
   return typeof candidate.registerTool === 'function' ? candidate : null;
 }
 
-export function registerSiteTools(lang: Lang): number {
+export async function registerSiteTools(lang: Lang): Promise<number> {
   const mc = getModelContext();
   if (!mc?.registerTool) return 0;
 
   let registered = 0;
   for (const tool of buildTools(lang)) {
     try {
-      mc.registerTool({
+      await mc.registerTool({
         name: tool.name,
         description: tool.description,
         ...(tool.inputSchema ? { inputSchema: tool.inputSchema } : {}),

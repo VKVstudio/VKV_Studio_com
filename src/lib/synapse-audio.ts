@@ -25,11 +25,7 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type MicErrorKind =
-  | 'permission-denied'
-  | 'not-found'
-  | 'not-supported'
-  | 'unknown';
+export type MicErrorKind = 'permission-denied' | 'not-found' | 'not-supported' | 'unknown';
 
 export interface MicError {
   kind: MicErrorKind;
@@ -175,7 +171,7 @@ class AudioEngineImpl implements AudioEngine {
 
   private _audioCtx: AudioContext | null = null;
   private _analyser: AnalyserNode | null = null;
-  private _analyserBuffer: Uint8Array | null = null;
+  private _analyserBuffer: Uint8Array<ArrayBuffer> | null = null;
 
   private _stream: MediaStream | null = null;
   private _sourceNode: MediaStreamAudioSourceNode | null = null;
@@ -256,7 +252,11 @@ class AudioEngineImpl implements AudioEngine {
     const analyser = this.ensureAnalyser(ctx);
 
     // Disconnect any previous source
-    try { this._sourceNode?.disconnect(); } catch { /* ignore */ }
+    try {
+      this._sourceNode?.disconnect();
+    } catch {
+      /* ignore */
+    }
 
     this._stream = stream;
     this._sourceNode = ctx.createMediaStreamSource(stream);
@@ -374,8 +374,16 @@ class AudioEngineImpl implements AudioEngine {
       const cleanup = () => {
         URL.revokeObjectURL(url);
         // Disconnect analyser from destination when done
-        try { analyser.disconnect(ctx.destination); } catch { /* ignore */ }
-        try { sourceNode.disconnect(); } catch { /* ignore */ }
+        try {
+          analyser.disconnect(ctx.destination);
+        } catch {
+          /* ignore */
+        }
+        try {
+          sourceNode.disconnect();
+        } catch {
+          /* ignore */
+        }
         this._playbackSourceNode = null;
         this._audioEl = null;
         this.isPlaying = false;
@@ -386,10 +394,14 @@ class AudioEngineImpl implements AudioEngine {
       };
 
       audio.addEventListener('ended', cleanup, { once: true });
-      audio.addEventListener('error', (e) => {
-        console.warn('[SynapseAudio] Audio playback error:', e);
-        cleanup();
-      }, { once: true });
+      audio.addEventListener(
+        'error',
+        (e) => {
+          console.warn('[SynapseAudio] Audio playback error:', e);
+          cleanup();
+        },
+        { once: true }
+      );
 
       audio.play().catch((err) => {
         console.warn('[SynapseAudio] play() rejected:', err);
@@ -415,7 +427,11 @@ class AudioEngineImpl implements AudioEngine {
     }
     // Disconnect audio graph nodes
     if (this._playbackSourceNode) {
-      try { this._playbackSourceNode.disconnect(); } catch { /* ignore */ }
+      try {
+        this._playbackSourceNode.disconnect();
+      } catch {
+        /* ignore */
+      }
       this._playbackSourceNode = null;
     }
     // Resolve pending promise so callers unblock
@@ -473,7 +489,11 @@ class AudioEngineImpl implements AudioEngine {
       this._stream.getTracks().forEach((t) => t.stop());
       this._stream = null;
     }
-    try { this._sourceNode?.disconnect(); } catch { /* ignore */ }
+    try {
+      this._sourceNode?.disconnect();
+    } catch {
+      /* ignore */
+    }
     this._sourceNode = null;
   }
 
@@ -485,7 +505,11 @@ class AudioEngineImpl implements AudioEngine {
 
     // Stop recording
     if (this._recorder && this._recorder.state !== 'inactive') {
-      try { this._recorder.stop(); } catch { /* ignore */ }
+      try {
+        this._recorder.stop();
+      } catch {
+        /* ignore */
+      }
     }
     this._recorder = null;
     this._chunks = [];
@@ -497,7 +521,9 @@ class AudioEngineImpl implements AudioEngine {
     if (this._audioEl) {
       try {
         this._audioEl.pause();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       this._audioEl = null;
     }
 
@@ -508,13 +534,19 @@ class AudioEngineImpl implements AudioEngine {
     this._stopRaf();
 
     // Disconnect analyser
-    try { this._analyser?.disconnect(); } catch { /* ignore */ }
+    try {
+      this._analyser?.disconnect();
+    } catch {
+      /* ignore */
+    }
     this._analyser = null;
     this._analyserBuffer = null;
 
     // Close AudioContext
     if (this._audioCtx && this._audioCtx.state !== 'closed') {
-      this._audioCtx.close().catch(() => { /* ignore */ });
+      this._audioCtx.close().catch(() => {
+        /* ignore */
+      });
     }
     this._audioCtx = null;
 

@@ -22,6 +22,7 @@ import rungOnprem from '@/assets/services/rung-onprem.png';
 import rungWeb from '@/assets/services/rung-web.png';
 import type { ImageMetadata } from 'astro';
 import { PROOF_STRIP, SERVICES, SITE_ORIGIN, serviceUrl } from '@/data/services';
+import markets from '@/data/markets.json';
 import { serviceNode, breadcrumbNode } from '@/lib/services-jsonld';
 import { supportedLangs, t } from '@i18n/utils';
 import type { Lang } from '@i18n/utils';
@@ -32,6 +33,7 @@ export const getStaticPaths = (() => {
 }) satisfies GetStaticPaths;
 
 const { lang } = Astro.params as { lang: Lang };
+const marketNames = markets.map((market) => market[lang]).join(', ');
 
 const copy = {
   en: {
@@ -47,6 +49,10 @@ const copy = {
     proofHeading: 'Verifiable proof',
     ladderEyebrow: '// the ladder',
     ladderHeading: 'Start small. Climb on proof.',
+    marketsHeading: 'Remote B2B work, agreed in writing',
+    marketsDescription:
+      'Based in Armenia. Project correspondence is in English. Buyer questions, the audit query language and scope are agreed in writing.',
+    marketsFocus: 'Current focus:',
     moreHeading: 'Also on this site',
     more: [
       // Proof first: the ladder's own case studies had no inbound link from
@@ -98,6 +104,10 @@ const copy = {
     proofHeading: 'Проверяемые доказательства',
     ladderEyebrow: '// лестница',
     ladderHeading: 'Начните с малого. Поднимайтесь по доказательствам.',
+    marketsHeading: 'Удалённая B2B-работа, согласованная письменно',
+    marketsDescription:
+      'Работаю из Армении. Проектная переписка — на английском. Вопросы заказчика, язык запросов для аудита и объём работ согласуем письменно.',
+    marketsFocus: 'Текущие рынки:',
     moreHeading: 'Ещё по теме',
     more: [
       // Близнец EN-правки: кейсы не имели ни одной входящей ссылки с этой
@@ -353,6 +363,18 @@ const jsonLd = [
               </li>
             ))
           }
+        </ul>
+      </div>
+    </section>
+
+    <section class="services-more" aria-labelledby="svc-markets-heading">
+      <div class="container">
+        <h2 id="svc-markets-heading" class="services-more__heading">{copy.marketsHeading}</h2>
+        <ul class="services-more__list" role="list">
+          <li>
+            <p>{copy.marketsDescription}</p>
+            <span>{copy.marketsFocus} {marketNames}</span>
+          </li>
         </ul>
       </div>
     </section>

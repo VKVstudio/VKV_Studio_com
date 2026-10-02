@@ -10,6 +10,7 @@
 import type { Lang } from '@i18n/utils';
 import { t } from '@i18n/utils';
 import type { FaqItem } from '@/data/faq';
+import markets from '@/data/markets.json';
 import { SITE_ORIGIN, serviceUrl, type ServiceRung } from '@/data/services';
 
 const PERSON_ID = `${SITE_ORIGIN}/#person`;
@@ -110,7 +111,11 @@ export function serviceNode(lang: Lang, rung: ServiceRung, opts?: { embedded?: b
     description: rung.seo.description[lang],
     url,
     provider: { '@id': PERSON_ID },
-    areaServed: ['Europe', 'United Kingdom'],
+    areaServed: markets.map((market) => ({
+      '@type': 'Country',
+      name: market.en,
+      identifier: market.code,
+    })),
     offers,
   };
 }

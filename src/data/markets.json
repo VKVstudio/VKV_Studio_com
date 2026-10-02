@@ -1,0 +1,16 @@
+[
+  {"code":"FR","en":"France","ru":"Франция"},
+  {"code":"SE","en":"Sweden","ru":"Швеция"},
+  {"code":"FI","en":"Finland","ru":"Финляндия"},
+  {"code":"SI","en":"Slovenia","ru":"Словения"},
+  {"code":"BE","en":"Belgium","ru":"Бельгия"},
+  {"code":"HR","en":"Croatia","ru":"Хорватия"},
+  {"code":"EE","en":"Estonia","ru":"Эстония"},
+  {"code":"HU","en":"Hungary","ru":"Венгрия"},
+  {"code":"IE","en":"Ireland","ru":"Ирландия"},
+  {"code":"LV","en":"Latvia","ru":"Латвия"},
+  {"code":"LT","en":"Lithuania","ru":"Литва"},
+  {"code":"LU","en":"Luxembourg","ru":"Люксембург"},
+  {"code":"GB","en":"United Kingdom","ru":"Великобритания"},
+  {"code":"US","en":"United States","ru":"США"}
+]

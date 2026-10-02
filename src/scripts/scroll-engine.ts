@@ -161,11 +161,12 @@ export function initScrollEngine(config: ScrollEngineConfig): ScrollEngineInstan
     return { destroy: () => {} };
   }
 
-  const ctx = canvas.getContext('2d', { alpha: false });
-  if (!ctx) {
+  const context = canvas.getContext('2d', { alpha: false });
+  if (!context) {
     console.warn('[ScrollEngine] Could not get 2D context');
     return { destroy: () => {} };
   }
+  const ctx = context;
 
   let isDestroyed = false;
   let rafId: number | null = null;

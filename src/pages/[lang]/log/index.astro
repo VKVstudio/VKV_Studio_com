@@ -1,4 +1,5 @@
 ---
+import { resolveProReading } from '@/lib/pro-insights';
 import { getImage } from 'astro:assets';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import InnerHeader from '../../../components/layout/InnerHeader.astro';
@@ -14,6 +15,11 @@ export function getStaticPaths() {
 
 const { lang } = Astro.params;
 const activeLang = (lang as Lang) || 'en';
+const insights = resolveProReading('home', {
+  isDev: import.meta.env.DEV,
+  previewBuild: import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true',
+  localPreviewUrl: import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL,
+});
 
 interface LogTool {
   name: string;
@@ -943,6 +949,32 @@ const content: Record<Lang, LogContent> = {
 // The boot line announcing the entry count is derived, not hand-typed:
 // git history shows the literal was manually bumped on every single
 // log-entry commit — the one dance step everyone eventually misses.
+content.en.entries.push({
+  n: '29',
+  slug: 'from-briefing-to-letter',
+  date: '2026-10-02',
+  title: t('en', 'buildLog.localBridges.title'),
+  lead: t('en', 'buildLog.localBridges.lead'),
+  body: [
+    t('en', 'buildLog.localBridges.motion'),
+    t('en', 'buildLog.localBridges.intake'),
+    t('en', 'buildLog.localBridges.validation'),
+  ],
+});
+
+content.ru.entries.push({
+  n: '29',
+  slug: 'from-briefing-to-letter',
+  date: '2026-10-02',
+  title: t('ru', 'buildLog.localBridges.title'),
+  lead: t('ru', 'buildLog.localBridges.lead'),
+  body: [
+    t('ru', 'buildLog.localBridges.motion'),
+    t('ru', 'buildLog.localBridges.intake'),
+    t('ru', 'buildLog.localBridges.validation'),
+  ],
+});
+
 content.en.bootLines[1] = `> loading decisions ... ${content.en.entries.length}`;
 content.ru.bootLines[1] = `> гружу решения ... ${content.ru.entries.length}`;
 
@@ -1203,6 +1235,21 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
                   {entry.body.map((p) => (
                     <p>{p}</p>
                   ))}
+                </div>
+              )}
+              {entry.slug === 'a-second-address-to-be-useful' && insights.visible && (
+                <div class="log-body">
+                  <p>
+                    <time datetime="2026-10-01">2026-10-01</time> ·{' '}
+                    {activeLang === 'ru'
+                      ? 'Дополнение: локальная редакционная версия .pro подготовлена к проверке. Эта запись сохраняет план от 27 сентября и не объявляет публичный запуск.'
+                      : 'Addendum: the local .pro editorial build is prepared for review. This preserves the September 27 plan and does not announce a public launch.'}
+                  </p>
+                  {insights.href && (
+                    <p>
+                      <a href={insights.href}>{insights.label[activeLang]} ↗</a>
+                    </p>
+                  )}
                 </div>
               )}
               {entry.link && (

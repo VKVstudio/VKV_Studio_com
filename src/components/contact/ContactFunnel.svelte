@@ -8,10 +8,8 @@
    * which the success panel says out loud, because for this audience a
    * form that provably cannot leak is a selling point.
    *
-   * Cal.com stays the second door (owner: async writing first — spoken
-   * calls are the option, never the requirement).
    */
-  import { tick, onDestroy } from 'svelte';
+  import { tick, onDestroy, onMount } from 'svelte';
   import {
     BUDGET_OPTIONS,
     TIMELINE_OPTIONS,
@@ -19,11 +17,17 @@
     isValid,
     isGateTripped,
     buildMailtoUrl,
-    buildCalUrl,
     buildEmailText,
   } from '@/lib/contact-form';
   import type { ContactFormData, FieldErrors } from '@/lib/contact-form';
   import { CONTACT_EMAIL } from '@/lib/site-config';
+  import { t } from '@/i18n/utils';
+  import {
+    readContactContext,
+    contactBriefingHref,
+    type ContactContext,
+  } from '@/lib/contact-context';
+  import { resolveLocalProPreview } from '@/lib/pro-promo';
 
   export interface FunnelLabels {
     company: string;
@@ -37,7 +41,6 @@
     successHeading: string;
     successBody: string;
     openMail: string;
-    orCal: string;
     editAnswers: string;
     replyPromise: string;
     errors: {
@@ -47,12 +50,23 @@
     };
   }
 
-  let { lang, labels }: { lang: 'en' | 'ru'; labels: FunnelLabels } = $props();
+  let {
+    lang,
+    labels,
+    localPreviewUrl = null,
+  }: { lang: 'en' | 'ru'; labels: FunnelLabels; localPreviewUrl?: string | null } = $props();
 
   let data = $state<ContactFormData>({ company: '', task: '', budget: '', timeline: '' });
   let errors = $state<FieldErrors>({});
   let submitted = $state(false);
   let copied = $state(false);
+  let copyFailed = $state(false);
+  let context = $state<ContactContext>({});
+  let ready = $state(false);
+  onMount(() => {
+    context = readContactContext(window.location.search);
+    ready = true;
+  });
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Anti-bot (owner decision, worklist M4; gate-order fix P2): a honeypot
@@ -77,24 +91,14 @@
   // Strings that live only here, not in the page's copy object (see the
   // component's props/labels contract) — kept bilingual via the same
   // lang-keyed-object pattern already used for FIELD labels in contact-form.ts.
-  const COPY_LABELS: Record<'en' | 'ru', { copy: string; copied: string }> = {
-    en: { copy: 'Copy the full text', copied: 'Copied' },
-    ru: { copy: 'Скопировать текст письма', copied: 'Скопировано' },
-  };
+
   // The address in plain, selectable text. A mailto: link is the primary
   // action, but in a corporate webmail (Outlook Web, Gmail in a tab) an
   // unregistered mailto handler does NOTHING and reports nothing — the visitor
   // clicks, sees no mail client, and leaves. There is no analytics on this
   // site, so a lead lost that way is lost silently. Showing the address costs
   // one line and gives that visitor somewhere to go.
-  const WRITE_DIRECT: Record<'en' | 'ru', string> = {
-    en: 'Or write directly:',
-    ru: 'Или напишите напрямую:',
-  };
-  const NEW_TAB_HINT: Record<'en' | 'ru', string> = {
-    en: 'opens in a new tab',
-    ru: 'открывается в новой вкладке',
-  };
+
   const TASK_PLACEHOLDER: Record<'en' | 'ru', string> = {
     en: 'A few sentences are enough.',
     ru: 'Достаточно нескольких предложений.',
@@ -187,8 +191,13 @@
   // its cleanup — no leak. Applying the same care to the timer below.)
   onDestroy(() => clearTimeout(copyTimer));
 
-  const mailtoUrl = $derived(buildMailtoUrl(data, lang));
-  const calUrl = $derived(buildCalUrl(data, lang));
+  const mailtoUrl = $derived(buildMailtoUrl(data, lang, context));
+  const emailText = $derived(buildEmailText(data, lang, context));
+  const briefingHref = $derived.by(() => {
+    const canonical = contactBriefingHref(context);
+    const local = resolveLocalProPreview(localPreviewUrl ?? undefined);
+    return canonical && local ? canonical.replace('https://vkvstudio.pro/', local) : null;
+  });
 
   function errorText(code: 'required' | 'too-short' | 'too-long' | undefined): string {
     return code ? labels.errors[code] : '';
@@ -221,17 +230,20 @@
   }
 
   async function onCopyFullText(): Promise<void> {
-    if (!navigator.clipboard) return;
+    copyFailed = false;
+    if (!navigator.clipboard) {
+      copyFailed = true;
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(buildEmailText(data, lang));
+      await navigator.clipboard.writeText(emailText);
       copied = true;
       clearTimeout(copyTimer);
       copyTimer = setTimeout(() => {
         copied = false;
       }, 2000);
     } catch {
-      // Clipboard permission denied or unavailable — the mailto link and
-      // the Cal.com door both still work, so this fails silently.
+      copyFailed = true;
     }
   }
 
@@ -288,7 +300,7 @@
     if (byAgent) {
       submitted = true;
       void focusSuccessHeading();
-      answerAgent(buildEmailText(data, lang));
+      answerAgent(buildEmailText(data, lang, context));
       return;
     }
 
@@ -308,6 +320,17 @@
   }
 </script>
 
+{#if context.service || briefingHref}
+  <aside class="funnel__context glass-panel">
+    {#if context.service}<p>
+        {t(lang, 'contact.contextService')}:
+        <strong>{t(lang, `contact.contextServices.${context.service}`)}</strong>
+      </p>{/if}
+    {#if briefingHref}<p><a href={briefingHref}>{t(lang, 'contact.contextBriefing')}</a></p>{/if}
+    <p class="funnel__hint">{t(lang, 'contact.contextNote')}</p>
+  </aside>
+{/if}
+
 {#if !submitted}
   <!-- method="dialog" is the pre-hydration guard: this island is client:visible,
        so a visitor who clicks Send in the moment between the form entering the
@@ -318,6 +341,7 @@
   <form
     class="funnel glass-panel"
     method="dialog"
+    aria-busy={!ready}
     onsubmit={onSubmit}
     novalidate
     toolname="submit_project_brief"
@@ -346,6 +370,7 @@
       <input
         id="funnel-company"
         name="company"
+        disabled={!ready}
         required
         toolparamdescription={AGENT[lang].company}
         class="funnel__input"
@@ -369,6 +394,7 @@
       <textarea
         id="funnel-task"
         name="task"
+        disabled={!ready}
         required
         toolparamdescription={AGENT[lang].task}
         class="funnel__input funnel__textarea"
@@ -392,6 +418,7 @@
         <select
           id="funnel-budget"
           name="budget"
+          disabled={!ready}
           required
           toolparamdescription={AGENT[lang].budget}
           class="funnel__input funnel__select"
@@ -416,6 +443,7 @@
         <select
           id="funnel-timeline"
           name="timeline"
+          disabled={!ready}
           required
           toolparamdescription={AGENT[lang].timeline}
           class="funnel__input funnel__select"
@@ -436,7 +464,9 @@
       </div>
     </div>
 
-    <button type="submit" class="funnel__submit" bind:this={submitEl}>{labels.submit}</button>
+    <button type="submit" disabled={!ready} class="funnel__submit" bind:this={submitEl}
+      >{labels.submit}</button
+    >
     <p class="funnel__promise text-mono">{labels.replyPromise}</p>
   </form>
 {:else}
@@ -447,18 +477,18 @@
     <p class="funnel__done-body">{labels.successBody}</p>
     <a href={mailtoUrl} class="funnel__submit funnel__submit--link">{labels.openMail}</a>
     <button type="button" class="funnel__copy" onclick={() => void onCopyFullText()}>
-      {copied ? COPY_LABELS[lang].copied : COPY_LABELS[lang].copy}
+      {t(lang, copied ? 'contact.copied' : 'contact.copyText')}
     </button>
+    {#if copyFailed}<p class="funnel__error" role="alert">{t(lang, 'contact.copyFailed')}</p>{/if}
+    <details class="funnel__draft">
+      <summary>{t(lang, 'contact.draftText')}</summary>
+      <pre>{emailText}</pre>
+    </details>
     <p class="funnel__direct">
-      {WRITE_DIRECT[lang]}
+      {t(lang, 'contact.directLabel')}
       <a href={`mailto:${CONTACT_EMAIL}`} class="funnel__address">{CONTACT_EMAIL}</a>
     </p>
-    <p class="funnel__cal">
-      <a href={calUrl} target="_blank" rel="noopener noreferrer">
-        {labels.orCal}
-        <span aria-hidden="true">→</span><span class="visually-hidden">— {NEW_TAB_HINT[lang]}</span>
-      </a>
-    </p>
+
     <button type="button" class="funnel__edit" onclick={() => void onEditAnswers()}>
       <span aria-hidden="true">←</span>
       {labels.editAnswers}
@@ -467,6 +497,31 @@
 {/if}
 
 <style>
+  .funnel__context {
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+    color: var(--text-secondary);
+  }
+  .funnel__context p {
+    margin-bottom: var(--space-2);
+    overflow-wrap: anywhere;
+  }
+  .funnel__context a {
+    color: var(--accent-green-300);
+    text-decoration: underline;
+  }
+  .funnel__draft summary {
+    cursor: pointer;
+    min-height: 44px;
+    color: var(--text-secondary);
+  }
+  .funnel__draft pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+  }
   .funnel {
     position: relative;
     padding: var(--space-8);
@@ -658,21 +713,6 @@
     color: var(--accent-green-200);
   }
 
-  .funnel__cal {
-    margin: 0;
-  }
-
-  .funnel__cal a {
-    color: var(--accent-green-300);
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    text-decoration: none;
-  }
-
-  .funnel__cal a:hover {
-    color: var(--accent-green-200);
-  }
-
   .funnel__copy {
     align-self: flex-start;
     background: transparent;
@@ -719,8 +759,7 @@
      desktop because it is wide, and a small window is not a phone. */
   @media (any-pointer: coarse), (max-width: 767px) {
     .funnel__copy,
-    .funnel__edit,
-    .funnel__cal a {
+    .funnel__edit {
       display: inline-flex;
       align-items: center;
       min-height: 44px;

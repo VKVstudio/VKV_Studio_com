@@ -50,6 +50,9 @@ const headingId = `${id}-heading`;
                 <span class="faq__chevron" aria-hidden="true" />
               </summary>
               <p class="faq__a">{item.a[lang]}</p>
+              {item.q.en === 'Why not just use ChatGPT (or a custom GPT) with our files?' && (
+                <slot name="rag-comparison" />
+              )}
             </details>
           </li>
         ))

@@ -178,7 +178,6 @@ interface FactBook {
     readonly responsePromise: FixedFact;
     readonly warranty: FixedFact;
     readonly auditCreditWindow: FixedFact;
-    readonly introCall: FixedFact;
     readonly chatRetention: FixedFact;
   };
   readonly legal: {
@@ -191,6 +190,7 @@ interface FactBook {
     readonly ndaScope: StatedFact;
   };
   readonly availability: {
+    readonly communicationMode: StatedFact;
     readonly timezoneOffset: FixedFact;
     readonly cancellation: StatedFact;
     readonly headcount: FixedFact;
@@ -628,20 +628,6 @@ export const FACTS = {
       },
       status: 'confirmed',
     },
-    introCall: {
-      label: { en: 'Intro call length', ru: 'Длительность вводного созвона' },
-      value: 30,
-      unit: 'minutes',
-      source: 'code',
-      sourceRef:
-        'src/pages/[lang]/contact/index.astro:96, :122; src/lib/site-config.ts:40 (Cal.com event spec), :47 (booking URL)',
-      verifiedAt: '2026-08-24',
-      notClaim: {
-        en: 'Optional, after the form — not a required step of the funnel.',
-        ru: 'Опция после формы, а не обязательный шаг воронки.',
-      },
-      status: 'confirmed',
-    },
     chatRetention: {
       label: {
         en: 'Server-side Synapse history retention',
@@ -759,6 +745,21 @@ export const FACTS = {
     },
   },
   availability: {
+    communicationMode: {
+      label: { en: 'Client communication', ru: 'Общение с клиентами' },
+      text: {
+        en: 'Written correspondence throughout: questions, scope, proposal, contract and approval.',
+        ru: 'Всё по переписке: вопросы, объём, предложение, договор и одобрение.',
+      },
+      source: 'ownerStatement',
+      sourceRef: '.system/review/local-finish-2026-10-02/com-local-qa.md',
+      verifiedAt: '2026-10-02',
+      notClaim: {
+        en: 'Preparing a draft does not send or deliver an enquiry.',
+        ru: 'Подготовка черновика не отправляет и не доставляет обращение.',
+      },
+      status: 'confirmed',
+    },
     timezoneOffset: {
       label: { en: 'Time zone', ru: 'Часовой пояс' },
       value: 4,
@@ -875,19 +876,18 @@ export const FACTS = {
     },
     agenticChecks: {
       label: {
-        en: 'Lighthouse agentic-browsing checks passed',
-        ru: 'Пройдено проверок агентного просмотра Lighthouse',
+        en: 'Local Lighthouse agentic-browsing checks passed on Contact',
+        ru: 'Локальные проверки агентного просмотра Lighthouse на странице контакта',
       },
-      value: 3,
-      outOf: 3,
+      value: 6,
+      outOf: 6,
       unit: 'count',
       source: 'measurement',
-      sourceRef:
-        'src/data/services.ts:574–582; src/pages/[lang]/cases/vkvstudio-site/index.astro:54, :102',
-      verifiedAt: '2026-08-24',
+      sourceRef: '.system/review/local-finish-2026-10-02/native-agentic-local-verification.json',
+      verifiedAt: '2026-10-02',
       notClaim: {
-        en: 'Google’s experimental audit, not a standard. The three checks are a well-formed accessibility tree, zero layout shift, and a valid llms.txt.',
-        ru: 'Экспериментальный аудит Google, а не стандарт. Три проверки — дерево доступности, нулевой сдвиг макета и валидный llms.txt.',
+        en: 'Lighthouse 13.5, local Contact page, native WebMCP explicitly enabled. Six scored checks pass; the registered-tool inventory is a separate informational row. This is not a deployed PageSpeed result or a universal browser guarantee.',
+        ru: 'Lighthouse 13.5, локальная страница контакта, native WebMCP явно включён. Пройдены шесть оцениваемых проверок; список инструментов — отдельная информационная строка. Это не результат опубликованного сайта в PageSpeed и не гарантия для любого браузера.',
       },
       status: 'confirmed',
     },

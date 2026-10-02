@@ -92,6 +92,7 @@ const { lang, rung, faqItems, faqHeading, hideHeader = false } = Astro.props;
               {t(lang, rung.riskLabelKey ?? 'services.guaranteeLabel')}
             </p>
             <p class="rung-guarantee__text">{rung.riskReversal[lang]}</p>
+            <slot name="safe-step" />
           </div>
         </div>
       </section>
@@ -156,11 +157,15 @@ const { lang, rung, faqItems, faqHeading, hideHeader = false } = Astro.props;
 
   {
     faqItems && (
-      <FaqSection lang={lang} items={faqItems} heading={faqHeading} id={`${rung.id}-faq`} />
+      <FaqSection lang={lang} items={faqItems} heading={faqHeading} id={`${rung.id}-faq`}>
+        <Fragment slot="rag-comparison">
+          <slot name="rag-comparison" />
+        </Fragment>
+      </FaqSection>
     )
   }
 
-  <ServiceCta lang={lang} />
+  <ServiceCta lang={lang} service={rung.id} outcome={t(lang, `services.ctaOutcomes.${rung.id}`)} />
 </main>
 
 <style>

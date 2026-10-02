@@ -132,6 +132,7 @@ function initAboutAnimations(): void {
     const timelineRect = timeline.getBoundingClientRect();
     const firstDot = dots[0];
     const lastDot = dots[dots.length - 1];
+    if (!firstDot || !lastDot) return;
     const firstDotRect = firstDot.getBoundingClientRect();
     const lastDotRect = lastDot.getBoundingClientRect();
 
@@ -389,7 +390,6 @@ function initStackAnimations(): void {
       }
     );
   }
-
 }
 
 /* ── STACK CARD HOVER/TAP — frosted-fade reveal + glass parallax ──

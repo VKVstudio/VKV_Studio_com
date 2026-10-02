@@ -33,15 +33,3 @@
  * you is not recoverable.
  */
 export const CONTACT_EMAIL = 'hello@vkvstudio.com';
-
-/**
- * The studio's public booking page (Cal.com, free tier, owner's Workspace
- * calendar behind it). Set up and verified 2026-08-21: one event type,
- * 30 min, Google Meet, EU-hours availability, auto-confirm, 3/day cap.
- *
- * Role in the funnel: SECONDARY. The primary conversion path is written —
- * the contact form promises a written answer within one business day; this
- * link is the quiet "prefer a call?" option for buyers who need to see a
- * human before they commit. Do not promote it above the written path.
- */
-export const CAL_BOOKING_URL = 'https://cal.com/vkvstudio/intro-call';

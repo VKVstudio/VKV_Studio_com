@@ -3,6 +3,7 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 import Header from '@components/layout/Header.astro';
 import HeroCanvas from '@components/sections/HeroCanvas.astro';
 import ServicesTeaser from '@components/sections/ServicesTeaser.astro';
+import ProPromo from '@components/sections/ProPromo.astro';
 import AboutSection from '@components/sections/AboutSection.astro';
 import LabSection from '@components/sections/LabSection.astro';
 import StackSection from '@components/sections/StackSection.astro';
@@ -171,6 +172,7 @@ const offerCatalogJsonLd = {
 
   <main id="main-content">
     <HeroCanvas lang={lang} />
+    <ProPromo lang={lang} />
     <ServicesTeaser lang={lang} />
     <AboutSection lang={lang} />
     <LabSection lang={lang} />

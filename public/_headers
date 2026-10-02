@@ -202,3 +202,13 @@
 # lives in HeroCanvas.astro (hero) and SynapseBrain.svelte (orb).
 /*.mp4
   Cache-Control: public, max-age=2592000
+
+# Static machine-readable guides and discovery manifests.
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+
+/agent-skills/*
+  Content-Type: text/markdown; profile="urn:air:agent-skills"; charset=utf-8
+
+/.well-known/*.json
+  Content-Type: application/json; charset=utf-8

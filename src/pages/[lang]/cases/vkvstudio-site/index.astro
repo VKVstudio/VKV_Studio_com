@@ -51,7 +51,10 @@ const copy = {
     lede: 'The site you are reading is the case study. It carries a scroll-scrubbed video hero, WebGL tools and an animated navigation — the exact features performance advice tells you to avoid — and still scores 99 on desktop Lighthouse. The pages without the video hero score 100. The one point is what the video costs, and it was worth paying. Verify every number from your own browser.',
     stats: [
       { label: 'Lighthouse, desktop', value: '99, with the video hero running' },
-      { label: 'Lighthouse agentic browsing', value: '3/3 checks passed' },
+      {
+        label: 'Lighthouse 13.5 · local contact page',
+        value: '6/6 scored agentic checks · native WebMCP enabled',
+      },
       { label: 'Design tokens', value: '~80 custom properties, no framework' },
     ],
     sections: [
@@ -73,7 +76,7 @@ const copy = {
       },
       {
         heading: 'Measured reality',
-        body: "Desktop Lighthouse performance: 99, with the video hero running — not a stripped test build and not an empty template; the pages without the video hero measure 100 on the same run. Lighthouse's agentic-browsing audit — Google's own experimental check for how well a site reads to an AI agent — passes all three of its checks here: a well-formed accessibility tree, zero layout shift, and a valid llms.txt; check it yourself in PageSpeed Insights, or in Chrome DevTools if your Chrome is new enough — it takes a minute. The whole site ships in two full locales with correct hreflang. Mobile pays more for that hero: a scroll-scrubbed video is heavier on a phone's radio and CPU than a static one, and this design accepts a lower mobile number rather than trim the desktop experience — a trade named here, not hidden. Every number on this page was measured with Lighthouse; run it yourself and hold me to it.",
+        body: "Desktop Lighthouse performance: 99, with the video hero running — not a stripped test build and not an empty template; the pages without the video hero measure 100 on the same run. A local Lighthouse 13.5 agentic-browsing audit of the contact page passed 6/6 applicable scored checks with native WebMCP enabled. The tool inventory is a separate informational row. The public evidence includes the accessibility tree, layout-shift measurement (CLS), llms.txt, the ARD catalog and read-only tools for site references. Which checks apply depends on the Lighthouse version and the browser's WebMCP support. The whole site ships in two full locales with correct hreflang. Mobile pays more for that hero: a scroll-scrubbed video is heavier on a phone's radio and CPU than a static one, and this design accepts a lower mobile number rather than trim the desktop experience — a trade named here, not hidden. Every number on this page was measured with Lighthouse; run it yourself and hold me to it.",
       },
       {
         heading: 'What is deliberately absent',
@@ -99,7 +102,10 @@ const copy = {
     lede: 'Сайт, который вы читаете, и есть кейс. В нём видео в hero на прокрутке, WebGL-инструменты и анимированная навигация — ровно то, чего советуют избегать ради скорости, — и при этом 99 баллов Lighthouse на десктопе. Страницы без видео дают 100. Этот один балл — цена видео, и она того стоила. Проверьте любое число здесь сами, в своём браузере.',
     stats: [
       { label: 'Lighthouse, десктоп', value: '99, с работающим видео в hero' },
-      { label: 'Агентный просмотр в Lighthouse', value: '3/3 — все проверки пройдены' },
+      {
+        label: 'Lighthouse 13.5 · локальная страница контакта',
+        value: '6/6 агентных проверок с оценкой · native WebMCP включён',
+      },
       { label: 'Дизайн-токены', value: '≈80 кастомных свойств, без фреймворка' },
     ],
     sections: [
@@ -121,7 +127,7 @@ const copy = {
       },
       {
         heading: 'Измеренная реальность',
-        body: 'Производительность в Lighthouse на десктопе: 99, с работающим видео в hero — не на урезанной тестовой сборке и не на пустом шаблоне; страницы без видео в том же прогоне дают 100. Агентный аудит Lighthouse — собственная экспериментальная проверка Google на то, насколько сайт читается ИИ-агентом, — проходит здесь все три проверки: корректное дерево доступности, нулевой сдвиг вёрстки и валидный llms.txt; убедитесь сами в PageSpeed Insights или в Chrome DevTools, если у вас свежий Chrome, — это минута. Весь сайт живёт в двух полных локалях с корректным hreflang. Мобильный платит за этот hero больше: видео на прокрутке нагружает радиомодуль и процессор телефона сильнее статичной картинки, и дизайн сознательно принимает более низкий мобильный балл, лишь бы не резать десктопное впечатление, — размен назван здесь, а не спрятан. Все числа на этой странице получены прогоном Lighthouse; прогоните сами и спросите с меня.',
+        body: 'Производительность в Lighthouse на десктопе: 99, с работающим видео в hero — не на урезанной тестовой сборке и не на пустом шаблоне; страницы без видео в том же прогоне дают 100. В локальном агентном аудите страницы контакта в Lighthouse 13.5 с включённым native WebMCP пройдены 6/6 применимых проверок, влияющих на оценку. Список инструментов — отдельная информационная строка. Публично можно проверить дерево доступности, измерение сдвига вёрстки (CLS), llms.txt, каталог ARD и инструменты только для чтения, возвращающие ссылки на материалы сайта. Набор применимых проверок зависит от версии Lighthouse и поддержки WebMCP в браузере. Весь сайт живёт в двух полных локалях с корректным hreflang. Мобильный платит за этот hero больше: видео на прокрутке нагружает радиомодуль и процессор телефона сильнее статичной картинки, и дизайн сознательно принимает более низкий мобильный балл, лишь бы не резать десктопное впечатление, — размен назван здесь, а не спрятан. Все числа на этой странице получены прогоном Lighthouse; прогоните сами и спросите с меня.',
       },
       {
         heading: 'Чего здесь сознательно нет',

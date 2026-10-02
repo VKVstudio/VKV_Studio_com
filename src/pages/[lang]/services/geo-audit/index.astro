@@ -17,6 +17,7 @@
  * Data (deliverables, retainer, guarantee, prices) still comes from
  * services.ts — this page adds dramaturgy, not a second source of truth.
  */
+import ProReading from '@components/services/ProReading.astro';
 import { Picture, getImage } from 'astro:assets';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import InnerHeader from '@components/layout/InnerHeader.astro';
@@ -29,6 +30,7 @@ import retReport from '@/assets/services/geo-ret-report.png';
 import retFix from '@/assets/services/geo-ret-fix.png';
 import retCredit from '@/assets/services/geo-ret-credit.png';
 import FaqSection from '@components/sections/FaqSection.astro';
+import { buildContactHref } from '@/lib/contact-context';
 import { CONTACT_EMAIL } from '@/lib/site-config';
 import { getRung } from '@/data/services';
 import { SERVICES_FAQ } from '@/data/services-faq';
@@ -50,11 +52,10 @@ const copy = {
   en: {
     h1: 'An AI is answering questions about your market. Right now.',
     lede: "Whether it mentions you is not a mystery — it's measurable. The audit measures it across ChatGPT, Perplexity, Google AI, Copilot and Gemini, and hands you the fix list: priced, ordered, no fluff.",
-    orderCta: 'Order the audit — €900',
-    mockCta: 'Measure my company — €900',
-    finalCta: 'Start the audit — €900',
-    orderNote:
-      'Report in 5–10 business days · order confirmed within one business day · no call, no forms, no pitch.',
+    orderCta: t('en', 'contact.geoCta'),
+    mockCta: t('en', 'contact.geoCta'),
+    finalCta: t('en', 'contact.geoCta'),
+    orderNote: t('en', 'contact.geoOrderNote'),
     heroEmail:
       'Or write directly: {email} — your domain and 2–3 competitors, that is all. One invoice, paid after the report is delivered, by bank transfer.',
     mockEyebrow: '// what buyers see',
@@ -76,7 +77,7 @@ const copy = {
       {
         num: '01',
         title: 'Order by email',
-        body: 'Your domain and two or three competitors — that is everything I need to start. Writing from your company address speeds up confirmation. No access to your systems or customer data: everything is measured from public sources, the way the AI engines see you.',
+        body: t('en', 'contact.geoFirstStep'),
       },
       {
         num: '02',
@@ -92,7 +93,7 @@ const copy = {
     guaranteeLabel: '// the guarantee',
     proofLabel: '// why trust this audit',
     proofBody:
-      'The checklist I run on your site is the one this site passes. You can verify that yourself, right now: ask any AI agent to browse vkvstudio.com and watch it find everything — then run this page through PageSpeed Insights, or open Chrome DevTools on it: Lighthouse’s agentic-browsing audit passes all three of its checks here, and the machine-readable layer behind that is public, and you can read it yourself. And before you buy AI-visibility work from anyone — including me — read the methodology page: what is measurable, what is not, and what nobody can honestly promise.',
+      "You can inspect this site's public accessibility tree, measure layout shift (CLS), and read llms.txt and the Agentic Resource Discovery (ARD) catalog. Read-only WebMCP tools provide site references in browsers with native support. The number of applicable Lighthouse agentic-browsing checks depends on the Lighthouse version and WebMCP support; the tool inventory is a separate informational row. And before you buy AI-visibility work from anyone — including me — read the methodology page: what is measurable, what is not, and what nobody can honestly promise.",
     proofLink: 'Read the measurement methodology →',
     retainerLabel: '// monthly',
     retainerHeading: 'After the audit: the monthly engine',
@@ -115,11 +116,10 @@ const copy = {
   ru: {
     h1: 'ИИ отвечает на вопросы о вашем рынке. Прямо сейчас.',
     lede: 'Упоминает ли он вас — не загадка, а измеримая величина. Аудит измеряет её в ChatGPT, Perplexity, Google AI, Copilot и Gemini и выдаёт список исправлений: с ценой, по порядку, без театра.',
-    orderCta: 'Заказать аудит — €900',
-    mockCta: 'Измерить мою компанию — €900',
-    finalCta: 'Запустить аудит — €900',
-    orderNote:
-      'Отчёт за 5–10 рабочих дней · подтверждение заказа в течение одного рабочего дня · без звонка, без форм, без питча.',
+    orderCta: t('ru', 'contact.geoCta'),
+    mockCta: t('ru', 'contact.geoCta'),
+    finalCta: t('ru', 'contact.geoCta'),
+    orderNote: t('ru', 'contact.geoOrderNote'),
     heroEmail:
       'Или напрямую: {email} — ваш домен и 2–3 конкурента, это всё. Один счёт, оплата после сдачи отчёта — банковским переводом.',
     mockEyebrow: '// что видят покупатели',
@@ -141,7 +141,7 @@ const copy = {
       {
         num: '01',
         title: 'Заказ по почте',
-        body: 'Ваш домен и два-три конкурента — это всё, что нужно для старта. Письмо с рабочего адреса компании ускоряет подтверждение. Без доступа к вашим системам и данным клиентов: всё измеряется по публичным источникам — так, как вас видят ИИ-движки.',
+        body: t('ru', 'contact.geoFirstStep'),
       },
       {
         num: '02',
@@ -157,7 +157,7 @@ const copy = {
     guaranteeLabel: '// гарантия',
     proofLabel: '// почему этому аудиту можно верить',
     proofBody:
-      'Чек-лист, который я прогоняю по вашему сайту, — тот самый, который проходит этот сайт. Проверьте прямо сейчас: попросите любого ИИ-агента открыть vkvstudio.com и посмотрите, как он найдёт всё, — а потом прогоните эту страницу через PageSpeed Insights или откройте на ней Chrome DevTools: агентный аудит Lighthouse проходит здесь все три проверки, и машиночитаемый слой за ними публичен — его можно открыть и прочитать самому. И прежде чем покупать работу с ИИ-видимостью у кого угодно — включая меня — прочтите страницу методологии: что измеримо, что нет, и чего никто не может честно обещать.',
+      'Здесь можно проверить публичное дерево доступности, измерить сдвиг вёрстки (CLS), прочитать llms.txt и каталог Agentic Resource Discovery (ARD). WebMCP-инструменты только для чтения возвращают ссылки на материалы сайта в браузере с native-поддержкой. Число применимых проверок агентного аудита Lighthouse зависит от версии Lighthouse и поддержки WebMCP; список инструментов — отдельная информационная строка. И прежде чем покупать работу с ИИ-видимостью у кого угодно — включая меня — прочтите страницу методологии: что измеримо, что нет, и чего никто не может честно обещать.',
     proofLink: 'Читать методологию измерений →',
     retainerLabel: '// ежемесячно',
     retainerHeading: 'После аудита: ежемесячное сопровождение',
@@ -179,9 +179,7 @@ const copy = {
   },
 }[lang];
 
-const orderMailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-  'AI Visibility Audit — order'
-)}&body=${encodeURIComponent('Domain:\nCompetitors (2-3):\nAnything specific to check:')}`;
+const orderContact = buildContactHref(lang, { service: 'geo-audit' });
 
 // {email} placeholders render as clickable mailto links around the constant.
 const [heroEmailPre = '', heroEmailPost = ''] = copy.heroEmail.split('{email}');
@@ -292,7 +290,12 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
         </h1>
         <p class="geo-hero__lede">{copy.lede}</p>
         <div class="geo-hero__order">
-          <a href={orderMailto} class="geo-hero__cta">
+          <a
+            href={orderContact}
+            data-contact-service="geo-audit"
+            data-contact-lang={lang}
+            class="geo-hero__cta"
+          >
             {copy.orderCta}
             <svg
               width="16"
@@ -362,7 +365,12 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
         <p class="geo-mock__caption">{copy.mockCaption}</p>
         <p class="geo-mock__fix text-mono">{copy.mockFix}</p>
         <div class="geo-cta-row">
-          <a href={orderMailto} class="geo-hero__cta geo-hero__cta--compact">{copy.mockCta}</a>
+          <a
+            href={orderContact}
+            data-contact-service="geo-audit"
+            data-contact-lang={lang}
+            class="geo-hero__cta geo-hero__cta--compact">{copy.mockCta}</a
+          >
         </div>
       </div>
     </section>
@@ -467,6 +475,7 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
             {copy.proofLink.replace(/\s*→\s*$/, '')}
             <span aria-hidden="true">→</span>
           </a>
+          <ProReading readingId="geoGuide" lang={lang} class="geo-callout__text" />
         </blockquote>
       </div>
     </section>
@@ -580,7 +589,12 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
       </div>
       <div class="container">
         <h2 class="geo-final__heading text-h2">{copy.finalHeading}</h2>
-        <a href={orderMailto} class="geo-hero__cta">
+        <a
+          href={orderContact}
+          data-contact-service="geo-audit"
+          data-contact-lang={lang}
+          class="geo-hero__cta"
+        >
           {copy.finalCta}
           <svg
             width="16"
@@ -608,6 +622,11 @@ const heroImagesrcset = heroPreloads.map((img, i) => `${img.src} ${HERO_WIDTHS[i
       </div>
     </section>
   </main>
+  <script>
+    import { initServiceContactLinks } from '@/scripts/contact-navigation';
+    initServiceContactLinks();
+    document.addEventListener('astro:page-load', initServiceContactLinks);
+  </script>
 </BaseLayout>
 
 <script>
