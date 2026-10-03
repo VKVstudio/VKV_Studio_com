@@ -88,7 +88,11 @@ export default defineConfig({
       // hreflang="en", which is invalid (one hreflang value must resolve to
       // exactly one URL). Excluding "/" here (before the i18n grouping runs)
       // leaves "/en/" and "/ru/" as the only real, indexable locale pages.
-      filter: (page) => new URL(page).pathname !== '/',
+      // Capture viewers are noindex utilities, not additional marketing pages.
+      filter: (page) => {
+        const pathname = new URL(page).pathname;
+        return pathname !== '/' && !/^\/(en|ru)\/audit-proofs\//.test(pathname);
+      },
       serialize(item) {
         const route = new URL(item.url).pathname.replace(/^\/(en|ru)/, '') || '/';
         const lastmod = LASTMOD[route];

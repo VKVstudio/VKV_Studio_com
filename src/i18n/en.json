@@ -69,10 +69,17 @@
     "pageSpeedAgentic": "Agentic audit 6/6",
     "scanned": "Checked",
     "viewEvidence": "View evidence",
-    "openCapture": "Open original capture",
-    "darkPreview": "Dark preview · original colours in the capture",
-    "captureAlt": "Original {source} report capture",
-    "captureAltMode": "Original {source} {mode} report capture",
+    "openCapture": "Open full-size capture",
+    "darkPreview": "Colours adapted for dark viewing",
+    "captureAlt": "Report capture from {source}",
+    "captureAltMode": "Report capture from {source}, {mode} mode",
+    "viewer": {
+      "title": "{source} — full-size capture",
+      "label": "Report capture",
+      "back": "Back to independent checks",
+      "original": "Original capture",
+      "themeNote": "Colours adapted with CSS for dark viewing. The original capture retains the report’s colours."
+    },
     "modes": {
       "mobile": "Mobile",
       "desktop": "Desktop"

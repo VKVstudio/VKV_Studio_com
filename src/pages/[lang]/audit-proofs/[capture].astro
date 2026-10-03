@@ -1,0 +1,222 @@
+---
+import type { GetStaticPathsResult } from 'astro';
+import { AUDIT_PROOFS } from '@/data/audit-proof';
+import type { AuditProof } from '@/data/audit-proof';
+import { supportedLangs, t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+import '@styles/global.css';
+
+interface Props {
+  lang: Lang;
+  proof: AuditProof;
+  capture: AuditProof['captures'][number];
+}
+
+export function getStaticPaths(): GetStaticPathsResult {
+  return supportedLangs.flatMap((lang) =>
+    AUDIT_PROOFS.flatMap((proof) =>
+      proof.captures.map((capture) => ({
+        params: {
+          lang,
+          capture: `${proof.id}${capture.mode ? `-${capture.mode}` : ''}`,
+        },
+        props: { lang, proof, capture },
+      }))
+    )
+  );
+}
+
+const { lang, proof, capture } = Astro.props;
+const modeLabel = capture.mode ? t(lang, `auditProof.modes.${capture.mode}`) : null;
+const title = t(lang, 'auditProof.viewer.title').replace('{source}', proof.source);
+const captureAlt = t(lang, modeLabel ? 'auditProof.captureAltMode' : 'auditProof.captureAlt')
+  .replace('{source}', proof.source)
+  .replace('{mode}', modeLabel ?? '');
+const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Asia/Yerevan',
+});
+const reportUrl = new URL(proof.reportUrl);
+if (proof.id === 'pagespeed' && capture.mode) {
+  reportUrl.searchParams.set('form_factor', capture.mode);
+}
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, follow" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0d0f12" />
+    <title>{title} | VKVstudio</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  </head>
+  <body>
+    <main class="capture-viewer">
+      <div class="capture-viewer__toolbar text-mono">
+        <a class="capture-viewer__back" href={`/${lang}/#audit-proof`}>
+          <span aria-hidden="true">←</span>
+          {t(lang, 'auditProof.viewer.back')}
+        </a>
+        <div class="capture-viewer__actions">
+          <a href={capture.src} target="_blank" rel="noopener noreferrer">
+            {t(lang, 'auditProof.viewer.original')}
+            <span aria-hidden="true">↗</span>
+          </a>
+          <a href={reportUrl.href} target="_blank" rel="noopener noreferrer">
+            {t(lang, 'auditProof.openReport')}
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </div>
+
+      <header class="capture-viewer__header">
+        <div>
+          <p class="capture-viewer__eyebrow text-mono">{t(lang, 'auditProof.viewer.label')}</p>
+          <h1>{proof.source}</h1>
+        </div>
+        <p class="capture-viewer__metadata text-mono">
+          {modeLabel && <span>{modeLabel}</span>}
+          <span>
+            {t(lang, 'auditProof.scanned')}:{' '}
+            <time datetime={proof.scannedAt}>
+              {dateFormatter.format(new Date(proof.scannedAt))}
+            </time>
+          </span>
+        </p>
+      </header>
+
+      <figure class="capture-viewer__figure">
+        <img
+          class:list={{ 'capture-viewer__image--adapted': proof.id !== 'browser' }}
+          src={capture.src}
+          width={capture.width}
+          height={capture.height}
+          alt={captureAlt}
+          decoding="async"
+        />
+        {
+          proof.id !== 'browser' && (
+            <figcaption>{t(lang, 'auditProof.viewer.themeNote')}</figcaption>
+          )
+        }
+      </figure>
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(html) {
+    color-scheme: dark;
+  }
+
+  .capture-viewer {
+    padding: var(--space-5) var(--container-padding) var(--space-10);
+  }
+
+  .capture-viewer__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-8);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-sm);
+  }
+
+  .capture-viewer__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+  }
+
+  .capture-viewer__toolbar a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-decoration-color: var(--border-default);
+    text-underline-offset: var(--space-1);
+  }
+
+  .capture-viewer__toolbar a:hover,
+  .capture-viewer__toolbar a:focus-visible {
+    color: var(--accent-green-200);
+    text-decoration-color: currentColor;
+  }
+
+  .capture-viewer__toolbar a:focus-visible {
+    outline: 2px solid var(--accent-green-300);
+    outline-offset: var(--space-1);
+    border-radius: var(--radius-sm);
+  }
+
+  .capture-viewer__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-8);
+    padding-block: var(--space-6);
+  }
+
+  .capture-viewer__eyebrow {
+    margin-bottom: var(--space-2);
+    color: var(--accent-green-200);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+  }
+
+  .capture-viewer__header h1 {
+    font-size: var(--text-h2);
+  }
+
+  .capture-viewer__metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+  }
+
+  .capture-viewer__figure {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .capture-viewer__figure img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+  }
+
+  /* Keep the source file intact and match the evidence-card presentation. */
+  .capture-viewer__image--adapted {
+    filter: invert(0.9) hue-rotate(180deg);
+  }
+
+  .capture-viewer__figure figcaption {
+    max-width: var(--container-narrow);
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .capture-viewer__toolbar a {
+      transition: color var(--duration-normal) var(--ease-out);
+    }
+  }
+</style>

@@ -74,7 +74,7 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
                   return (
                     <a
                       class="audit-proof__capture"
-                      href={capture.src}
+                      href={`/${lang}/audit-proofs/${proof.id}${capture.mode ? `-${capture.mode}` : ''}/`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -91,7 +91,9 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
                         alt={captureAlt}
                       />
                       {proof.id !== 'browser' && (
-                        <span class="audit-proof__capture-note">{t(lang, 'auditProof.darkPreview')}</span>
+                        <span class="audit-proof__capture-note">
+                          {t(lang, 'auditProof.darkPreview')}
+                        </span>
                       )}
                       <span class="audit-proof__capture-action text-mono">
                         {actionLabel} <span aria-hidden="true">↗</span>
@@ -163,6 +165,12 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
     overflow: hidden;
   }
 
+  .audit-proof__item:has(.audit-proof__summary:hover),
+  .audit-proof__item:has(.audit-proof__summary:focus-visible),
+  .audit-proof__item:has(.audit-proof__details[open]) {
+    border-color: var(--border-accent);
+  }
+
   .audit-proof__details {
     height: 100%;
   }
@@ -171,8 +179,8 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    min-height: 28rem;
-    padding: var(--space-6);
+    min-height: 26rem;
+    padding: var(--space-5);
     cursor: pointer;
     list-style: none;
   }
@@ -203,41 +211,48 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
   }
 
   .audit-proof__grade-context {
-    min-height: var(--space-6);
     color: var(--text-secondary);
     font-size: var(--text-sm);
   }
 
   .audit-proof__source {
     color: var(--text-primary);
-    font-size: var(--text-lg);
+    margin-top: var(--space-3);
+    font-size: var(--text-base);
     font-weight: var(--weight-semibold);
-    min-height: 2.7em;
+    line-height: var(--leading-snug);
   }
 
   .audit-proof__scores {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    min-height: var(--space-24);
     margin-top: var(--space-2);
     color: var(--text-secondary);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     line-height: var(--leading-snug);
+  }
+
+  .audit-proof__scores:empty {
+    display: none;
   }
 
   .audit-proof__date {
     margin-top: auto;
-    padding-top: var(--space-5);
+    padding-top: var(--space-4);
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
 
   .audit-proof__reveal {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
     gap: var(--space-2);
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
     color: var(--accent-green-200);
     font-size: var(--text-sm);
   }
@@ -280,7 +295,7 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
     border-radius: var(--radius-sm);
   }
 
-  /* Adapt only the on-page preview. The linked source capture stays untouched. */
+  /* Match the full-size viewer's CSS treatment; the source JPG stays untouched. */
   .audit-proof__capture-image--light {
     filter: invert(0.9) hue-rotate(180deg);
   }
@@ -318,6 +333,48 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
     color: var(--text-muted);
     font-size: var(--text-sm);
     line-height: var(--leading-relaxed);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .audit-proof__item {
+      transition: border-color var(--duration-normal) var(--ease-out);
+    }
+
+    .audit-proof__details[open] .audit-proof__evidence {
+      animation: evidence-reveal var(--duration-slow) var(--ease-out) both;
+    }
+
+    @keyframes evidence-reveal {
+      from {
+        opacity: 0;
+        transform: translateY(calc(-1 * var(--space-2)));
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @supports (interpolate-size: allow-keywords) and (transition-behavior: allow-discrete) {
+      .audit-proof__details {
+        interpolate-size: allow-keywords;
+      }
+
+      .audit-proof__details::details-content {
+        block-size: 0;
+        overflow: clip;
+        opacity: 0;
+        transition:
+          block-size var(--duration-slow) var(--ease-out),
+          opacity var(--duration-normal) var(--ease-out),
+          content-visibility var(--duration-slow) allow-discrete;
+      }
+
+      .audit-proof__details[open]::details-content {
+        block-size: auto;
+        opacity: 1;
+      }
+    }
   }
 
   @media (max-width: 1100px) {
