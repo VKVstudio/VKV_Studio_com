@@ -16,8 +16,9 @@
  *    terminal chunk had landed: a 503 on the chunk left a zero-size orb with
  *    no hit area and no assistant until reload; a slow chunk left neither orb
  *    nor terminal on screen for the whole download (audit 2026-09-21).
- *  - The terminal chunk was only fetched once the scroll gate opened, so a
- *    click right after the gate paid the network round trip.
+ *  - Unconditional window-load prefetch evaluated the terminal graph even
+ *    when the visitor never reached the scroll gate. Fetching now starts on
+ *    readiness / intent; an immediate first open may wait for that work.
  *  - div.synapse-container transitioned `bottom` to ride above the footer /
  *    cookie sheet: a non-composited animation AND 0.0162 of the page's 0.0163
  *    CLS, because a fixed element moving through `bottom` is a layout shift
@@ -38,7 +39,7 @@
  * written as `.then(() => (Terminal = terminalModule))` inside the warm-up
  * was invisible (both found by the 2026-09-21 audit).
  *
- * Every assertion below was mutation-proved on 2026-09-21 against copies of
+ * The original assertions were mutation-proved on 2026-09-21 against copies of
  * the guarded files in a scratch tree (the repo files were never modified):
  * each mutation listed next to a test turns that test red, and the unmutated
  * copies are green.
@@ -169,17 +170,21 @@ describe('SynapseApp — the terminal is not part of the homepage boot', () => {
     expect(functionBody(APP, 'coarsePointer')).toMatch(/\(hover: none\), \(pointer: coarse\)/);
   });
 
-  it('the chunk is prefetched after window load, gated on nothing', () => {
-    // Mutation: remove `prefetchTerminal();` from onMount (leaving the
-    // function defined) — the fetch would again wait for the scroll gate.
-    const mount = /onMount\(\(\) => \{([\s\S]*?)\n  \}\);/.exec(APP)?.[1] ?? '';
-    expect(mount).toMatch(/prefetchTerminal\(\)/);
-    const prefetch = functionBody(APP, 'prefetchTerminal');
-    expect(prefetch).toMatch(/fetchTerminal\(\)/);
-    expect(prefetch).toMatch(/readyState === 'complete'/);
-    expect(prefetch).toMatch(/addEventListener\('load'/);
-    // Prefetch is stage 1 only: no mount from the load path.
-    expect(prefetch).not.toMatch(/mountTerminal/);
+  it('the chunk waits for readiness or intent, with no boot-triggered prefetch', () => {
+    // Regression: restoring a hydration / window-load prefetch evaluates the
+    // terminal graph on visits that never approach the orb's scroll gate.
+    expect(APP).not.toMatch(/\bonMount\s*\(|\bprefetchTerminal\b|\breadyState\b/);
+    expect(APP).not.toMatch(/\$effect(?:\.pre)?\s*\(/);
+    expect(APP).not.toMatch(/addEventListener\(\s*['"](?:load|DOMContentLoaded)['"]/);
+    // One declaration and exactly two calls: mount intent and scroll readiness.
+    expect([...APP.matchAll(/\bfetchTerminal\(\)/g)]).toHaveLength(3);
+    // Wrapper calls must not provide another route from component boot.
+    expect([...APP.matchAll(/\bwarmTerminal\(\)/g)]).toHaveLength(1);
+    expect([...APP.matchAll(/\bmountTerminal\(\)/g)]).toHaveLength(3);
+    expect(functionBody(APP, 'mountTerminal')).toMatch(/fetchTerminal\(\)/);
+    expect(functionBody(APP, 'warmTerminal')).toMatch(/fetchTerminal\(\)/);
+    expect(APP).toMatch(/onReady=\{warmTerminal\}/);
+    expect(APP).toMatch(/onIntent=\{mountTerminal\}/);
   });
 
   it('the orb never collapses before the terminal is mounted', () => {

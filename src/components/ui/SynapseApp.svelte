@@ -13,30 +13,19 @@
    *  • Brain collapse (1→0 on open, 0→1 on close) is a CSS transition inside
    *    SynapseBrain driven by the `collapsed` prop — no GSAP in this file
    *
-   * Why the terminal is lazy (Lighthouse 13.5, mobile, 2026-09-20)
+   * Loading policy (2026-10-04)
    * ─────────────────────────────────────────────────────────────────────────────
-   * This island hydrates at client:idle on the homepage. With the terminal
-   * mounted eagerly, SynapseApp.*.js cost 1635 ms total / 1569 ms scripting in
-   * bootup-time on a page load where nobody had opened the chat — the terminal's
-   * onMount opens IndexedDB, migrates old storage, purges stale anonymous chats,
-   * creates a conversation, subscribes to auth, builds an AudioContext engine,
-   * and starts a 20 s heartbeat. All of it for a panel behind a click that is
-   * itself scroll-gated (the orb only becomes clickable once #about is on
-   * screen — see brain-morph.ts; that gate is a feature).
+   * This island hydrates at client:idle, but hydration and window load do not
+   * fetch the terminal. import() fetches AND evaluates its dependency graph;
+   * that work belongs to readiness or intent, not every homepage visit.
    *
-   * Three stages, three different bills (2026-09-21):
-   *  1. PREFETCH — the chunk is imported in an idle slot right after the window
-   *     `load` event, on every visit, gated on nothing. `import()` fetches AND
-   *     evaluates the module graph (terminal + sidebar + orb renderer + gsap +
-   *     Dexie + client); evaluation defines functions and registers nothing —
-   *     the terminal's onMount is what costs, and nothing mounts here.
-   *  2. WARM-UP on the scroll gate opening (`onReady`): fine-pointer devices
-   *     only make sure stage 1 happened; coarse-pointer devices (touch, no
-   *     hover) MOUNT the terminal hidden in an idle slot, because there is no
-   *     pointerenter to mount it ahead of the tap — the tap would otherwise pay
-   *     the whole onMount bill before anything opens.
-   *  3. INTENT on the orb (pointerenter / focus) → mount, so a click on a
-   *     fine-pointer device finds the terminal already there.
+   *  • Scroll readiness (`onReady`) fetches the chunk when the orb becomes
+   *    available near #about. Coarse-pointer devices also mount it hidden in
+   *    an idle slot, since a tap has no preceding hover.
+   *  • Pointer / focus intent mounts the terminal ahead of a likely click.
+   *  • Activation also requests a mount, sharing any in-flight import. An
+   *    immediate first activation can pay the fetch / evaluation cost; the
+   *    orb stays visible and reports pending until the terminal is available.
    *
    * The orb never collapses ahead of the terminal: `collapsed` derives from
    * `Terminal !== null`, not from the wish alone. A click that lands before
@@ -47,32 +36,13 @@
    * the next click runs the import again; the second failure in a row
    * switches the orb's label and tooltip to "reload the page to retry". It
    * says reload, not click, because that is what recovers: the HTML module
-   * map records a failed module fetch as null for the life of the document,
-   * so a repeated import() of the same URL fails without touching the
-   * network (measured 2026-09-21, Chrome 153 against a server answering 503
-   * on the chunk: one 503 on the wire, five failed imports across prefetch,
-   * warm-up and three clicks). The retry still runs — it is free, and a
-   * browser that does not cache the failure recovers on the spot. The first
-   * version of this file set terminalOpen and collapsed the orb before
-   * importing, so a 503 on the chunk left a scale(0) orb with no hit area —
-   * the assistant was gone until reload (audit 2026-09-21, reproduced
-   * against the build).
-   *
-   * Rejected: client:visible for the whole island — the orb is position:fixed
-   * and always in the viewport, so it hydrates at once and changes nothing.
-   * Rejected: keeping the eager mount and deferring only the onMount work —
-   * the chunk itself (terminal + sidebar + orb renderer + Dexie + audio
-   * engine + client) is the larger part of the bill.
-   * Rejected: a network-only prefetch (<link rel="modulepreload">) — Vite gives
-   * source code no handle on the hashed chunk URL of a dynamic import, and the
-   * chunk's own static imports (gsap, synapse-client) are only discovered on
-   * evaluation anyway, so a preload of the top chunk alone would still leave a
-   * round-trip waterfall for the click. `import()` fetches the whole graph.
+   * map records a failed module fetch as null for the life of the document.
+   * A repeated import may therefore fail without another network request.
+   * The retry remains available for browsers that can recover immediately.
    *
    * Svelte 5 runes: $state, $derived
    */
 
-  import { onMount } from 'svelte';
   import SynapseBrain from '@/components/ui/SynapseBrain.svelte';
   import type { Lang } from '@/i18n/utils';
   import type SynapseTerminal from '@/components/ui/SynapseTerminal.svelte';
@@ -99,7 +69,7 @@
    *
    * Two stages on purpose — fetched and mounted are different bills:
    *   • `terminalModule` (plain `let`, non-reactive) holds the evaluated
-   *     chunk after the prefetch. Evaluating it costs a parse; nothing runs.
+   *     chunk after a readiness / intent fetch. Evaluation does not mount it.
    *   • assigning `Terminal` (reactive) is what mounts it, and mounting is
    *     what runs the terminal's onMount: IndexedDB open + migration + purge,
    *     conversation creation, audio engine, auth subscription, heartbeat.
@@ -146,7 +116,7 @@
     return terminalLoad;
   }
 
-  /** Stage 3: mount — intent on the orb, the click itself, or the coarse-
+  /** Mount — intent on the orb, the click itself, or the coarse-
       pointer warm-up. Resolves to whether the terminal is mounted. */
   function mountTerminal(): Promise<boolean> {
     if (Terminal) return Promise.resolve(true);
@@ -169,32 +139,13 @@
     }
   }
 
-  /**
-   * Stage 1 on every visit: fetch the chunk in an idle slot right after the
-   * window `load` event, regardless of the scroll gate. This island hydrates
-   * at client:idle, which can be before or after `load` — both are handled.
-   */
-  function prefetchTerminal(): void {
-    if (terminalLoad) return;
-    const schedule = (): void => whenIdle(() => void fetchTerminal(), 5000, 1000);
-    if (document.readyState === 'complete') {
-      schedule();
-    } else {
-      window.addEventListener('load', schedule, { once: true });
-    }
-  }
-
-  onMount(() => {
-    prefetchTerminal();
-  });
-
   /** No hover on the primary input: a tap is the first and only intent. */
   function coarsePointer(): boolean {
     return window.matchMedia('(hover: none), (pointer: coarse)').matches;
   }
 
   /**
-   * Stage 2, on the scroll gate opening. Fine pointers stop at stage 1 —
+   * Fetch on the scroll gate opening. Fine pointers stop after fetching —
    * pointerenter / focus will mount ahead of the click. Coarse pointers mount
    * hidden in an idle slot: mounted with open=false, the terminal's overlay
    * keeps its inline `opacity: 0; visibility: hidden` and its open-watcher
