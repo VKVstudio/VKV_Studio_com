@@ -6,6 +6,7 @@ import {
   contactRelayReady,
   deliverContactRelay,
   type ContactRelayEnvironment,
+  type ContactReadinessDiagnostic,
 } from '../../functions/_lib/contact-relay';
 import {
   handleContactRequest,
@@ -216,6 +217,96 @@ describe('fixed Workspace relay transport', () => {
 });
 
 describe('authenticated readiness', () => {
+  it('diagnoses invalid configuration without upstream work', async () => {
+    const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+    const mock = vi.fn<typeof fetch>();
+    expect(
+      await contactRelayReady({ ...env, CONTACT_RELAY_HMAC_KEY: 'invalid' }, mock, diagnostic)
+    ).toBe(false);
+    expect(diagnostic.mock.calls).toEqual([[{ code: 'config-invalid' }]]);
+    expect(mock).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 403, 503])(
+    'diagnoses returned HTTP %i without reading its body',
+    async (status) => {
+      const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+      const response = new Response('secret-bearing upstream body', { status });
+      const mock = vi.fn<typeof fetch>(async () => response);
+      expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+      expect(diagnostic.mock.calls).toEqual([[{ code: 'relay-http-status', status }]]);
+      expect(response.bodyUsed).toBe(false);
+    }
+  );
+
+  it('separates signing failures from fetch failures and never forwards exception text', async () => {
+    const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+    const mock = vi.fn<typeof fetch>();
+    const signing = vi
+      .spyOn(crypto.subtle, 'digest')
+      .mockRejectedValueOnce(new DOMException('secret key and signing payload', 'OperationError'));
+    expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+    expect(mock).not.toHaveBeenCalled();
+    signing.mockRestore();
+    const error = new TypeError('secret URL, credentials and cause', {
+      cause: new Error('secret nested error'),
+    });
+    error.name = 'secret arbitrary name';
+    mock.mockRejectedValueOnce(error);
+    expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+    expect(diagnostic.mock.calls).toEqual([
+      [{ code: 'relay-signing-failed', errorType: 'OperationError' }],
+      [{ code: 'fetch-failed', errorType: 'TypeError' }],
+    ]);
+  });
+
+  it('maps unrecognized exception names to a constant rather than logging them', async () => {
+    const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+    const mock = vi.fn<typeof fetch>(async () => {
+      throw new DOMException('secret message', 'SecretName');
+    });
+    expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+    expect(diagnostic.mock.calls).toEqual([[{ code: 'fetch-failed', errorType: 'Error' }]]);
+  });
+
+  it('distinguishes an invalid receipt from an explicit not-ready service', async () => {
+    const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+    const mock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('secret invalid JSON', {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(Response.json({ ok: true, transport: 'workspace-smtp', secret: true }))
+      .mockResolvedValueOnce(Response.json({ ok: false, transport: 'workspace-smtp' }));
+    for (let attempt = 0; attempt < 3; attempt++) {
+      expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+    }
+    expect(diagnostic.mock.calls).toEqual([
+      [{ code: 'receipt-invalid' }],
+      [{ code: 'receipt-invalid' }],
+      [{ code: 'service-not-ready' }],
+    ]);
+  });
+
+  it('does not log successful or cached readiness and isolates a failing diagnostic callback', async () => {
+    const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+    const mock = vi.fn<typeof fetch>(async () =>
+      Response.json({ ok: true, transport: 'workspace-smtp' })
+    );
+    expect(await contactRelayReady(env, mock, diagnostic)).toBe(true);
+    expect(await contactRelayReady(env, mock, diagnostic)).toBe(true);
+    expect(mock).toHaveBeenCalledTimes(1);
+    expect(diagnostic).not.toHaveBeenCalled();
+    const throwingDiagnostic = (): void => {
+      throw new Error('synthetic diagnostic error');
+    };
+    expect(
+      await contactRelayReady({ ...env, CONTACT_RELAY_READY: 'false' }, mock, throwingDiagnostic)
+    ).toBe(false);
+  });
+
   it('signs GET with empty body and caches a positive result for five seconds', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(1_791_000_000_000);
@@ -264,6 +355,50 @@ describe('authenticated readiness', () => {
 });
 
 describe('relay integration retains the Pages boundary', () => {
+  it('throttles safe GET diagnostics across failures and never adds public fields or headers', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    // Advance beyond earlier test events; the throttle is shared across configurations.
+    const start = Date.now() + 120_000;
+    vi.setSystemTime(start);
+    const logger = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const get = (): Request => new Request('https://vkvstudio.com/api/contact');
+    const mock = vi.fn<typeof fetch>(async () => {
+      const error = new Error('secret credentials, headers and body');
+      error.name = 'secret custom error name';
+      throw error;
+    });
+    const invalid = await handleContactRequest(
+      get(),
+      { ...env, CONTACT_TURNSTILE_SECRET: '' },
+      mock
+    );
+    expect(invalid.status).toBe(503);
+    expect(await invalid.json()).toEqual({ ok: false, code: 'unavailable' });
+    expect(logger.mock.calls).toEqual([['[contact-readiness]', 'config-invalid', '']]);
+    expect(mock).not.toHaveBeenCalled();
+    vi.setSystemTime(start + 59_999);
+    const failed = await handleContactRequest(get(), env, mock);
+    expect(failed.status).toBe(503);
+    expect(await failed.json()).toEqual({ ok: false, code: 'unavailable' });
+    expect(Array.from(failed.headers)).toEqual(Array.from(invalid.headers));
+    expect(logger).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(start + 60_000);
+    await handleContactRequest(get(), env, mock);
+    expect(logger.mock.calls).toEqual([
+      ['[contact-readiness]', 'config-invalid', ''],
+      ['[contact-readiness]', 'fetch-failed', 'Error'],
+    ]);
+    for (let attempt = 0; attempt < 5; attempt++) await handleContactRequest(get(), env, mock);
+    expect(logger).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps POST readiness failures outside the GET diagnostic logger', async () => {
+    const logger = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const mock = vi.fn<typeof fetch>(async () => Response.json({ ok: false }, { status: 403 }));
+    expect((await handleContactRequest(enquiry(), env, mock)).status).toBe(503);
+    expect(logger).not.toHaveBeenCalled();
+  });
+
   it('uses readiness, Turnstile and one signed relay submission in order', async () => {
     const mock = gateway();
     const response = await handleContactRequest(enquiry(), env, mock);

@@ -4,6 +4,7 @@ import {
   contactRelayReady,
   deliverContactRelay,
   type ContactRelayEnvironment,
+  type ContactReadinessDiagnostic,
 } from './contact-relay';
 
 z.config({ jitless: true });
@@ -14,6 +15,21 @@ const RECIPIENT = 'valerii@vkvstudio.com';
 const SENDER = 'enquiries@vkvstudio.com';
 const CHALLENGE_ACTION = 'project_enquiry';
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
+// One failure event per minute per isolate, independent of public request volume.
+let lastReadinessDiagnostic: number | undefined;
+
+function logReadinessDiagnostic(event: ContactReadinessDiagnostic): void {
+  const now = Date.now();
+  if (lastReadinessDiagnostic !== undefined && now - lastReadinessDiagnostic < 60_000) return;
+  lastReadinessDiagnostic = now;
+  // Only constant codes, allowlisted error types and numeric HTTP status reach logs.
+  console.warn(
+    '[contact-readiness]',
+    event.code,
+    'status' in event ? event.status : 'errorType' in event ? event.errorType : ''
+  );
+}
 
 export interface ContactRateLimit {
   limit(input: { key: string }): Promise<{ success: boolean }>;
@@ -219,10 +235,13 @@ export async function handleContactRequest(
     return reply(405, { ok: false, code: 'method' }, { Allow: 'GET, POST' });
   }
   if (request.method === 'GET') {
+    if (!configured(env)) {
+      logReadinessDiagnostic({ code: 'config-invalid' });
+      return unavailable();
+    }
     const ready =
-      configured(env) &&
-      (env.CONTACT_DELIVERY_TRANSPORT !== 'workspace-relay' ||
-        (await contactRelayReady(env, requestFetch)));
+      env.CONTACT_DELIVERY_TRANSPORT !== 'workspace-relay' ||
+      (await contactRelayReady(env, requestFetch, logReadinessDiagnostic));
     return ready ? reply(200, { siteKey: env.CONTACT_TURNSTILE_SITE_KEY }) : unavailable();
   }
   if (
