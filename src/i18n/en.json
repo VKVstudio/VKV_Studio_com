@@ -47,6 +47,39 @@
     "ctaServices": "Services & pricing",
     "scroll": "Scroll"
   },
+  "auditProof": {
+    "eyebrow": "Independent checks",
+    "heading": "Measured, not promised.",
+    "lead": "Three A+ configuration ratings. A 100 desktop performance score and 99 on mobile. Open the original reports and see the measurements.",
+    "categories": {
+      "tls": "TLS configuration",
+      "headers": "HTTP headers",
+      "browser": "Browser protections",
+      "pagespeed": "Lab performance"
+    },
+    "gradeContext": {
+      "tls": "TLS grade",
+      "headers": "Header grade",
+      "browser": "Observatory grade",
+      "pagespeed": "Desktop performance"
+    },
+    "browserScore": "140/100 points · 12/12 checks · bonus points included",
+    "pageSpeedMobile": "Mobile performance 99",
+    "pageSpeedQuality": "Accessibility 100 · Best Practices 100 · SEO 100",
+    "pageSpeedAgentic": "Agentic audit 6/6",
+    "scanned": "Checked",
+    "viewEvidence": "View evidence",
+    "openCapture": "Open original capture",
+    "darkPreview": "Dark preview · original colours in the capture",
+    "captureAlt": "Original {source} report capture",
+    "captureAltMode": "Original {source} {mode} report capture",
+    "modes": {
+      "mobile": "Mobile",
+      "desktop": "Desktop"
+    },
+    "openReport": "Open live report",
+    "scope": "Dated TLS and HTTP-header checks plus a PageSpeed lab run on the public page. Each score covers its stated test, not the whole site's security."
+  },
   "about": {
     "headline": "From pixels to pipelines.",
     "headline_sub": "20+ years of building things that work.",

@@ -1,0 +1,352 @@
+---
+import { AUDIT_PROOFS } from '@/data/audit-proof';
+import { t } from '@i18n/utils';
+import type { Lang } from '@i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Asia/Yerevan',
+});
+---
+
+<section class="audit-proof" id="audit-proof" aria-labelledby="audit-proof-heading">
+  <div class="container">
+    <header class="audit-proof__intro">
+      <p class="audit-proof__eyebrow text-mono">{t(lang, 'auditProof.eyebrow')}</p>
+      <h2 class="text-h2" id="audit-proof-heading">{t(lang, 'auditProof.heading')}</h2>
+      <p class="audit-proof__lead">{t(lang, 'auditProof.lead')}</p>
+    </header>
+
+    <ul class="audit-proof__grid">
+      {
+        AUDIT_PROOFS.map((proof) => (
+          <li class="audit-proof__item">
+            <details class="audit-proof__details">
+              <summary class="audit-proof__summary">
+                <span class="audit-proof__category text-mono">
+                  {t(lang, `auditProof.categories.${proof.id}`)}
+                </span>
+                <span class="audit-proof__grade text-mono">{proof.grade}</span>
+                <span class="audit-proof__grade-context">{t(lang, proof.gradeContextKey)}</span>
+                <span class="audit-proof__source">{proof.source}</span>
+                <span class="audit-proof__scores">
+                  {proof.scoreKeys?.map((key) => (
+                    <span>{t(lang, key)}</span>
+                  ))}
+                </span>
+                <span class="audit-proof__date">
+                  {t(lang, 'auditProof.scanned')}:{' '}
+                  <time datetime={proof.scannedAt}>
+                    {dateFormatter.format(new Date(proof.scannedAt))}
+                  </time>
+                </span>
+                <span class="audit-proof__reveal text-mono">
+                  {t(lang, 'auditProof.viewEvidence')}
+                  <span class="audit-proof__toggle" aria-hidden="true">
+                    <span class="audit-proof__expand">+</span>
+                    <span class="audit-proof__collapse">−</span>
+                  </span>
+                </span>
+              </summary>
+
+              <div class="audit-proof__evidence">
+                {proof.captures.map((capture) => {
+                  const modeLabel = capture.mode
+                    ? t(lang, `auditProof.modes.${capture.mode}`)
+                    : null;
+                  const actionLabel = modeLabel
+                    ? `${t(lang, 'auditProof.openCapture')} — ${modeLabel}`
+                    : t(lang, 'auditProof.openCapture');
+                  const captureAlt = t(
+                    lang,
+                    modeLabel ? 'auditProof.captureAltMode' : 'auditProof.captureAlt'
+                  )
+                    .replace('{source}', proof.source)
+                    .replace('{mode}', modeLabel ?? '');
+
+                  return (
+                    <a
+                      class="audit-proof__capture"
+                      href={capture.src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {modeLabel && (
+                        <span class="audit-proof__capture-mode text-mono">{modeLabel}</span>
+                      )}
+                      <img
+                        class:list={{ 'audit-proof__capture-image--light': proof.id !== 'browser' }}
+                        src={capture.src}
+                        width={capture.width}
+                        height={capture.height}
+                        loading="lazy"
+                        decoding="async"
+                        alt={captureAlt}
+                      />
+                      {proof.id !== 'browser' && (
+                        <span class="audit-proof__capture-note">{t(lang, 'auditProof.darkPreview')}</span>
+                      )}
+                      <span class="audit-proof__capture-action text-mono">
+                        {actionLabel} <span aria-hidden="true">↗</span>
+                      </span>
+                    </a>
+                  );
+                })}
+                <a
+                  class="audit-proof__report-link text-mono"
+                  href={proof.reportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${t(lang, 'auditProof.openReport')} — ${proof.source}`}
+                >
+                  {t(lang, 'auditProof.openReport')} <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </details>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="audit-proof__scope">{t(lang, 'auditProof.scope')}</p>
+  </div>
+</section>
+
+<style>
+  .audit-proof {
+    padding-block: var(--space-20);
+    background: var(--bg-graphite);
+  }
+
+  .audit-proof__intro {
+    max-width: var(--container-narrow);
+    margin-bottom: var(--space-10);
+  }
+
+  .audit-proof__eyebrow {
+    margin-bottom: var(--space-3);
+    color: var(--accent-green-300);
+    text-transform: uppercase;
+  }
+
+  .audit-proof__intro h2 {
+    margin-bottom: var(--space-4);
+  }
+
+  .audit-proof__lead {
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  .audit-proof__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .audit-proof__item {
+    align-self: start;
+    min-width: 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-obsidian);
+    overflow: hidden;
+  }
+
+  .audit-proof__details {
+    height: 100%;
+  }
+
+  .audit-proof__summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 28rem;
+    padding: var(--space-6);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .audit-proof__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .audit-proof__summary:focus-visible,
+  .audit-proof__evidence a:focus-visible {
+    outline: 2px solid var(--accent-green-300);
+    outline-offset: 2px;
+  }
+
+  .audit-proof__category {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+  }
+
+  .audit-proof__grade {
+    margin-block: var(--space-4) var(--space-1);
+    color: var(--accent-green-200);
+    font-size: var(--text-display);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+  }
+
+  .audit-proof__grade-context {
+    min-height: var(--space-6);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  .audit-proof__source {
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    min-height: 2.7em;
+  }
+
+  .audit-proof__scores {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-height: var(--space-24);
+    margin-top: var(--space-2);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+
+  .audit-proof__date {
+    margin-top: auto;
+    padding-top: var(--space-5);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .audit-proof__reveal {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    color: var(--accent-green-200);
+    font-size: var(--text-sm);
+  }
+
+  .audit-proof__collapse,
+  .audit-proof__details[open] .audit-proof__expand {
+    display: none;
+  }
+
+  .audit-proof__details[open] .audit-proof__collapse {
+    display: inline;
+  }
+
+  .audit-proof__evidence {
+    border-top: 1px solid var(--border-subtle);
+    padding: var(--space-4);
+  }
+
+  .audit-proof__capture {
+    display: block;
+    color: var(--accent-green-200);
+    text-decoration: none;
+  }
+
+  .audit-proof__capture + .audit-proof__capture {
+    margin-top: var(--space-5);
+  }
+
+  .audit-proof__capture-mode {
+    display: block;
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+  }
+
+  .audit-proof__capture img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Adapt only the on-page preview. The linked source capture stays untouched. */
+  .audit-proof__capture-image--light {
+    filter: invert(0.9) hue-rotate(180deg);
+  }
+
+  .audit-proof__capture-note {
+    display: block;
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .audit-proof__capture-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-underline-offset: var(--space-1);
+  }
+
+  .audit-proof__report-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: var(--space-3);
+    color: var(--accent-green-200);
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-underline-offset: var(--space-1);
+  }
+
+  .audit-proof__scope {
+    max-width: var(--container-narrow);
+    margin-top: var(--space-6);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (max-width: 1100px) {
+    .audit-proof__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .audit-proof {
+      padding-block: var(--space-12);
+    }
+
+    .audit-proof__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .audit-proof__summary {
+      min-height: 0;
+      padding: var(--space-5);
+    }
+
+    .audit-proof__source,
+    .audit-proof__scores {
+      min-height: 0;
+    }
+
+    .audit-proof__scores:empty {
+      display: none;
+    }
+  }
+</style>

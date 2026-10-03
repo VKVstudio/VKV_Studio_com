@@ -222,12 +222,16 @@ const newTab = NEW_TAB_HINT[lang];
     display: flex;
     align-items: center;
     gap: var(--space-4);
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .footer__social-link {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     width: 36px;
     height: 36px;
     color: var(--text-muted);
@@ -297,15 +301,10 @@ const newTab = NEW_TAB_HINT[lang];
     background: hsla(155, 65%, 50%, 0.05);
   }
 
-  /* ── Mobile: let the right-side link row wrap ─────────────────
-     RU copy ("Политика конфиденциальности") is long enough that, combined
-     with the nowrap lang-switch pill + 2 social icons, .footer__links
-     overflowed the viewport at narrow widths (horizontal scroll on RU
-     home, colliding with the fixed Synapse orb). Desktop has ample room
-     so this media query never changes the wide-viewport layout. */
+  /* Keep long RU labels able to break on phones. The link row already wraps
+     at tablet widths; this breakpoint adds breathing room between rows. */
   @media (max-width: 639px) {
     .footer__links {
-      flex-wrap: wrap;
       row-gap: var(--space-3);
     }
 

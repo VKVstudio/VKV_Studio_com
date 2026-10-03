@@ -975,6 +975,33 @@ content.ru.entries.push({
   ],
 });
 
+content.en.entries.push({
+  n: '30',
+  slug: 'public-results-with-receipts',
+  date: '2026-10-04',
+  title: 'Public results, with the receipts',
+  lead: 'If I sell engineering quality, visitors should be able to inspect the evidence.',
+  body: [
+    'I checked the published site with SSL Labs, SecurityHeaders and Mozilla HTTP Observatory. The results were A+ across all four tested TLS endpoints, A+ for the page headers, and A+ with 140/100 points and 12/12 checks in Observatory. Its score includes bonus points; it is not a percentage of protection.',
+    'The same public homepage scored 99 for mobile performance and 100 on desktop in PageSpeed Insights, with 100 for accessibility, best practices and SEO, and 6/6 for agentic browsing on both. These are dated laboratory results. There is not enough real-user data in CrUX yet.',
+    'I kept the original captures and linked the reports from the homepage. TLS and header grades say something useful about the deployed configuration. They do not replace application testing or prove that vulnerabilities cannot exist.',
+  ],
+  link: { label: 'Inspect the results', url: '/en/#audit-proof' },
+});
+content.ru.entries.push({
+  n: '30',
+  slug: 'public-results-with-receipts',
+  date: '2026-10-04',
+  title: 'Результаты, которые можно проверить',
+  lead: 'Если я продаю инженерное качество, посетитель должен видеть доказательства.',
+  body: [
+    'Проверил опубликованный сайт в SSL Labs, SecurityHeaders и Mozilla HTTP Observatory. Получились A+ на всех четырёх проверенных TLS-адресах, A+ за заголовки страницы и A+ с 140/100 баллами и 12/12 проверок в Observatory. Баллы выше ста включают бонусы, это не процент защищённости.',
+    'Эта же главная получила в PageSpeed Insights 99 за производительность на мобильных и 100 на компьютере, по 100 за доступность, рекомендации и SEO, а также 6/6 за агентный просмотр на обоих устройствах. Это лабораторный замер с датой. Реальных пользовательских данных в CrUX пока недостаточно.',
+    'Сохранил исходные снимки и ссылки на отчёты прямо на главной. Оценки TLS и заголовков показывают качество конкретной конфигурации. Они не заменяют проверку приложения и не доказывают, что уязвимостей быть не может.',
+  ],
+  link: { label: 'Посмотреть результаты', url: '/ru/#audit-proof' },
+});
+
 content.en.bootLines[1] = `> loading decisions ... ${content.en.entries.length}`;
 content.ru.bootLines[1] = `> гружу решения ... ${content.ru.entries.length}`;
 
