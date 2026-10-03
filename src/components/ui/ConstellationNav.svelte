@@ -60,14 +60,40 @@
   // Width-based on purpose: it must agree with the CSS that hides .nav-canvas
   // and shows .mobile-nav, both gated at (max-width: 767px).
   let isMobileNav = false;
+  let reducedMotion = false;
   $effect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     isMobileNav = mq.matches;
+    reducedMotion = motion.matches;
     const onChange = (e: MediaQueryListEvent) => {
       isMobileNav = e.matches;
+      if (!isOpen) return;
+      if (isMobileNav) {
+        finishBrainVideo();
+        if (animFrameId !== null) cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      } else if (!reducedMotion && animFrameId === null) {
+        setupCanvas();
+        animFrameId = requestAnimationFrame(animate);
+      }
     };
     mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      reducedMotion = e.matches;
+      if (reducedMotion) {
+        finishBrainVideo();
+        if (animFrameId !== null) cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      } else if (isOpen && animFrameId === null) {
+        animFrameId = requestAnimationFrame(animate);
+      }
+    };
+    motion.addEventListener('change', onMotionChange);
+    return () => {
+      mq.removeEventListener('change', onChange);
+      motion.removeEventListener('change', onMotionChange);
+    };
   });
 
   let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -88,13 +114,11 @@
   // onended — and the constellation proceeds. Defense in depth: the menu
   // must never depend on a media pipeline behaving.
   let watchdogLastT = -1;
-  let watchdogStill = 0;
+  let watchdogProgressAt = 0;
   /** Nodes hovered during video — branches created after video ends */
   let pendingBranches: Set<string> = new Set();
   /** Dark overlay alpha — lerps to target after video ends */
   let darkOverlayAlpha = 0;
-  /** Whether playbackRate has already been slowed for the second half */
-  let videoSlowed = false;
 
   // ── Binary Star — Language Switcher ────────────────────────
   const langNode = {
@@ -133,7 +157,7 @@
       id: 'home',
       labelEN: 'HOME',
       labelRU: 'ГЛАВНАЯ',
-      target: '#hero-section',
+      target: `/${lang}/`,
       x: 0.5,
       y: 0.147,
       labelPos: 'top',
@@ -142,25 +166,25 @@
       id: 'lab',
       labelEN: 'LAB',
       labelRU: 'ЛАБОРАТОРИЯ',
-      target: '#lab',
+      target: `/${lang}/lab/`,
       x: 0.248,
       y: 0.466,
       labelPos: 'left',
     },
     {
       id: 'about',
-      labelEN: 'ABOUT',
-      labelRU: 'ОБО МНЕ',
-      target: '#about',
+      labelEN: 'SERVICES',
+      labelRU: 'УСЛУГИ',
+      target: `/${lang}/services/`,
       x: 0.513,
       y: 0.56,
       labelPos: 'bottom',
     },
     {
       id: 'stack',
-      labelEN: 'STACK',
-      labelRU: 'СТЕК',
-      target: '#stack',
+      labelEN: 'TRUST',
+      labelRU: 'ДОВЕРИЕ',
+      target: `/${lang}/trust/`,
       x: 0.74,
       y: 0.623,
       labelPos: 'right',
@@ -169,7 +193,7 @@
       id: 'contact',
       labelEN: 'CONTACT',
       labelRU: 'КОНТАКТ',
-      target: '#contact',
+      target: `/${lang}/contact/`,
       x: 0.578,
       y: 0.9,
       labelPos: 'bottom',
@@ -639,32 +663,10 @@
     if (videoPlaying && !videoEnded && videoEl) {
       const t = videoEl.currentTime;
       if (Math.abs(t - watchdogLastT) < 0.001) {
-        watchdogStill++;
-        if (watchdogStill === 90) {
-          console.warn(
-            '[constellation] brain video stalled — forcing end state',
-            JSON.stringify({
-              t,
-              readyState: videoEl.readyState,
-              networkState: videoEl.networkState,
-              rate: videoEl.playbackRate,
-              paused: videoEl.paused,
-            })
-          );
-          videoEnded = true;
-          videoPlayedOnce = true;
-          videoSlowed = false;
-          try {
-            videoEl.pause();
-            videoEl.currentTime = videoEl.duration || t;
-          } catch {
-            // A broken pipeline may refuse the seek — the post-ended dark
-            // overlay covers the frozen frame either way.
-          }
-        }
+        if (performance.now() - watchdogProgressAt >= 1500) finishBrainVideo();
       } else {
         watchdogLastT = t;
-        watchdogStill = 0;
+        watchdogProgressAt = performance.now();
       }
     }
 
@@ -860,9 +862,8 @@
     }
 
     // === 4) NAV DOTS & LABELS ===
-    // During video: hide nav dots (they’re part of the video animation)
-    // After video: show dots + labels on hover/activation
-    if (!videoPlaying || videoEnded) {
+    // Navigation stays visible while its decorative video loads or plays.
+    {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
 
@@ -950,8 +951,8 @@
           ctx.fill();
         }
 
-        // Labels — all buttons after video ended
-        if (videoEnded) {
+        // Labels are available from the first frame, independently of media.
+        {
           const fontSize = isHov ? 20 : 16;
           ctx.font = `500 ${fontSize}px 'JetBrains Mono', 'SF Mono', monospace`;
 
@@ -1021,7 +1022,7 @@
           ctx.shadowBlur = 0;
         }
       } // end for navItems
-    } // end if !videoPlaying || videoEnded
+    }
 
     // === 5) BINARY STAR — LANGUAGE SWITCHER (Eclipsing Binary) ===
     // Always rendered so the user can switch language immediately
@@ -1250,7 +1251,7 @@
     }
 
     ctx.restore();
-    animFrameId = requestAnimationFrame(animate);
+    animFrameId = isMobileNav || reducedMotion ? null : requestAnimationFrame(animate);
   }
 
   // ── Mouse tracking ─────────────────────────────────────────
@@ -1265,7 +1266,7 @@
     // display:none on phones) — a background tap could navigate somewhere
     // random instead of just closing. handleClick's else-branch (onClose)
     // is still wanted on mobile, so only the hit-testing is gated.
-    if (isMobileNav) return;
+    if (isMobileNav || reducedMotion) return;
     const rect = overlayEl.getBoundingClientRect();
     rawMouseX = (e.clientX - rect.left) / rect.width;
     rawMouseY = (e.clientY - rect.top) / rect.height;
@@ -1306,11 +1307,11 @@
         // First hover on any dot → start the brain video
         if (!videoPlaying && videoEl) {
           videoPlaying = true;
+          watchdogProgressAt = performance.now();
+          watchdogLastT = 0;
           videoEl.currentTime = 0;
-          videoEl.playbackRate = 3.5;
-          videoEl.play().catch(() => {
-            /* autoplay blocked */
-          });
+          videoEl.playbackRate = 1.5;
+          videoEl.play().catch(finishBrainVideo);
         }
 
         if (videoEnded) {
@@ -1369,7 +1370,19 @@
 
   // ── Navigation ─────────────────────────────────────────────
 
+  function finishBrainVideo(): void {
+    if (!isOpen) return;
+    videoEnded = true;
+    videoPlayedOnce = true;
+    videoEl?.pause();
+  }
+
   function navigateTo(target: string): void {
+    if (!target.startsWith('#')) {
+      onClose();
+      window.location.assign(target);
+      return;
+    }
     const lenis = (
       window as Window & {
         lenisInstance?: { scrollTo: (t: string, o?: Record<string, unknown>) => void };
@@ -1394,7 +1407,7 @@
     videoPlaying = false;
     videoEnded = false;
     watchdogLastT = -1;
-    watchdogStill = 0;
+    watchdogProgressAt = 0;
     canvasOpacity = 1;
     pendingBranches.clear();
     darkOverlayAlpha = 0;
@@ -1433,13 +1446,13 @@
     videoPlaying = false;
     videoEnded = false;
     watchdogLastT = -1;
-    watchdogStill = 0;
+    watchdogProgressAt = 0;
     canvasOpacity = 1;
     pendingBranches.clear();
     darkOverlayAlpha = 0;
     requestAnimationFrame(() => {
       setupCanvas();
-      if (videoPlayedOnce) {
+      if (videoPlayedOnce || isMobileNav || reducedMotion) {
         // Skip video on re-open: jump to end state
         videoPlaying = true;
         videoEnded = true;
@@ -1614,20 +1627,8 @@
       muted
       playsinline
       preload="auto"
-      onended={() => {
-        videoEnded = true;
-        videoPlayedOnce = true;
-        videoSlowed = false;
-      }}
-      ontimeupdate={() => {
-        if (!videoSlowed && videoEl && videoEl.duration) {
-          const progress = videoEl.currentTime / videoEl.duration;
-          if (progress >= 0.5) {
-            videoEl.playbackRate = 2;
-            videoSlowed = true;
-          }
-        }
-      }}
+      onended={finishBrainVideo}
+      onerror={finishBrainVideo}
     ></video>
 
     <!-- End frame shown on re-open (skip video) -->
@@ -1642,13 +1643,11 @@
     <canvas bind:this={canvasEl} class="nav-canvas"></canvas>
 
     {#each navItems as item (item.id)}
-      <button
+      <a
         class="a11y-btn"
+        href={item.target}
         style="left: {item.x * 100}%; top: {item.y * 100}%;"
-        aria-label={t(lang, 'nav.navigateTo').replace(
-          '{label}',
-          lang === 'ru' ? item.labelRU : item.labelEN
-        )}
+        aria-label={`${lang === 'ru' ? 'Открыть' : 'Open'} ${lang === 'ru' ? item.labelRU : item.labelEN}`}
         onfocus={() => {
           hoveredNode = item.id;
         }}
@@ -1657,9 +1656,10 @@
         }}
         onclick={(e) => {
           e.stopPropagation();
-          navigateTo(item.target);
+          // Preserve native links, including modifier-click and new tabs.
+          if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) onClose();
         }}
-      ></button>
+      ></a>
     {/each}
 
     <button
@@ -1705,16 +1705,17 @@
         <!-- stopPropagation on all three mobile buttons: without it every tap
              also bubbled to the overlay's handleClick (double-fire), matching
              the guard the a11y/close buttons already carry. -->
-        <button
+        <a
           class="mobile-item"
+          href={item.target}
           style="animation-delay: {i * 80}ms"
           onclick={(e) => {
             e.stopPropagation();
-            navigateTo(item.target);
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) onClose();
           }}
         >
           {lang === 'ru' ? item.labelRU : item.labelEN}
-        </button>
+        </a>
       {/each}
       <button
         class="mobile-item"
@@ -1888,6 +1889,7 @@
   }
 
   .mobile-item {
+    text-decoration: none;
     font-family: var(--font-mono, 'JetBrains Mono', monospace);
     font-size: 18px;
     font-weight: 500;

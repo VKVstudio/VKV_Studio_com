@@ -112,7 +112,8 @@
         tokenize(currentText, mb, { signal: controller.signal }),
       ]);
 
-      if (myRequestId !== latestRequestId) return; // superseded — discard the stale result
+      if (myRequestId !== latestRequestId || text !== currentText
+        || modelA !== ma || modelB !== mb) return;
 
       resultA = ra;
       resultB = rb;
@@ -133,12 +134,12 @@
     const mb = modelB;
 
     clearTimeout(runTimer);
+    activeController?.abort();
+    latestRequestId++;
+    resultA = null;
+    resultB = null;
 
     if (!currentText.trim()) {
-      // Cancel any in-flight request and invalidate it so a late resolution
-      // can't repopulate resultA/resultB after the text was cleared.
-      activeController?.abort();
-      latestRequestId++;
       resultA = null;
       resultB = null;
       isLoading = false;
@@ -153,7 +154,11 @@
       void runCompare(currentText, ma, mb);
     }, delay);
 
-    return () => clearTimeout(runTimer);
+    return () => {
+      clearTimeout(runTimer);
+      activeController?.abort();
+      latestRequestId++;
+    };
   });
 
   // Derived: check if each panel has token breakdown

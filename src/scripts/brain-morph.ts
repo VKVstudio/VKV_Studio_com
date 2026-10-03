@@ -174,8 +174,80 @@ export function initBrainMorph(config: BrainMorphConfig): BrainMorphInstance {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   if (prefersReducedMotion) {
+    // The static image still opens the assistant; only its video/motion stops.
+    const previousDisplay = onlineDoc.style.display;
     onlineDoc.style.display = 'none';
-    return { destroy: () => {} };
+    const aboutEl = document.getElementById('about');
+    const events = new AbortController();
+    let observer: IntersectionObserver | undefined;
+    let refreshFrame: number | null = null;
+    let lastIntersecting = false;
+    let ready = false;
+    let disposed = false;
+
+    function setReady(next: boolean): void {
+      if (disposed || next === ready) return;
+      ready = next;
+      container.classList.toggle('ready', ready);
+      container.style.pointerEvents = ready ? 'auto' : 'none';
+      container.style.cursor = ready ? 'pointer' : 'default';
+      container.style.opacity = ready ? '1' : '';
+    }
+
+    function refreshReady(): void {
+      if (disposed || !observer || !aboutEl || refreshFrame !== null) return;
+      refreshFrame = requestAnimationFrame((): void => {
+        refreshFrame = null;
+        if (disposed || !observer || !aboutEl) return;
+        // Re-observe after jumps that can skip the section entirely. Geometry
+        // comes from the observer; this branch never performs a layout read.
+        observer.takeRecords();
+        observer.unobserve(aboutEl);
+        observer.observe(aboutEl);
+      });
+    }
+
+    if (aboutEl && typeof IntersectionObserver === 'function') {
+      observer = new IntersectionObserver(
+        (entries): void => {
+          if (disposed) return;
+          for (const entry of entries) {
+            if (entry.target !== aboutEl) continue;
+            lastIntersecting = entry.isIntersecting;
+            setReady(entry.boundingClientRect.top < (entry.rootBounds?.bottom ?? innerHeight));
+          }
+        },
+        { threshold: [0, Number.EPSILON] }
+      );
+      observer.observe(aboutEl);
+      window.addEventListener(
+        'scroll',
+        (): void => {
+          if (!lastIntersecting) refreshReady();
+        },
+        { passive: true, signal: events.signal }
+      );
+      window.addEventListener('resize', refreshReady, { signal: events.signal });
+      window.addEventListener('pageshow', refreshReady, { signal: events.signal });
+      window.addEventListener('hashchange', refreshReady, { signal: events.signal });
+      window.addEventListener('popstate', refreshReady, { signal: events.signal });
+    } else {
+      setReady(true);
+    }
+
+    return {
+      destroy: (): void => {
+        disposed = true;
+        observer?.disconnect();
+        events.abort();
+        if (refreshFrame !== null) cancelAnimationFrame(refreshFrame);
+        container.classList.remove('ready');
+        container.style.pointerEvents = '';
+        container.style.cursor = '';
+        container.style.opacity = '';
+        onlineDoc.style.display = previousDisplay;
+      },
+    };
   }
 
   // Mobile never loads/scrubs brain-morph.mp4 (the largest asset on the

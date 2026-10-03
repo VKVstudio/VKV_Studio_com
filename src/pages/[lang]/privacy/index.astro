@@ -31,8 +31,8 @@ interface PolicyContent {
 
 const content: Record<Lang, PolicyContent> = {
   en: {
-    updated: 'Last updated: 6 September 2026',
-    updatedISO: '2026-09-06',
+    updated: 'Last updated: 3 October 2026',
+    updatedISO: '2026-10-03',
     intro:
       "This policy covers vkvstudio.com and every page and browser-based tool hosted on it — the marketing site, the Lab (Tokenizer Profiler, Prompt Architect, Embedding Space Explorer), and the Synapse AI assistant. It's written to describe exactly what the code on this site does today, not what a generic privacy-policy template assumes a website does. Where a feature isn't live in the current deployment, that's stated explicitly below.",
     sections: [
@@ -41,6 +41,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'What I collect, and why',
         paragraphs: ['VKVstudio is built to need as little of your data as possible:'],
         list: [
+          t('en', 'privacy.contactCollection'),
           "Language preference — determined entirely by the page URL (/en/ or /ru/); it isn't stored in a cookie or any other persistent identifier.",
           "Standard hosting logs — like effectively every website, requests to this site pass through Cloudflare's edge network, which records ordinary connection metadata (IP address, user agent, timestamp, requested URL) for security and performance purposes. This site doesn't read or process those logs directly — see 'Third-party processors' below.",
           "Text you type into a Lab tool — handled as described in 'What stays on your device' and 'What may reach a server' below.",
@@ -51,6 +52,7 @@ const content: Record<Lang, PolicyContent> = {
         id: 'cookies',
         title: 'Cookies & local storage',
         paragraphs: [
+          t('en', 'privacy.contactVerification'),
           "This site itself sets no cookies at all — none for tracking, none for advertising or analytics, and currently none for any other purpose either. Your interface language is read from the page URL (/en/ or /ru/), not persisted anywhere. One scoped exception exists: if you open Google sign-in for Synapse, the Google Identity Services script it loads may set Google's own cookies (such as g_state) — that script is only loaded when you use sign-in, never on page load; see 'Third-party processors' below.",
           "What the site does use is your browser's own local storage (localStorage and IndexedDB) — a different, non-cookie mechanism that isn't sent to any server automatically. It's used only for on-device functionality: remembering that you've dismissed the notice you may have seen, caching Lab-tool data and downloaded model weights on your device so they don't have to be re-fetched, and, when you use the Synapse assistant, keeping a local copy of your chat history. None of this is used for tracking or shared with anyone.",
           "Because there's currently nothing non-essential here to opt out of, the notice you may have seen simply states this rather than offering a granular accept/reject choice. If that ever changes — for example, if cookie-based analytics is added — this policy and the notice will be updated to disclose it and, where required, to offer a real choice before any such cookie is set.",
@@ -70,6 +72,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'What may reach a server',
         paragraphs: ['A few features can, under specific conditions, send text off your device:'],
         list: [
+          t('en', 'privacy.contactTransfer'),
           "Embedding Space Explorer — the passages and search queries you embed are sent to VKVstudio's own inference backend and turned into vectors by Google's EmbeddingGemma running there. They're embedded on the fly and are not stored by the embedding endpoint. If that backend is ever offline, the Explorer simply doesn't work — this feature has no local fallback.",
           "Exact token counts in the Tokenizer Profiler — some proprietary models (Claude, Gemini) publish no client-side tokenizer, so an exact count needs an API call. Selecting one of those models is what starts it: from then on the text in the box is sent, as you type, to VKVstudio's own inference backend, which forwards it to Google's or Anthropic's API and returns just the number. There is no separate switch to agree to — the model you pick is the choice. Every other model in the list is counted entirely in your browser and nothing is sent anywhere. If the backend is unreachable, the tool falls back to a local approximation and labels the number as approximate rather than exact.",
           "Synapse conversations — your message is sent to VKVstudio's own inference backend and answered by the self-hosted model running there, whether or not you are signed in. That is simply where the model lives; it is not in your browser. What signing in changes is storage: signed in, the conversation is also written to a server-side database keyed to your Google account's unique id — not your name, email, or IP address. Signed out, nothing about the conversation is written to that database and the transcript exists only in your browser. In both cases the server writes operational log lines per request; for voice requests those include the first 80 characters of the transcript and of the assistant's reply, while typed-chat requests are logged without message content.",
@@ -82,6 +85,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'Third-party processors',
         paragraphs: [],
         list: [
+          t('en', 'privacy.contactProcessor'),
           "Hugging Face — hosts the tokenizer model/vocabulary files the Tokenizer Profiler downloads for some models (run locally in your browser). Your browser fetches these files directly from Hugging Face's CDN; the text you tokenize is never sent there. (The Embedding Space Explorer no longer downloads a model to your browser — it embeds on the inference backend instead; see “What stays on your device”.)",
           "Anthropic / Google — reached only if you use exact tokenizer verification and the inference backend is live (see above); the specific text you asked to verify is sent to whichever provider's API matches the model you selected.",
           'Google Cloud — two directions. Speech-to-Text transcribes Synapse voice input: the audio you record with the mic button is sent to Google for transcription. Text-to-Speech (Chirp 3 HD) synthesises the spoken replies, so the text of every reply that is read aloud is sent to Google; unlike the mic, this is not opt-in — it runs whenever the backend is up and Synapse speaks.',
@@ -102,6 +106,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'Data retention',
         paragraphs: [],
         list: [
+          t('en', 'privacy.contactRetention'),
           "Notice-dismissal flag (localStorage) — persists until you clear your browser's local storage for this site.",
           "Local IndexedDB conversation history (Synapse) — if you are signed in, it stays on your device until you clear your browser storage, delete conversations in the app, or sign out: signing out deletes this device's local copy immediately (the server copy is separate — above). If you are not signed in, it is deleted on the next visit after about 90 seconds of no activity, not at the moment the browser closes.",
           'Server-side conversation history (Synapse, only if you sign in with Google) — retained until you delete the conversation, or automatically purged 30 days after it was last updated, whichever comes first.',
@@ -168,8 +173,8 @@ const content: Record<Lang, PolicyContent> = {
     ],
   },
   ru: {
-    updated: 'Обновлено: 6 сентября 2026',
-    updatedISO: '2026-09-06',
+    updated: 'Обновлено: 3 октября 2026',
+    updatedISO: '2026-10-03',
     intro:
       'Эта политика распространяется на весь сайт vkvstudio.com и на все инструменты, работающие в браузере на этом домене: основной сайт, раздел «Лаборатория» (Профайлер токенизации, Prompt Architect, Пространство эмбеддингов) и AI-ассистента Synapse. Текст описывает именно то, что делает код сайта сегодня, а не то, что предполагает типовой шаблон политики конфиденциальности. Если какая-то функция ещё не работает в текущей публичной версии сайта, это прямо указано ниже.',
     sections: [
@@ -178,6 +183,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'Что я собираю и зачем',
         paragraphs: ['VKVstudio спроектирован так, чтобы запрашивать как можно меньше данных:'],
         list: [
+          t('ru', 'privacy.contactCollection'),
           'Языковые предпочтения — определяются исключительно URL страницы (/en/ или /ru/) и не сохраняются ни в cookie-файле, ни в каком-либо ином постоянном идентификаторе.',
           'Стандартные логи хостинга — как и практически любой сайт, запросы к vkvstudio.com проходят через edge-сеть Cloudflare, которая фиксирует обычные метаданные соединения (IP-адрес, user agent, время запроса, запрошенный URL) в целях безопасности и производительности. Сам сайт не читает и не обрабатывает эти логи напрямую — подробнее в разделе «Сторонние обработчики» ниже.',
           'Текст, который вы вводите в инструментах Лаборатории, — обрабатывается так, как описано в разделах «Что остаётся на вашем устройстве» и «Что может попасть на сервер» ниже.',
@@ -188,6 +194,7 @@ const content: Record<Lang, PolicyContent> = {
         id: 'cookies',
         title: 'Cookie-файлы и локальное хранилище',
         paragraphs: [
+          t('ru', 'privacy.contactVerification'),
           'Сам сайт не устанавливает никаких cookie-файлов вообще — ни для отслеживания, ни для рекламы или аналитики, ни для чего-либо ещё на данный момент. Язык интерфейса определяется URL страницы (/en/ или /ru/) и нигде не сохраняется. Единственное узкое исключение: если вы открываете вход через Google для Synapse, загружаемый при этом скрипт Google Identity Services может ставить собственные cookie Google (например, g_state) — он загружается только при использовании входа, никогда при открытии страницы; см. «Сторонние обработчики» ниже.',
           'Сайт использует собственное локальное хранилище вашего браузера (localStorage и IndexedDB) — это другой механизм, не cookie-файлы, и он не отправляется автоматически ни на какой сервер. Он нужен только для работы функций на устройстве: чтобы запомнить, что вы закрыли уведомление, которое могли увидеть, кэшировать данные инструментов Лаборатории и загруженные веса моделей на вашем устройстве, чтобы не загружать их заново, и — когда вы пользуетесь ассистентом Synapse — хранить локальную копию истории переписки. Ничто из этого не используется для отслеживания и никому не передаётся.',
           'Поскольку сейчас здесь нет ни одного необязательного элемента, от которого можно было бы отказаться, уведомление, которое вы могли увидеть, просто сообщает об этом, а не предлагает детальный выбор «принять/отклонить». Если это изменится — например, появится аналитика на основе cookie-файлов — эта политика и уведомление будут обновлены, чтобы раскрыть это и, где это требуется, предложить реальный выбор до установки такого cookie-файла.',
@@ -209,6 +216,7 @@ const content: Record<Lang, PolicyContent> = {
           'Несколько функций при определённых условиях могут отправлять текст за пределы вашего устройства:',
         ],
         list: [
+          t('ru', 'privacy.contactTransfer'),
           'Пространство эмбеддингов — отрывки и поисковые запросы, которые вы эмбеддите, отправляются на собственный inference-бэкенд VKVstudio и превращаются в векторы моделью Google EmbeddingGemma, работающей там. Они эмбеддятся на лету и не сохраняются эндпоинтом эмбеддингов. Если этот бэкенд когда-либо окажется недоступен, инструмент просто не работает — локального запасного варианта у этой функции нет.',
           'Точный подсчёт токенов в Профайлере токенизации — для некоторых проприетарных моделей (Claude, Gemini) клиентский токенизатор не публикуется, поэтому точное число требует обращения к API. Запускает это сам выбор такой модели: с этого момента текст из поля отправляется по мере набора на собственный inference-бэкенд VKVstudio, тот пересылает его в API Google или Anthropic и возвращает только число. Отдельного переключателя, который надо включить, нет — выбор модели и есть согласие. Все остальные модели в списке считаются целиком в вашем браузере, и никуда ничего не уходит. Если бэкенд недоступен, инструмент переходит на локальное приближение и помечает число как приблизительное, а не точное.',
           'Переписка с Synapse — ваше сообщение отправляется на собственный inference-бэкенд VKVstudio и обрабатывается работающей там self-hosted моделью, независимо от того, вошли вы или нет. Просто модель живёт там, а не в вашем браузере. Вход меняет хранение: если вы вошли, переписка дополнительно записывается в серверную базу, привязанную к уникальному идентификатору вашего аккаунта Google — не к имени, email или IP-адресу. Если не вошли, в эту базу о переписке не записывается ничего, и она существует только в вашем браузере. В обоих случаях сервер пишет служебные строки лога на каждый запрос; для голосовых запросов они включают первые 80 символов расшифровки и ответа ассистента, а текстовая переписка логируется без содержимого сообщений.',
@@ -221,6 +229,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'Сторонние обработчики',
         paragraphs: [],
         list: [
+          t('ru', 'privacy.contactProcessor'),
           'Hugging Face — хранит файлы моделей/словарей токенизатора, которые Профайлер токенизации загружает для некоторых моделей (работают локально в вашем браузере). Ваш браузер получает эти файлы напрямую с CDN Hugging Face; текст, который вы токенизируете, туда не отправляется. (Пространство эмбеддингов больше не загружает модель в браузер — оно считает эмбеддинги на inference-бэкенде; см. «Что остаётся на вашем устройстве».)',
           'Anthropic / Google — задействуются, только если вы используете точную проверку токенизатора и inference-бэкенд запущен (см. выше); конкретный текст, который вы попросили проверить, отправляется в API того провайдера, который соответствует выбранной модели.',
           'Google Cloud — два направления. Speech-to-Text распознаёт голосовой ввод Synapse: аудио, записанное кнопкой микрофона, отправляется в Google для расшифровки. Text-to-Speech (Chirp 3 HD) синтезирует озвучку ответов, поэтому текст каждого зачитанного вслух ответа отправляется в Google; в отличие от микрофона, это не опциональная функция — работает всегда, когда бэкенд запущен и Synapse говорит.',
@@ -241,6 +250,7 @@ const content: Record<Lang, PolicyContent> = {
         title: 'Хранение данных',
         paragraphs: [],
         list: [
+          t('ru', 'privacy.contactRetention'),
           'Флаг о закрытии уведомления (localStorage) — хранится до тех пор, пока вы не очистите локальное хранилище браузера для этого сайта.',
           'Локальная история переписки Synapse в IndexedDB — если вы вошли, остаётся на вашем устройстве, пока вы не очистите хранилище браузера, не удалите переписку в приложении или не выйдете из аккаунта: выход немедленно удаляет локальную копию на этом устройстве (серверная копия — отдельно, выше). Если вы не вошли, она удаляется при следующем визите после ~90 секунд без активности, а не в момент закрытия браузера.',
           'Серверная история переписки Synapse (только если вы вошли через Google) — хранится до тех пор, пока вы не удалите переписку, либо автоматически удаляется через 30 дней после последнего изменения, в зависимости от того, что наступит раньше.',

@@ -14,12 +14,18 @@
  */
 import type { Lang } from '@i18n/utils';
 import { t } from '@i18n/utils';
+import { resolveProReading } from '@/lib/pro-insights';
 
 interface Props {
   lang: Lang;
 }
 
 const { lang } = Astro.props;
+const insights = resolveProReading('home', {
+  isDev: import.meta.env.DEV,
+  previewBuild: import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true',
+  localPreviewUrl: import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL,
+});
 ---
 
 <nav class="inner-header" aria-label={t(lang, 'nav.siteNavigation')}>
@@ -29,6 +35,8 @@ const { lang } = Astro.props;
     >
     <div class="inner-header__right">
       <a href={`/${lang}/services/`} class="inner-header__link">{t(lang, 'nav.services')}</a>
+      <a href={`/${lang}/lab/`} class="inner-header__link">{t(lang, 'lab.title')}</a>
+      {insights.href && <a href={insights.href} class="inner-header__link">VKVstudio.pro</a>}
       <a href={`/${lang}/contact/`} class="inner-header__link inner-header__link--accent">
         {t(lang, 'nav.contact')}
       </a>
@@ -44,6 +52,7 @@ const { lang } = Astro.props;
   .inner-header__row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: var(--space-4);
   }
@@ -51,6 +60,8 @@ const { lang } = Astro.props;
   .inner-header__right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: var(--space-5);
   }
 
@@ -79,6 +90,9 @@ const { lang } = Astro.props;
   /* Touch targets: 24px clears WCAG 2.5.8 AA on pointer-precise desktops, but
      mobile taps need the fuller 44px target — same trick as PricingCard's CTA. */
   @media (max-width: 767px) {
+    .inner-header__right {
+      gap: var(--space-2) var(--space-4);
+    }
     .inner-header__link {
       min-height: 44px;
       display: inline-flex;

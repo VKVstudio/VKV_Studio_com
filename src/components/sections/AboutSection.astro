@@ -68,11 +68,7 @@ const timelineItems = [
 
       {
         timelineItems.map((item, index) => (
-          <div
-            class="timeline-item js-timeline-item"
-            role="listitem"
-            style={`--item-index: ${index}`}
-          >
+          <div class="timeline-item js-timeline-item" role="listitem" data-item-index={index}>
             {/* Timeline dot */}
             <div class="timeline-item__dot js-timeline-dot" aria-hidden="true">
               <div class="timeline-item__dot-inner">

@@ -588,7 +588,7 @@ describe('Trusted Types default policy — createHTML (the shipped script, execu
   });
 });
 
-describe('Trusted Types default policy — createScriptURL / createScript (unchanged)', () => {
+describe('Trusted Types default policy — createScriptURL / createScript', () => {
   it('allows same-origin, blob: and the two script-src hosts', () => {
     expect(policy.createScriptURL('/_astro/tokenizer.js')).toBe('/_astro/tokenizer.js');
     expect(policy.createScriptURL('https://vkvstudio.com/_astro/x.js')).toBe(
@@ -603,6 +603,19 @@ describe('Trusted Types default policy — createScriptURL / createScript (uncha
     expect(policy.createScriptURL('https://accounts.google.com/gsi/client')).toBe(
       'https://accounts.google.com/gsi/client'
     );
+  });
+
+  it('allows only the exact explicit Turnstile loader on the challenge host', () => {
+    const loader = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    expect(policy.createScriptURL(loader)).toBe(loader);
+    for (const url of [
+      'https://challenges.cloudflare.com/turnstile/v0/api.js',
+      loader + '&callback=other',
+      loader + '#other',
+      'https://challenges.cloudflare.com/other.js',
+      'https://challenges.cloudflare.com.evil.example/turnstile/v0/api.js?render=explicit',
+      'http://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
+    ]) expect(policy.createScriptURL(url), url).toBeNull();
   });
 
   it('refuses every other script URL, and refuses createScript outright', () => {
@@ -656,6 +669,7 @@ describe('Trusted Types default policy — the shipped bytes', () => {
     // elements instead of pruning them, and URL resolution in place of the
     // scheme regex. The bound is snug on purpose: it is a tripwire, not a
     // budget.
-    expect(Buffer.byteLength(TRUSTED_TYPES_POLICY_SCRIPT, 'utf8')).toBeLessThan(3456);
+    // 2026-10-03: the exact Turnstile loader adds 88 bytes (3464 B total).
+    expect(Buffer.byteLength(TRUSTED_TYPES_POLICY_SCRIPT, 'utf8')).toBeLessThan(3552);
   });
 });

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { t, type Lang } from '@/i18n/utils';
+import type { Lang } from '@/i18n/utils';
+import { contactText as t } from './contact-labels';
 
 // Use interpreted schemas under the site's enforced CSP and Trusted Types.
 z.config({ jitless: true });

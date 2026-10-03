@@ -153,7 +153,7 @@
     <button
       class="dot-wrap"
       class:active={isActive}
-      style:--i={i}
+      data-waypoint-index={i}
       aria-label={t(lang, 'nav.navigateToSection').replace('{label}', label(wp))}
       aria-current={isActive ? 'true' : undefined}
       onmouseenter={() => {

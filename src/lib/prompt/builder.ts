@@ -812,10 +812,17 @@ export function extractVariables(blocks: PromptBlock[]): string[] {
   return Array.from(seen);
 }
 
+/** Read only an explicitly supplied string, never an inherited object property. */
+export function variableValue(values: Record<string, string>, name: string): string | undefined {
+  return Object.hasOwn(values, name) && typeof values[name] === 'string'
+    ? values[name]
+    : undefined;
+}
+
 /** Replace {{variable}} occurrences with provided values */
 export function applyVariables(text: string, values: Record<string, string>): string {
   return text.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_, name) => {
-    return values[name] !== undefined ? values[name] : `{{${name}}}`;
+    return variableValue(values, name) ?? `{{${name}}}`;
   });
 }
 

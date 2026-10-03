@@ -38,7 +38,7 @@
   # 420 script tags, JSON-LD excluded — JSON-LD is data, script-src never applies
   # to it), and the whole site ships exactly FIVE distinct inline scripts, none
   # of them page-varying:
-  #   'sha256-Q27LY9eI…'  the Trusted Types default policy, BaseLayout <head>
+  #    the Trusted Types default policy, BaseLayout <head>
   #                       (src/lib/trusted-types-policy.ts, 3376 B, 34 pages —
   #                       2026-09-21: the regex tag/handler check was replaced
   #                       by a parse-and-rebuild allowlist sanitizer, which is
@@ -49,10 +49,10 @@
   #                       elements with createElement so an `is=` value cannot
   #                       ride along, and RESOLVES URLs instead of matching the
   #                       scheme with a regex)
-  #   'sha256-SaCkFfPr…'  Astro's <astro-island> runtime (4403 B, 34 pages)
-  #   'sha256-BF0290pk…'  Astro's client:idle loader (316 B, 34 pages)
-  #   'sha256-Q2BPg90Z…'  Astro's client:visible loader (372 B, 12 pages)
-  #   'sha256-eIXWvAmx…'  Astro's client:only loader (130 B, /lab/embeddings/)
+  #    Astro's <astro-island> runtime (4403 B, 34 pages)
+  #    Astro's client:idle loader (316 B, 34 pages)
+  #    Astro's client:visible loader (372 B, 12 pages)
+  #    Astro's client:only loader (130 B, /lab/embeddings/)
   # Every component <script> (HeroCanvas, Header, PageHero, the pages) is hoisted
   # by Astro into a hashed /_astro/*.js module, covered by 'self'. There is no
   # is:inline or define:vars script anywhere in src/, and the built HTML carries
@@ -87,11 +87,11 @@
   # present, so it would only ever re-enable inline scripts on a browser too old
   # to matter, and tests/unit/csp-headers.test.ts fails if it comes back.
   #
-  # style-src KEEPS 'unsafe-inline' and must: Svelte SSR emits style="" attributes
-  # (hero parallax, per-frame values), Astro inlines every stylesheet as a <style>
-  # block (build.inlineStylesheets), and GIS injects its own. Per the CSP spec a
-  # single hash in style-src would switch 'unsafe-inline' off, so no style hashes
-  # are listed either. Nothing in the audit set penalises style-src.
+  # This is a fail-closed CSP template. src/build/content-security-policy.mjs
+  # adds final executable script hashes and per-page CSS/attribute hashes.
+  # Exact static attributes use unsafe-hashes; arbitrary inline styles do not.
+  # Dynamic Svelte/GSAP CSSOM writes retain their existing behavior.
+  # Deploy only the generated build _headers, never this source template.
   #
   # require-trusted-types-for 'script': every innerHTML / DOMParser / Worker(url)
   # / script.src / eval write must carry a Trusted Type, and a `default` policy
@@ -125,7 +125,9 @@
   # broken on the DEPLOYED site from the day this header was added, while working
   # perfectly in dev, where Cloudflare's _headers are not applied at all. blob: is
   # same-origin by construction, so this grants nothing an attacker can reach.
-  Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; script-src 'self' 'sha256-Q27LY9eIKgxX9LhG+ONLtn7lmsZ0gwopA0midEGvJxo=' 'sha256-SaCkFfPruIdTXT8/97JArQmGxiJAL2o4bBDvSgJ5y3Q=' 'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw=' 'sha256-Q2BPg90ZMplYY+FSdApNErhpWafg2hcRRbndmvxuL/Q=' 'sha256-eIXWvAmxkr251LJZkjniEK5LcPF3NkapbJepohwYRIc=' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self'; connect-src 'self' https://api.vkvstudio.com https://accounts.google.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://cdn.jsdelivr.net; worker-src 'self' blob:; media-src 'self' blob:; frame-src https://accounts.google.com; frame-ancestors 'none'; require-trusted-types-for 'script'
+  # Turnstile contact protection: the explicit loader is separately constrained
+  # by Trusted Types; the frame needs the challenge host. No connect-src grant.
+  Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; script-src 'self' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://accounts.google.com https://challenges.cloudflare.com; style-src 'self' https://accounts.google.com; style-src-elem 'self' https://accounts.google.com; style-src-attr 'none'; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self'; connect-src 'self' https://api.vkvstudio.com https://accounts.google.com https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://cdn.jsdelivr.net; worker-src 'self' blob:; media-src 'self' blob:; frame-src https://accounts.google.com https://challenges.cloudflare.com; frame-ancestors 'none'; require-trusted-types-for 'script'
   # Kept for ancient user agents only. frame-ancestors above is what actually
   # enforces this — per OWASP, X-Frame-Options is obsolete and ignored wherever
   # frame-ancestors is present. 20 bytes, no harm, no illusions.

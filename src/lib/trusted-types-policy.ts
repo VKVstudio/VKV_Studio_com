@@ -93,8 +93,8 @@
  *     them without a special case), and the GIS loader in src/lib/auth.ts
  *     (https://accounts.google.com/gsi/client). Anything else is refused. This
  *     mirrors script-src in public/_headers on purpose: the two lists must move
- *     together, and csp-headers.test.ts fails if they drift. UNCHANGED by the
- *     2026-09-21 sanitizer rewrite.
+ *     together, and csp-headers.test.ts fails if they drift. Turnstile's explicit
+ *     loader is allowed by its exact URL; other challenge-host URLs are refused.
  *
  *   createScript — eval / new Function / script.text. Nothing on the site uses
  *     them (script-src has no 'unsafe-eval', so they have been blocked by CSP
@@ -329,6 +329,7 @@ export const TRUSTED_TYPES_POLICY_SCRIPT: string =
   'var HOSTS=["https://cdn.jsdelivr.net/","https://accounts.google.com/"];' +
   'function url(u){u=String(u);var a;try{a=new URL(u,document.baseURI);}catch(e){return null;}' +
   'if(a.origin===location.origin)return u;' +
+  'if(u==="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit")return u;' +
   'for(var i=0;i<HOSTS.length;i++){if(u.indexOf(HOSTS[i])===0)return u;}return null;}' +
   'try{tt.createPolicy("default",{createHTML:html,createScriptURL:url,createScript:function(){return null;}});}catch(e){}' +
   '})();';

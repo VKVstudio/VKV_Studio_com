@@ -30,6 +30,11 @@
   let model = $state<ModelId>(MODEL_LIST[0]);
   let result = $state<TokenResult | null>(null);
   let isTyping = $state(false);
+  let resultContext = $state<{ text: string; model: ModelId; mode: InputMode } | null>(null);
+  let resultIsCurrent = $derived(
+    result !== null && !isTyping && resultContext?.text === text
+      && resultContext?.model === model && resultContext?.mode === inputMode
+  );
   let viewMode = $state<ViewMode>('blocks');
   let showCompare = $state(false);
   let inputMode = $state<InputMode>('raw');
@@ -293,7 +298,9 @@
         },
       });
 
-      if (myRequestId !== latestRequestId) return; // superseded — discard the stale result
+      if (myRequestId !== latestRequestId || text !== currentText
+        || model !== currentModel || inputMode !== currentMode) return;
+      resultContext = { text: currentText, model: currentModel, mode: currentMode };
 
       result = r;
       displayedMode = currentMode; // number below is about to reflect currentMode — flip the label in the same breath
@@ -307,10 +314,10 @@
         currentMode === 'chat' && r.chatOverhead ? r.chatOverhead.wrappedTotal : r.totalTokens;
 
       if (animate) {
-        animateCounter(displayTokens, tokensTarget, (v) => (displayTokens = v));
-        animateCounter(displayChars, r.totalChars, (v) => (displayChars = v));
-        animateCounter(displayDensity, r.density, (v) => (displayDensity = v), true);
-        animateCounter(displayLatencyMs, r.latencyMs, (v) => (displayLatencyMs = v), true);
+        animateCounter(displayTokens, tokensTarget, (v) => { if (myRequestId === latestRequestId) displayTokens = v; });
+        animateCounter(displayChars, r.totalChars, (v) => { if (myRequestId === latestRequestId) displayChars = v; });
+        animateCounter(displayDensity, r.density, (v) => { if (myRequestId === latestRequestId) displayDensity = v; }, true);
+        animateCounter(displayLatencyMs, r.latencyMs, (v) => { if (myRequestId === latestRequestId) displayLatencyMs = v; }, true);
       } else {
         displayTokens = tokensTarget;
         displayChars = r.totalChars;
@@ -342,12 +349,18 @@
     const currentMode = inputMode; // toggling Raw ↔ As chat message recomputes too
 
     clearTimeout(debounceTimer);
+    // Invalidate immediately, including the debounce window before the next run.
+    activeController?.abort();
+    latestRequestId++;
+    result = null;
+    resultContext = null;
+    usedFallback = false;
+    displayTokens = 0;
+    displayChars = 0;
+    displayDensity = 0;
+    displayLatencyMs = 0;
 
     if (!currentText.trim()) {
-      // Cancel any in-flight request and invalidate it so a late resolution
-      // can't repopulate `result` after the user cleared the textarea.
-      activeController?.abort();
-      latestRequestId++;
       result = null;
       isTyping = false;
       usedFallback = false;
@@ -366,7 +379,11 @@
       void performTokenize(currentText, currentModel, currentMode, false);
     }, delay);
 
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      clearTimeout(debounceTimer);
+      activeController?.abort();
+      latestRequestId++;
+    };
   });
 
   // Ctrl+Enter → tokenize immediately (flush debounce)
@@ -396,9 +413,9 @@
   // Copy JSON result
   let copySuccess = $state(false);
   async function copyResult() {
-    if (!result) return;
+    if (!resultIsCurrent || !result || !resultContext) return;
     const payload = {
-      model,
+      model: resultContext.model,
       totalTokens: result.totalTokens,
       totalChars: result.totalChars,
       density: result.density,
@@ -604,7 +621,7 @@
             class="tokenizer__action-btn"
             onclick={copyResult}
             id="btn-copy-json"
-            disabled={!result}
+            disabled={!resultIsCurrent}
             aria-label={t(lang, 'tokenizer.copy') || 'Copy tokens as JSON'}
           >
             {copySuccess ? '✓ ' + t(lang, 'tokenizer.copied') : '⎘ ' + t(lang, 'tokenizer.copy')}

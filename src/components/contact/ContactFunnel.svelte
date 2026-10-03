@@ -1,27 +1,24 @@
 <script lang="ts">
-  /**
-   * ContactFunnel — the written-first intake. Four questions, validated
-   * locally; the result is a prefilled email opened in the visitor's own
-   * mail client. CSP forbids form posts (form-action 'none') and that is
-   * the design, not a workaround: the funnel has NO backend, nothing is
-   * stored or sent until the visitor presses Send in their own mailer —
-   * which the success panel says out loud, because for this audience a
-   * form that provably cannot leak is a selling point.
-   *
-   */
   import { tick, onDestroy, onMount } from 'svelte';
   import {
     BUDGET_OPTIONS,
     TIMELINE_OPTIONS,
-    validate,
-    isValid,
-    isGateTripped,
     buildMailtoUrl,
     buildEmailText,
   } from '@/lib/contact-form';
-  import type { ContactFormData, FieldErrors } from '@/lib/contact-form';
+  import type { ContactFormData } from '@/lib/contact-form';
+  import {
+    validateSubmission,
+    submitContactEnquiry,
+    createContactSiteKeyLoader,
+    mountContactChallenge,
+    type ContactSubmissionErrors,
+    type ContactDeliveryCode,
+    type ContactChallenge,
+  } from '@/lib/contact-submission';
   import { CONTACT_EMAIL } from '@/lib/site-config';
-  import { t } from '@/i18n/utils';
+  import { contactText as t } from '@/lib/contact-labels';
+  import type { ContactLabels } from '@/lib/contact-labels';
   import {
     readContactContext,
     contactBriefingHref,
@@ -29,213 +26,179 @@
   } from '@/lib/contact-context';
   import { resolveLocalProPreview } from '@/lib/pro-promo';
 
-  export interface FunnelLabels {
-    company: string;
-    companyHint: string;
-    task: string;
-    taskHint: string;
-    budget: string;
-    timeline: string;
-    choose: string;
-    submit: string;
-    successHeading: string;
-    successBody: string;
-    openMail: string;
-    editAnswers: string;
-    replyPromise: string;
-    errors: {
-      required: string;
-      'too-short': string;
-      'too-long': string;
-    };
-  }
-
+  export type FunnelLabels = ContactLabels;
   let {
     lang,
     labels,
     localPreviewUrl = null,
-  }: { lang: 'en' | 'ru'; labels: FunnelLabels; localPreviewUrl?: string | null } = $props();
+  }: {
+    lang: 'en' | 'ru';
+    labels: FunnelLabels;
+    localPreviewUrl?: string | null;
+  } = $props();
 
   let data = $state<ContactFormData>({ company: '', task: '', budget: '', timeline: '' });
-  let errors = $state<FieldErrors>({});
+  let replyEmail = $state('');
+  let errors = $state<ContactSubmissionErrors>({});
   let submitted = $state(false);
+  let deliveryStatus = $state<'delivered' | 'queued'>('delivered');
+  let deliveryCode = $state<ContactDeliveryCode | null>(null);
+  let sending = $state(false);
+  let agentReview = $state(false);
   let copied = $state(false);
   let copyFailed = $state(false);
   let context = $state<ContactContext>({});
   let ready = $state(false);
-  onMount(() => {
-    context = readContactContext(window.location.search);
-    ready = true;
-  });
+  let honeypot = $state('');
+  let turnstileToken = $state('');
+  let challengeContainer = $state<HTMLDivElement | null>(null);
+  let loadingChallenge = false;
+  let siteKey: string | null = null;
+  const getSiteKey = createContactSiteKeyLoader();
+  let challenge: ContactChallenge | null = null;
+  let destroyed = false;
+  let requestId = '';
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // Anti-bot (owner decision, worklist M4; gate-order fix P2): a honeypot
-  // field no human sees. Validation always runs first (below) so a real
-  // visitor's mistakes are shown normally; only a FILLED honeypot silently
-  // "accepts" a submit — that only happens to a script. Worthless against
-  // nothing today (mailto has no server to spam), but the future /api/lead
-  // endpoint inherits this exact contract, elapsed-fill-time included (see
-  // isGateTripped's doc comment for why that signal doesn't gate here).
-  let honeypot = $state('');
-  const mountedAt = Date.now();
-
-  // Bound refs for focus management: the success heading gets keyboard/SR
-  // focus on submit, the first invalid control gets it on a failed submit,
-  // and "Edit the answers" returns focus to the first field.
+  let replyEmailEl = $state<HTMLInputElement | null>(null);
   let companyEl = $state<HTMLInputElement | null>(null);
   let taskEl = $state<HTMLTextAreaElement | null>(null);
   let budgetEl = $state<HTMLSelectElement | null>(null);
   let timelineEl = $state<HTMLSelectElement | null>(null);
   let successHeadingEl = $state<HTMLHeadingElement | null>(null);
+  let submitEl = $state<HTMLButtonElement | null>(null);
 
-  // Strings that live only here, not in the page's copy object (see the
-  // component's props/labels contract) — kept bilingual via the same
-  // lang-keyed-object pattern already used for FIELD labels in contact-form.ts.
+  onMount(() => {
+    context = readContactContext(window.location.search);
+    requestId = crypto.randomUUID();
+    ready = true;
+    void getSiteKey().then((key) => {
+      if (!destroyed) siteKey = key;
+    });
+  });
+  onDestroy(() => {
+    destroyed = true;
+    clearTimeout(copyTimer);
+    challenge?.destroy();
+  });
 
-  // The address in plain, selectable text. A mailto: link is the primary
-  // action, but in a corporate webmail (Outlook Web, Gmail in a tab) an
-  // unregistered mailto handler does NOTHING and reports nothing — the visitor
-  // clicks, sees no mail client, and leaves. There is no analytics on this
-  // site, so a lead lost that way is lost silently. Showing the address costs
-  // one line and gives that visitor somewhere to go.
-
-  const TASK_PLACEHOLDER: Record<'en' | 'ru', string> = {
-    en: 'A few sentences are enough.',
-    ru: 'Достаточно нескольких предложений.',
-  };
-
-  // WebMCP declarative descriptions — what a visiting AI agent reads to
-  // understand this form. Chrome's budgets are hard: the tool name is capped
-  // at 30 characters, the description at 500, each parameter description at
-  // 150. tests/unit/webmcp-contact-form.test.ts measures all three against the
-  // strings below — against THIS SOURCE, not against rendered HTML, which is
-  // worth knowing before trusting it: the attributes reach an agent only
-  // because Astro server-renders this island, so that test also pins the
-  // contact page's client:visible directive.
-  //
-  // Deliberately NOT set: `toolautosubmit`. It makes the agent's submission a
-  // real navigation, which this site's CSP forbids outright (form-action
-  // 'none') — the agent would get no answer and the visitor would lose their
-  // answers. Without it the submission stays a dialog-method submit, which
-  // never reaches the CSP check at all. The honeypot below has no description
-  // on purpose: an agent is given no reason to fill a field whose only job is
-  // to catch scripts that fill everything.
-  // The field order an agent is told about when its submission fails
-  // validation, and the sentence that introduces the list.
-  const FIELD_ORDER = ['company', 'task', 'budget', 'timeline'] as const;
-  const AGENT_ERRORS: Record<'en' | 'ru', { intro: string }> = {
-    en: { intro: 'The enquiry was not accepted. Fix these answers and submit again:' },
-    ru: { intro: 'Обращение не принято. Исправьте эти ответы и отправьте снова:' },
-  };
-
-  const AGENT: Record<
-    'en' | 'ru',
-    { tool: string; company: string; task: string; budget: string; timeline: string }
-  > = {
+  const FIELD_ORDER = ['replyEmail', 'company', 'task', 'budget', 'timeline'] as const;
+  const AGENT = {
     en: {
-      tool: 'Prepare an enquiry to VKVstudio about a web or AI engineering project. Nothing is sent anywhere: the answers are composed into an email that the person reviews and sends from their own mail client, and the studio replies in writing within one business day.',
-      company: 'The company and what it does — one line is enough.',
-      task: 'The task in the person’s own words. A few sentences; what outcome they want, not a specification.',
-      budget: 'Budget band for the work. Must be one of the options offered by the field.',
-      timeline: 'How soon the work should start. Must be one of the options offered by the field.',
+      tool: t('en', 'contact.agent.tool'),
+      replyEmail: t('en', 'contact.agent.replyEmail'),
+      company: t('en', 'contact.agent.company'),
+      task: t('en', 'contact.agent.task'),
+      budget: t('en', 'contact.agent.budget'),
+      timeline: t('en', 'contact.agent.timeline'),
     },
     ru: {
-      tool: 'Подготовить обращение в VKVstudio о проекте по веб- или AI-разработке. Никуда ничего не отправляется: ответы складываются в письмо, которое человек проверяет и отправляет из своего почтового клиента, а студия отвечает письменно в течение одного рабочего дня.',
-      company: 'Компания и чем занимается — достаточно одной строки.',
-      task: 'Задача своими словами. Несколько предложений: какой нужен результат, а не техническое задание.',
-      budget: 'Бюджетная вилка. Должно быть одним из вариантов, предлагаемых полем.',
-      timeline: 'Когда начинать работу. Должно быть одним из вариантов, предлагаемых полем.',
+      tool: t('ru', 'contact.agent.tool'),
+      replyEmail: t('ru', 'contact.agent.replyEmail'),
+      company: t('ru', 'contact.agent.company'),
+      task: t('ru', 'contact.agent.task'),
+      budget: t('ru', 'contact.agent.budget'),
+      timeline: t('ru', 'contact.agent.timeline'),
     },
   };
 
-  // The etalon CTA's magnetism (geo-audit's initGeoHeroManners, same
-  // coefficient): the submit pill leans toward the cursor while hovered.
-  // $effect only runs client-side, so the SSR pass never touches window.
-  let submitEl = $state<HTMLElement | null>(null);
-
+  // Scope this existing magnetic behavior to the submit button and clean up
+  // on unmount. No effect reads and writes the same reactive state.
   $effect(() => {
     const el = submitEl;
-    if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-
-    let hovering = false;
-    const enter = (): void => {
-      hovering = true;
-      el.classList.add('is-magnetic');
-    };
+    if (
+      !el ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      !window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    )
+      return;
     const leave = (): void => {
-      hovering = false;
-      el.classList.remove('is-magnetic');
       el.style.transform = '';
     };
-    const move = (e: MouseEvent): void => {
-      if (!hovering) return;
-      const r = el.getBoundingClientRect();
-      const cx = e.clientX - r.left - r.width / 2;
-      const cy = e.clientY - r.top - r.height / 2;
-      el.style.transform = `translate(${cx * 0.25}px, ${cy * 0.25}px)`;
+    const move = (event: MouseEvent): void => {
+      if (el.disabled) return;
+      const rect = el.getBoundingClientRect();
+      el.style.transform =
+        'translate(' +
+        (event.clientX - rect.left - rect.width / 2) * 0.25 +
+        'px, ' +
+        (event.clientY - rect.top - rect.height / 2) * 0.25 +
+        'px)';
     };
-
-    el.addEventListener('mouseenter', enter);
     el.addEventListener('mousemove', move);
     el.addEventListener('mouseleave', leave);
     return () => {
-      el.removeEventListener('mouseenter', enter);
       el.removeEventListener('mousemove', move);
       el.removeEventListener('mouseleave', leave);
+      leave();
     };
   });
-  // (Verified: submitEl resets to null on unmount, which re-runs the effect
-  // above through its early return and disposes the previous listeners via
-  // its cleanup — no leak. Applying the same care to the timer below.)
-  onDestroy(() => clearTimeout(copyTimer));
 
   const mailtoUrl = $derived(buildMailtoUrl(data, lang, context));
   const emailText = $derived(buildEmailText(data, lang, context));
   const briefingHref = $derived.by(() => {
     const canonical = contactBriefingHref(context);
     const local = resolveLocalProPreview(localPreviewUrl ?? undefined);
-    return canonical && local ? canonical.replace('https://vkvstudio.pro/', local) : null;
+    return canonical && local ? canonical.replace('https://vkvstudio.pro/', local) : canonical;
   });
 
-  function errorText(code: 'required' | 'too-short' | 'too-long' | undefined): string {
+  function errorText(
+    code: 'required' | 'too-short' | 'too-long' | 'invalid-email' | undefined
+  ): string {
     return code ? labels.errors[code] : '';
   }
 
-  // Focuses the first invalid control in DOM order, matching how a
-  // keyboard/SR user reads the form top to bottom.
   async function focusFirstError(): Promise<void> {
     await tick();
-    if (errors.company) {
-      companyEl?.focus();
-    } else if (errors.task) {
-      taskEl?.focus();
-    } else if (errors.budget) {
-      budgetEl?.focus();
-    } else if (errors.timeline) {
-      timelineEl?.focus();
-    }
+    if (errors.replyEmail) replyEmailEl?.focus();
+    else if (errors.company) companyEl?.focus();
+    else if (errors.task) taskEl?.focus();
+    else if (errors.budget) budgetEl?.focus();
+    else if (errors.timeline) timelineEl?.focus();
   }
 
-  async function focusSuccessHeading(): Promise<void> {
-    await tick();
-    successHeadingEl?.focus();
+  async function beginVerification(): Promise<void> {
+    if (!ready || loadingChallenge || challenge || submitted || destroyed) return;
+    loadingChallenge = true;
+    try {
+      siteKey ??= await getSiteKey();
+      if (!siteKey || destroyed) return;
+      await tick();
+      const container = challengeContainer;
+      if (!container || destroyed) return;
+      const mounted = await mountContactChallenge(
+        container,
+        siteKey,
+        lang,
+        (token) => {
+          if (!destroyed) turnstileToken = token;
+        },
+        () => {
+          if (!destroyed) deliveryCode = 'verification';
+        }
+      );
+      if (destroyed || !container.isConnected) mounted.destroy();
+      else challenge = mounted;
+    } catch {
+      if (!destroyed) deliveryCode = 'verification';
+    } finally {
+      loadingChallenge = false;
+    }
   }
 
   async function onEditAnswers(): Promise<void> {
     submitted = false;
+    deliveryCode = null;
+    agentReview = false;
+    requestId = crypto.randomUUID();
     await tick();
-    companyEl?.focus();
+    replyEmailEl?.focus();
   }
 
   async function onCopyFullText(): Promise<void> {
     copyFailed = false;
-    if (!navigator.clipboard) {
-      copyFailed = true;
-      return;
-    }
     try {
+      if (!navigator.clipboard) throw new Error('clipboard-unavailable');
       await navigator.clipboard.writeText(emailText);
       copied = true;
       clearTimeout(copyTimer);
@@ -247,12 +210,55 @@
     }
   }
 
-  function onSubmit(e: SubmitEvent): void {
-    e.preventDefault();
+  async function sendEnquiry(): Promise<void> {
+    sending = true;
+    deliveryCode = null;
+    let attempted = false;
+    try {
+      siteKey ??= await getSiteKey();
+      if (!siteKey) {
+        deliveryCode = 'unavailable';
+        return;
+      }
+      if (!turnstileToken) {
+        await beginVerification();
+        deliveryCode = 'verification';
+        return;
+      }
+      attempted = true;
+      const result = await submitContactEnquiry({
+        ...data,
+        replyEmail,
+        lang,
+        context,
+        website: honeypot,
+        turnstileToken,
+        requestId,
+      });
+      if (destroyed) return;
+      turnstileToken = '';
+      if (!result.ok) {
+        deliveryCode = result.code;
+        challenge?.reset();
+        return;
+      }
+      deliveryStatus = result.status;
+      submitted = true;
+      agentReview = false;
+      challenge?.destroy();
+      challenge = null;
+      await tick();
+      successHeadingEl?.focus();
+    } catch {
+      if (!destroyed) deliveryCode = attempted ? 'delivery-unknown' : 'unavailable';
+    } finally {
+      if (!destroyed) sending = false;
+    }
+  }
 
-    // WebMCP: the same event, seen from the agent side. `agentInvoked` is
-    // undefined for every human, so nothing below changes the human flow.
-    const agentEvent = e as SubmitEvent & {
+  function onSubmit(event: SubmitEvent): void {
+    event.preventDefault();
+    const agentEvent = event as SubmitEvent & {
       agentInvoked?: boolean;
       respondWith?: (value: unknown) => void;
     };
@@ -262,61 +268,38 @@
         agentEvent.respondWith(Promise.resolve({ content: [{ type: 'text', text }] }));
       }
     };
-
-    // Validate first, always — a tripped honeypot must never suppress
-    // errors a real visitor would want to see (gate-order fix, P2).
-    errors = validate(data);
-    if (!isValid(errors)) {
+    if (!ready || sending || deliveryCode === 'delivery-unknown') {
+      if (byAgent) answerAgent(t(lang, 'contact.agent.unavailable'));
+      return;
+    }
+    errors = validateSubmission(data, replyEmail);
+    if (Object.keys(errors).length !== 0) {
       void focusFirstError();
-      // ...and an agent must never be left hanging here. Found by audit
-      // 2026-09-20: Chrome publishes this form's schema with `required: []`
-      // (see the `required` attributes added to the controls, which fix the
-      // contract itself), so a compliant agent that omitted a field landed on
-      // this bare `return` and got Chromium's "the site has a programming
-      // error" instead of an answer it could act on. The ordering test stayed
-      // green throughout, because it asserted the order of the guards and not
-      // that this one answers.
-      if (byAgent) {
+      if (byAgent)
         answerAgent(
-          `${AGENT_ERRORS[lang].intro}\n${FIELD_ORDER.filter((f) => errors[f])
-            .map((f) => `- ${f}: ${errorText(errors[f])}`)
-            .join('\n')}`
+          t(lang, 'contact.agent.invalid') +
+            '\n' +
+            FIELD_ORDER.filter((field) => errors[field])
+              .map((field) => '- ' + field + ': ' + errorText(errors[field]))
+              .join('\n')
         );
-      }
       return;
     }
-
-    // WebMCP: an agent filled and submitted this form on a person's behalf.
-    // Two things change, and only for that path — `agentInvoked` is undefined
-    // for every human, so the branch below is unreachable in an ordinary
-    // browser and the human flow is byte-for-byte what it was.
-    //
-    // 1. The honeypot gate is skipped. An agent that fills every field it can
-    //    see is doing its job, not attacking us; punishing it with the silent
-    //    accept would swallow a real lead without a trace.
-    // 2. We answer with the composed email text instead of only swapping the
-    //    panel, so the agent has something to hand back to the person — this
-    //    form has no backend and never sends anything by itself.
+    if (honeypot.trim()) {
+      deliveryCode = 'verification';
+      if (byAgent) answerAgent(t(lang, 'contact.delivery.verification'));
+      return;
+    }
+    // An agent can fill and validate the same form, but cannot approve an
+    // external email on behalf of the person. A real button press is needed.
     if (byAgent) {
-      submitted = true;
-      void focusSuccessHeading();
-      answerAgent(buildEmailText(data, lang, context));
+      agentReview = true;
+      void tick().then(() => submitEl?.focus());
+      answerAgent(t(lang, 'contact.agent.review'));
       return;
     }
-
-    const elapsedMs = Date.now() - mountedAt;
-    if (isGateTripped(honeypot, elapsedMs)) {
-      // Silent accept: a script tripped the honeypot. The panel still
-      // swaps to the success state so the bot learns nothing from it —
-      // still moving focus too, in case a real visitor is ever
-      // misclassified (an odd autofill extension, say).
-      submitted = true;
-      void focusSuccessHeading();
-      return;
-    }
-
-    submitted = true;
-    void focusSuccessHeading();
+    agentReview = false;
+    void sendEnquiry();
   }
 </script>
 
@@ -332,7 +315,7 @@
 {/if}
 
 {#if !submitted}
-  <!-- method="dialog" is the pre-hydration guard: this island is client:visible,
+  <!-- method="dialog" is the pre-hydration guard: this island is client:idle,
        so a visitor who clicks Send in the moment between the form entering the
        viewport and the island booting would otherwise trigger a NATIVE submit —
        which navigates to ?website= and loses every answer (and, in production,
@@ -341,8 +324,9 @@
   <form
     class="funnel glass-panel"
     method="dialog"
-    aria-busy={!ready}
+    aria-busy={!ready || sending}
     onsubmit={onSubmit}
+    onfocusin={() => void beginVerification()}
     novalidate
     toolname="submit_project_brief"
     tooldescription={AGENT[lang].tool}
@@ -352,17 +336,41 @@
          isn't a recognized field name; removed from every human channel
          (sight, tab order, screen readers) but present to a script. -->
     <div class="funnel__hp" aria-hidden="true">
-      <label for="funnel-website">Leave this field empty</label>
+      <label for="funnel-website">{t(lang, 'contact.honeypotLabel')}</label>
       <input
         id="funnel-website"
         name="website"
         type="text"
         tabindex="-1"
         aria-hidden="true"
-        toolparamdescription="Do not fill this field. It exists to catch automated scripts."
+        toolparamdescription={t(lang, 'contact.agent.honeypot')}
         autocomplete="one-time-code"
         bind:value={honeypot}
       />
+    </div>
+
+    <div class="funnel__field">
+      <label class="funnel__label text-mono" for="funnel-reply-email">{labels.replyEmail}</label>
+      <input
+        id="funnel-reply-email"
+        name="replyEmail"
+        type="email"
+        autocomplete="email"
+        class="funnel__input"
+        disabled={!ready || sending}
+        required
+        aria-required="true"
+        toolparamdescription={AGENT[lang].replyEmail}
+        maxlength="254"
+        bind:value={replyEmail}
+        bind:this={replyEmailEl}
+        placeholder={labels.replyEmailHint}
+        aria-invalid={errors.replyEmail ? 'true' : undefined}
+        aria-describedby={errors.replyEmail ? 'funnel-reply-email-error' : undefined}
+      />
+      {#if errors.replyEmail}<p class="funnel__error" id="funnel-reply-email-error">
+          {errorText(errors.replyEmail)}
+        </p>{/if}
     </div>
 
     <div class="funnel__field">
@@ -370,7 +378,7 @@
       <input
         id="funnel-company"
         name="company"
-        disabled={!ready}
+        disabled={!ready || sending}
         required
         toolparamdescription={AGENT[lang].company}
         class="funnel__input"
@@ -394,13 +402,13 @@
       <textarea
         id="funnel-task"
         name="task"
-        disabled={!ready}
+        disabled={!ready || sending}
         required
         toolparamdescription={AGENT[lang].task}
         class="funnel__input funnel__textarea"
         bind:value={data.task}
         bind:this={taskEl}
-        placeholder={TASK_PLACEHOLDER[lang]}
+        placeholder={t(lang, 'contact.taskPlaceholder')}
         rows="5"
         maxlength="2000"
         aria-required="true"
@@ -418,7 +426,7 @@
         <select
           id="funnel-budget"
           name="budget"
-          disabled={!ready}
+          disabled={!ready || sending}
           required
           toolparamdescription={AGENT[lang].budget}
           class="funnel__input funnel__select"
@@ -443,7 +451,7 @@
         <select
           id="funnel-timeline"
           name="timeline"
-          disabled={!ready}
+          disabled={!ready || sending}
           required
           toolparamdescription={AGENT[lang].timeline}
           class="funnel__input funnel__select"
@@ -464,9 +472,41 @@
       </div>
     </div>
 
-    <button type="submit" disabled={!ready} class="funnel__submit" bind:this={submitEl}
-      >{labels.submit}</button
+    <button
+      type="submit"
+      disabled={!ready || sending || deliveryCode === 'delivery-unknown'}
+      class="funnel__submit"
+      bind:this={submitEl}>{sending ? t(lang, 'contact.sending') : labels.submit}</button
     >
+    <div
+      class="funnel__challenge"
+      role="group"
+      aria-label={t(lang, 'contact.verificationLabel')}
+      bind:this={challengeContainer}
+    ></div>
+    {#if agentReview}<p class="funnel__hint" role="status">
+        {t(lang, 'contact.agent.review')}
+      </p>{/if}
+    {#if deliveryCode}
+      <p class="funnel__error" role="alert">{t(lang, 'contact.delivery.' + deliveryCode)}</p>
+      <a href={mailtoUrl} class="funnel__address">{labels.openMail}</a>
+      <button type="button" class="funnel__copy" onclick={() => void onCopyFullText()}
+        >{t(lang, copied ? 'contact.copied' : 'contact.copyText')}</button
+      >
+      <details class="funnel__draft">
+        <summary>{t(lang, 'contact.draftText')}</summary>
+        <pre>{emailText}</pre>
+      </details>
+      {#if copyFailed}<p class="funnel__error" role="alert">{t(lang, 'contact.copyFailed')}</p>{/if}
+    {/if}
+    <p class="funnel__hint">
+      {t(lang, 'contact.sendNotice')}
+      <a class="funnel__address" href={'/' + lang + '/privacy/'}>{t(lang, 'footer.privacyLink')}</a>
+    </p>
+    <p class="funnel__direct">
+      {t(lang, 'contact.directLabel')}
+      <a href={'mailto:' + CONTACT_EMAIL} class="funnel__address">{CONTACT_EMAIL}</a>
+    </p>
     <p class="funnel__promise text-mono">{labels.replyPromise}</p>
   </form>
 {:else}
@@ -474,8 +514,9 @@
     <h2 class="funnel__done-heading" tabindex="-1" bind:this={successHeadingEl}>
       {labels.successHeading}
     </h2>
-    <p class="funnel__done-body">{labels.successBody}</p>
-    <a href={mailtoUrl} class="funnel__submit funnel__submit--link">{labels.openMail}</a>
+    <p class="funnel__done-body">
+      {deliveryStatus === 'queued' ? t(lang, 'contact.queuedBody') : labels.successBody}
+    </p>
     <button type="button" class="funnel__copy" onclick={() => void onCopyFullText()}>
       {t(lang, copied ? 'contact.copied' : 'contact.copyText')}
     </button>
@@ -576,12 +617,9 @@
     font: inherit;
     font-size: var(--text-base);
     color: var(--text-primary);
-    background: hsla(220, 20%, 8%, 0.7);
+    background: var(--bg-graphite);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    transition:
-      border-color var(--duration-normal) var(--ease-out),
-      box-shadow var(--duration-normal) var(--ease-out);
   }
 
   .funnel__input::placeholder {
@@ -597,7 +635,7 @@
   }
 
   .funnel__input[aria-invalid='true'] {
-    border-color: hsl(0, 65%, 55%);
+    border-color: var(--color-error);
   }
 
   .funnel__textarea {
@@ -625,7 +663,9 @@
   .funnel__error {
     margin: 0;
     font-size: var(--text-xs);
-    color: hsl(0, 65%, 65%);
+    color: var(--text-primary);
+    border-inline-start: 2px solid var(--color-error);
+    padding-inline-start: var(--space-2);
   }
 
   /* The homepage CTA pill recipe (HeroOverlay's .hero-overlay__cta family). */
@@ -647,22 +687,17 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     align-self: flex-start;
-    transition:
-      box-shadow 0.3s ease-out,
-      border-color 0.3s ease-out,
-      transform 0.3s ease-out;
   }
 
   /* Magnetic state: snappier follow while hovered (homepage coefficient). */
   .funnel__submit.is-magnetic {
-    transition-duration: 0.08s;
   }
 
   .funnel__submit:hover {
     box-shadow:
       0 0 20px var(--accent-glow-strong),
       0 0 60px var(--accent-glow),
-      inset 0 0 20px hsla(155, 70%, 70%, 0.15);
+      inset 0 0 20px var(--accent-glow);
     border-color: var(--accent-green-100);
   }
 
@@ -706,7 +741,6 @@
     font-family: var(--font-mono);
     text-decoration: none;
     overflow-wrap: break-word;
-    transition: color var(--duration-normal) var(--ease-out);
   }
 
   .funnel__address:hover {
@@ -722,7 +756,6 @@
     font-size: var(--text-xs);
     color: var(--text-ghost);
     cursor: pointer;
-    transition: color var(--duration-normal) var(--ease-out);
   }
 
   .funnel__copy:hover {
@@ -738,7 +771,6 @@
     font-size: var(--text-xs);
     color: var(--text-ghost);
     cursor: pointer;
-    transition: color var(--duration-normal) var(--ease-out);
   }
 
   .funnel__edit:hover {
@@ -763,6 +795,35 @@
       display: inline-flex;
       align-items: center;
       min-height: 44px;
+    }
+  }
+  .funnel__challenge:empty {
+    display: none;
+  }
+  .funnel__challenge {
+    max-width: 100%;
+  }
+  .funnel__submit:disabled {
+    cursor: wait;
+    opacity: 0.65;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .funnel__input {
+      transition:
+        border-color var(--duration-normal) var(--ease-out),
+        box-shadow var(--duration-normal) var(--ease-out);
+    }
+    .funnel__submit {
+      transition:
+        box-shadow var(--duration-normal) var(--ease-out),
+        border-color var(--duration-normal) var(--ease-out),
+        transform var(--duration-fast) var(--ease-out);
+    }
+    .funnel__address,
+    .funnel__copy,
+    .funnel__edit {
+      transition: color var(--duration-normal) var(--ease-out);
     }
   }
 </style>

@@ -1,57 +1,24 @@
 /**
- * public/_headers — the CSP and HSTS contract, re-derived from source.
+ * Source template and generated CSP/HSTS contract.
  *
- * script-src carries no 'unsafe-inline'. Every inline script the site ships is
- * allowed by a sha256 hash instead, and a hash is only as good as the bytes it
- * was taken from. Those bytes come from exactly two places:
- *
- *   1. Astro's own island runtime and client-directive loaders. Astro inlines
- *      them verbatim from node_modules/astro/dist/runtime/server/astro-island
- *      .prebuilt.js and node_modules/astro/dist/runtime/client/<directive>
- *      .prebuilt.js — each module's default export IS the string that lands
- *      between <script> and </script>. So an Astro upgrade that touches those
- *      files silently changes the bytes, and a header still listing the old
- *      hashes would refuse the runtime on every page: no island hydrates, the
- *      assistant never opens, the labs are dead, and nothing fails at build.
- *
- *   2. The Trusted Types default policy (src/lib/trusted-types-policy.ts),
- *      injected by BaseLayout.astro through set:html, so its bytes are the
- *      exported constant, unchanged.
- *
- * This suite hashes both sources on every run and compares the SET of hashes
- * to the header: a hash for something that no longer ships is as much a bug as
- * a missing one (it means someone edited the header by hand and stopped
- * reading). The directive loaders are matched against the directives the
- * source actually uses — add `client:load` somewhere and the test tells you
- * the hash to add; drop the last `client:visible` and it tells you which hash
- * is now dead.
- *
- * Regeneration is therefore: run the suite, read the failure. It prints the
- * expected `'sha256-…'` tokens. Optionally, point CSP_DIST at a fresh build
- * (`pnpm exec astro build --outDir <dir>` then `CSP_DIST=<dir> pnpm exec vitest
- * run tests/unit/csp-headers.test.ts`) and the last test scans every HTML file
- * in it and asserts the inline scripts on disk are exactly the hashed set —
- * the end-to-end check, skipped when no build is offered because a build is
- * too heavy for the unit suite.
- *
- * Mutation-proved 2026-09-21 (11/11 caught, each applied to the real file and
- * restored byte-identically): 'unsafe-inline' re-added; 'preload' removed; one
- * character of a hash changed; one hash removed; a bogus extra hash added;
- * 'wasm-unsafe-eval' removed; require-trusted-types-for removed; one byte added
- * to the policy constant; a policy HOSTS entry no longer mirroring script-src;
- * the BaseLayout tag altered; a second is:inline script added to a layout.
+ * The build integration derives hashes from actual HTML and lazy modules.
+ * CSP_DIST selects a real artifact for independent checks against installed
+ * Astro runtime/loader bytes, the TT constant and every emitted SSR style.
+ * No build is needed to verify the restrictive source template and invariants.
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { TRUSTED_TYPES_POLICY_SCRIPT } from '@/lib/trusted-types-policy';
+import { cspHash, inspectHtml } from '../../src/build/content-security-policy.mjs';
 
 const ROOT = join(__dirname, '..', '..');
-const HEADERS_FILE = join(ROOT, 'public', '_headers');
+const BUILD = process.env.CSP_DIST;
+const HEADERS_FILE = BUILD ? join(BUILD, '_headers') : join(ROOT, 'public', '_headers');
 
 const sha256 = (s: string): string =>
   `'sha256-${createHash('sha256').update(s, 'utf8').digest('base64')}'`;
@@ -150,6 +117,7 @@ describe('public/_headers — Content-Security-Policy', () => {
       'blob:',
       'https://cdn.jsdelivr.net',
       'https://accounts.google.com',
+      'https://challenges.cloudflare.com',
     ]) {
       expect(scriptSrc, `script-src lost ${src}`).toContain(src);
     }
@@ -159,10 +127,11 @@ describe('public/_headers — Content-Security-Policy', () => {
     expect(scriptSrc).not.toContain("'strict-dynamic'");
   });
 
-  it('style-src keeps unsafe-inline and lists no hashes (a single hash would switch it off)', () => {
-    const styleSrc = directive(csp, 'style-src');
-    expect(styleSrc).toContain("'unsafe-inline'");
-    expect(styleSrc.some((s) => /^'sha(256|384|512)-/.test(s))).toBe(false);
+  it('limits style permissions to external sheets and generated exact hashes', () => {
+    expect(directive(csp, 'style-src')).toEqual(["'self'", 'https://accounts.google.com']);
+    expect(directive(csp, 'style-src-elem')).not.toContain("'unsafe-inline'");
+    expect(directive(csp, 'style-src-attr')).toEqual(["'none'"]);
+    expect(csp).not.toContain("'unsafe-inline'");
   });
 
   it('requires Trusted Types for script sinks and does not restrict policy names', () => {
@@ -178,6 +147,11 @@ describe('public/_headers — Content-Security-Policy', () => {
   });
 
   it('hashes exactly the inline scripts the build emits: Astro runtime + used directive loaders + TT policy', async () => {
+    if (!BUILD) {
+      // The source is a fail-closed template; emitted bytes are derived by the integration.
+      expect(scriptSrc.some((token) => /^'sha(?:256|384|512)-/.test(token))).toBe(false);
+      return;
+    }
     const astro = await astroInlineScripts();
     const used = usedDirectives();
     expect(used.size, 'no client:* directive found in src — the scan is broken').toBeGreaterThan(0);
@@ -223,10 +197,23 @@ describe('public/_headers — Content-Security-Policy', () => {
     expect(TRUSTED_TYPES_POLICY_SCRIPT).not.toMatch(/[\r\n]/);
     // The default policy must be named `default` — any other name is just a policy.
     expect(TRUSTED_TYPES_POLICY_SCRIPT).toContain('createPolicy("default"');
-    // The script-URL allowlist inside the policy mirrors the external script-src hosts.
+    // Turnstile needs only its explicit loader, not arbitrary challenge-host scripts.
     for (const host of scriptSrc.filter((s) => s.startsWith('https://'))) {
+      if (host === 'https://challenges.cloudflare.com') {
+        expect(TRUSTED_TYPES_POLICY_SCRIPT).toContain(
+          'u==="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"'
+        );
+        expect(TRUSTED_TYPES_POLICY_SCRIPT).not.toContain('"https://challenges.cloudflare.com/"');
+        continue;
+      }
       expect(TRUSTED_TYPES_POLICY_SCRIPT, `policy HOSTS lacks ${host}`).toContain(`"${host}/"`);
     }
+  });
+
+  it('allows the Turnstile frame without granting it network or form destinations', () => {
+    expect(directive(csp, 'frame-src')).toContain('https://challenges.cloudflare.com');
+    expect(directive(csp, 'connect-src')).not.toContain('https://challenges.cloudflare.com');
+    expect(directive(csp, 'form-action')).toEqual(["'none'"]);
   });
 
   it('BaseLayout injects the policy constant verbatim as the first inline script', () => {
@@ -250,8 +237,8 @@ describe('public/_headers — Content-Security-Policy', () => {
   });
 
   it('(when CSP_DIST points at a build) every inline script on disk is hashed, and nothing else', () => {
-    const dist = process.env.CSP_DIST;
-    if (!dist || !existsSync(dist)) return; // opt-in: a build is too heavy for the unit suite
+    const dist = BUILD;
+    if (!dist) return; // opt-in: a build is too heavy for the unit suite
     const onDisk = new Map<string, string[]>();
     for (const f of walk(dist, /\.html$/)) {
       const html = readFileSync(f, 'utf8');
@@ -271,6 +258,44 @@ describe('public/_headers — Content-Security-Policy', () => {
     ).toEqual([]);
     const unused = [...listed].filter((h) => !onDisk.has(h));
     expect(unused, 'hashes in script-src that no page in the build uses').toEqual([]);
+  });
+});
+
+describe('generated _headers — style coverage', () => {
+  it('(when CSP_DIST points at a build) allows every SSR style and bounds Cloudflare rules', () => {
+    if (!BUILD) return;
+    const raw = readFileSync(HEADERS_FILE, 'utf8');
+    const policies = new Map<string, string>();
+    let route = '';
+    for (const line of raw.split(/\r?\n/)) {
+      if (line.startsWith('/')) route = line.trim();
+      const policy = line.match(/^\s+Content-Security-Policy:\s*(.+)$/i)?.[1];
+      if (policy) policies.set(route, policy);
+      if (line.trim() && !line.trim().startsWith('#'))
+        expect(Buffer.byteLength(line, 'utf8')).toBeLessThanOrEqual(2000);
+    }
+    expect(raw.split(/\r?\n/).filter((line) => line.startsWith('/')).length).toBeLessThanOrEqual(
+      100
+    );
+    for (const file of walk(BUILD, /\.html$/)) {
+      const relativeFile = file.slice(BUILD.length).replaceAll('\\', '/').replace(/^\//, '');
+      const pageRoute =
+        relativeFile === 'index.html'
+          ? '/'
+          : relativeFile.endsWith('/index.html')
+            ? '/' + relativeFile.slice(0, -10)
+            : '/' + relativeFile;
+      const policy = policies.get(pageRoute) ?? policies.get('/*') ?? '';
+      const page = inspectHtml(readFileSync(file, 'utf8'));
+      expect(policy, pageRoute).not.toContain("'unsafe-inline'");
+      for (const style of page.inlineStyles)
+        expect(directive(policy, 'style-src-elem'), pageRoute).toContain(cspHash(style));
+      for (const attribute of page.styleAttributes) {
+        const permissions = directive(policy, 'style-src-attr');
+        expect(permissions, pageRoute).toContain("'unsafe-hashes'");
+        expect(permissions, pageRoute).toContain(cspHash(attribute));
+      }
+    }
   });
 });
 

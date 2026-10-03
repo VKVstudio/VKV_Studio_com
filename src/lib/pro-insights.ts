@@ -1,30 +1,30 @@
 import { PRO_PROMO_LAUNCHED, resolveLocalProPreview } from './pro-promo';
-// Public readiness is per destination; the homepage switch alone enables none.
+// These destinations are part of the owner's approved public release.
 export const PRO_INSIGHTS = {
   home: {
     path: '/',
-    publicReady: false,
+    publicReady: true,
     label: { en: 'AI Insights (.pro)', ru: 'AI Insights (.pro, EN)' },
   },
   geoGuide: {
     path: '/briefings/ai-search-no-magic-file/',
-    publicReady: false,
+    publicReady: true,
     label: {
       en: 'What Google AI search needs from your website',
       ru: 'Что требуется сайту для AI-поиска Google (EN)',
     },
   },
   ragComparison: {
-    path: null,
-    publicReady: false,
+    path: '/briefings/',
+    publicReady: true,
     label: {
-      en: 'When a document pilot is worth testing',
-      ru: 'Когда стоит проверять документный пилот (EN)',
+      en: 'AI briefings before your next pilot',
+      ru: 'Разборы AI перед следующим пилотом (EN)',
     },
   },
   localModel: {
     path: '/briefings/nemotron-active-parameters-are-not-memory/',
-    publicReady: false,
+    publicReady: true,
     label: {
       en: 'What to measure before choosing a local model',
       ru: 'Что измерить перед выбором локальной модели (EN)',
@@ -40,10 +40,10 @@ export function resolveProReading(
   const localBase =
     options.isDev || options.previewBuild ? resolveLocalProPreview(options.localPreviewUrl) : null;
   const href =
-    (options.launched ?? PRO_PROMO_LAUNCHED) && entry.publicReady && entry.path
-      ? 'https://vkvstudio.pro' + entry.path
-      : localBase && entry.path
-        ? localBase.slice(0, -1) + entry.path
+    localBase && entry.path
+      ? localBase.slice(0, -1) + entry.path
+      : (options.launched ?? PRO_PROMO_LAUNCHED) && entry.publicReady && entry.path
+        ? 'https://vkvstudio.pro' + entry.path
         : null;
   return { visible: !!href || options.isDev || options.previewBuild, href, label: entry.label };
 }

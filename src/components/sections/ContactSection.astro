@@ -12,12 +12,19 @@
 import type { Lang } from '@i18n/utils';
 import { t } from '@i18n/utils';
 import { CONTACT_EMAIL } from '@/lib/site-config';
+import ContactFunnel from '@components/contact/ContactFunnel.svelte';
+import { CONTACT_LABELS } from '@/lib/contact-labels';
+import { resolveLocalProPreview } from '@/lib/pro-promo';
 
 interface Props {
   lang: Lang;
 }
 
 const { lang } = Astro.props;
+const localPreviewUrl =
+  import.meta.env.DEV || import.meta.env.VKV_PRO_PROMO_PREVIEW === 'true'
+    ? resolveLocalProPreview(import.meta.env.VKV_PRO_LOCAL_PREVIEW_URL)
+    : null;
 ---
 
 <section class="contact-section" id="contact" aria-labelledby="contact-heading">
@@ -36,6 +43,10 @@ const { lang } = Astro.props;
 
       {/* Subtitle */}
       <p class="contact__subtitle">{t(lang, 'services.ctaSub')}</p>
+
+      <div class="contact__form">
+        <ContactFunnel client:idle lang={lang} labels={CONTACT_LABELS[lang]} localPreviewUrl={localPreviewUrl} />
+      </div>
 
       {/* CTA links */}
       <div class="contact__links">
@@ -155,6 +166,10 @@ const { lang } = Astro.props;
   }
 
   /* ── Label ─────────────────────────────────────────────── */
+  .contact__form {
+    width: 100%;
+    text-align: left;
+  }
   .contact__label {
     /* text-mono handles styling */
   }

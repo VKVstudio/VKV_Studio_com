@@ -1,0 +1,50 @@
+[Unit]
+Description=VKVstudio fixed-recipient enquiry relay
+Requires=vkvstudio-contact-relay.socket
+After=vkvstudio-contact-relay.socket network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60s
+StartLimitBurst=3
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/vkvstudio-contact-relay
+ExecStart=/usr/bin/python3 -I -B /opt/vkvstudio-contact-relay/relay.py --systemd-socket --database /var/lib/vkvstudio-contact-relay/ledger.sqlite3 --credential /run/credentials/vkvstudio-contact-relay.service/relay-hmac --key-id workspace-v1
+Sockets=vkvstudio-contact-relay.socket
+LoadCredential=relay-hmac:/etc/vkvstudio-contact-relay/relay-hmac
+StateDirectory=vkvstudio-contact-relay
+StateDirectoryMode=0700
+UMask=0077
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+CPUQuota=10%
+MemoryHigh=96M
+MemoryMax=128M
+TasksMax=16
+LimitNOFILE=64
+TimeoutStartSec=10s
+TimeoutStopSec=10s
+Restart=no

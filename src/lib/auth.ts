@@ -210,7 +210,15 @@ function loadGis(): Promise<void> {
   _gisLoading = new Promise<void>((resolve, reject) => {
     if (typeof document === 'undefined') return reject(new Error('no dom'));
     if (gis()) return resolve();
+    // The home response grants this per-response permission to GIS styles
+    // only. Google copies its script nonce to the button stylesheet.
+    const markers = document.querySelectorAll<HTMLMetaElement>('meta[name="vkv-gis-style-nonce"]');
+    const nonce = markers.length === 1 ? markers[0]?.content : undefined;
+    if (!nonce || !/^[A-Za-z0-9+/]{32}$/.test(nonce)) {
+      return reject(new Error('GIS style permission unavailable'));
+    }
     const s = document.createElement('script');
+    s.nonce = nonce;
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
     s.defer = true;

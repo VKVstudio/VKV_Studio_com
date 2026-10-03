@@ -3,6 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { defineConfig } from 'astro/config';
 import svelte from '@astrojs/svelte';
 import sitemap from '@astrojs/sitemap';
+import contentSecurityPolicy from './src/build/content-security-policy.mjs';
+import subresourceIntegrity from './src/build/subresource-integrity.mjs';
+import pagesWorker from './src/build/pages-worker.mjs';
 
 /**
  * `lastmod` per URL, taken from the last commit that touched the page's source.
@@ -19,6 +22,7 @@ import sitemap from '@astrojs/sitemap';
  */
 const PAGE_SOURCES = {
   '/': 'src/pages/[lang]/index.astro',
+  '/lab/': 'src/pages/[lang]/lab/index.astro',
   '/lab/tokenizer/': 'src/pages/[lang]/lab/tokenizer/index.astro',
   '/lab/prompt/': 'src/pages/[lang]/lab/prompt/index.astro',
   '/lab/embeddings/': 'src/pages/[lang]/lab/embeddings/index.astro',
@@ -67,6 +71,9 @@ export default defineConfig({
   site: 'https://vkvstudio.com',
   integrations: [
     svelte(),
+    contentSecurityPolicy(),
+    subresourceIntegrity(),
+    pagesWorker(),
     sitemap({
       i18n: {
         defaultLocale: 'en',
@@ -100,25 +107,10 @@ export default defineConfig({
     }),
   ],
   output: 'static',
-  // NOT enabling Astro's hash-based CSP (`security.csp`). It looks like the
-  // obvious way to drop 'unsafe-inline' from script-src, and it was tried and
-  // measured on a preview deploy 2026-08-09 — it does not fit this site:
-  //
-  //  1. `strictDynamic: true` disables host-based allowlisting INCLUDING
-  //     'self'. Astro hydrates islands through dynamic import(), which
-  //     strict-dynamic does not extend trust to, so all 10 islands were
-  //     blocked and the page shipped dead.
-  //  2. With strictDynamic off, scripts work — but Astro also emits hashes in
-  //     style-src, and per the CSP spec ANY hash there makes the browser
-  //     ignore 'unsafe-inline'. That blocks the runtime inline style
-  //     attributes Svelte emits for the hero parallax (`style:transform`),
-  //     whose values are computed per frame and so cannot be hashed at build
-  //     time. Omitting styleDirective is worse still: Astro then emits
-  //     style-src with hashes and no 'unsafe-inline' at all.
-  //
-  // So the choice is between a working hero and a stricter script-src, and
-  // 'unsafe-inline' stays for now. Revisit if Astro exposes style-src-attr,
-  // or if the parallax stops using inline style attributes.
+  // The build-only integration derives per-page CSP from final HTML and lazy
+  // module bytes, preserving inline CSS, exact SSR style values and hydration.
+  // CSSOM updates stay available without unsafe-inline; static attributes use
+  // finite unsafe-hashes permissions. No strict-dynamic or markup rewrites.
   compressHTML: true,
   build: {
     // Every page's CSS ships inside the HTML instead of as <link rel="stylesheet">.

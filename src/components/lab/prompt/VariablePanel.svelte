@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../../../i18n/utils';
+  import { variableValue } from '../../../lib/prompt/builder';
 
   let {
     lang = 'en',
@@ -90,7 +91,7 @@
           type="text"
           class="var-item__input"
           placeholder={name}
-          value={values[name] ?? ''}
+          value={variableValue(values, name) ?? ''}
           oninput={(e) => handleInput(name, (e.target as HTMLInputElement).value)}
           aria-label="{t(lang, 'prompt.valueFor')} {name}"
         />

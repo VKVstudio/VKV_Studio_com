@@ -2,6 +2,7 @@
   import { t } from '../../../i18n/utils';
   import { MODELS } from '../../../lib/prompt/builder';
   import { SYNAPSE_API_BASE } from '@/lib/api-config';
+  import { getIdToken } from '@/lib/auth';
 
   let { lang = 'en', onGenerated } = $props<{
     lang?: 'en' | 'ru';
@@ -87,10 +88,14 @@ Do not add explanations. Output only the prompt.`;
     try {
       const promptText = buildGenerationPrompt(lang, userInput, selectedModel, selectedStyle);
 
+      const token = getIdToken();
       const res = await fetch(`${SYNAPSE_API_BASE}/api/chat`, {
         method: 'POST',
         signal: abort.signal,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         // `lang` is passed alongside the directive baked into `promptText`
         // above so a future backend revision can key off it directly —
         // the current `/api/chat` (ChatRequest, extra="ignore") simply
@@ -101,7 +106,12 @@ Do not add explanations. Output only the prompt.`;
       if (!res.ok) {
         // 429 is the common one and is not a fault: the backend rate-limits per
         // IP, and a shared address reaches it without anyone misbehaving.
-        genError = t(lang, res.status === 429 ? 'prompt.generateBusy' : 'prompt.generateError');
+        genError = t(
+          lang,
+          res.status === 401
+            ? 'prompt.generateSignIn'
+            : res.status === 429 ? 'prompt.generateBusy' : 'prompt.generateError'
+        );
         return;
       }
 

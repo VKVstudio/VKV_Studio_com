@@ -1,0 +1,17 @@
+[Unit]
+Description=VKVstudio enquiry relay local socket
+
+[Socket]
+ListenStream=/run/vkvstudio-contact-relay.sock
+SocketUser=root
+SocketGroup=cloudflared
+SocketMode=0660
+Accept=no
+Backlog=16
+FileDescriptorName=contact-relay
+Service=vkvstudio-contact-relay.service
+TriggerLimitIntervalSec=60s
+TriggerLimitBurst=3
+
+[Install]
+WantedBy=sockets.target

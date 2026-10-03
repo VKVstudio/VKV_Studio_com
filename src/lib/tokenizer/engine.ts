@@ -810,7 +810,9 @@ async function tokenizeWithAPI(
     if (
       typeof data !== 'object' ||
       data === null ||
-      typeof (data as { totalTokens?: unknown }).totalTokens !== 'number'
+      typeof (data as { totalTokens?: unknown }).totalTokens !== 'number' ||
+      !Number.isSafeInteger((data as { totalTokens: number }).totalTokens) ||
+      (data as { totalTokens: number }).totalTokens < 0
     ) {
       // Same reasoning as above — the backend answered, just not usefully.
       console.warn(

@@ -1292,6 +1292,8 @@
   @media (max-width: 767px), ((max-height: 767px) and (pointer: coarse)) {
     .hero-overlay__content {
       gap: var(--space-3);
+      min-width: 0;
+      max-width: calc(100% - 2 * var(--space-4));
       /* Frosted backdrop so the text stops drowning in the bright neural
          video (owner's phone screenshot). The Stack section's 2026 glass
          recipe, gentled for a text panel: lighter veil, no grain — the

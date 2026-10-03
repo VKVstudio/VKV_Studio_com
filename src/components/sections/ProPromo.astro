@@ -21,11 +21,11 @@ const copy = {
     heading: 'AI moves fast.',
     hook: 'Know what matters.',
     body: 'AI news is everywhere. VKVstudio.pro explains what it means for your business: where AI could help, what it takes, and where the limits are. When it is time to build, the next step connects to VKVstudio services.',
+    announcement: 'I am building VKVstudio.pro to turn AI news into practical business decisions: where AI could help, what it takes, and where the limits are. When you need to build, VKVstudio offers a written project enquiry and a clear scope.',
     cta: 'Read VKVstudio.pro',
     language: 'English-language insights for business decision makers.',
-    preview: 'Preview · public launch pending',
+    preview: 'VKVstudio.pro · coming soon',
     localPreview: t('en', 'contact.proLocalPreview'),
-    pause: t('en', 'contact.pauseMotion'),
     rail: 'From AI news to your next move',
     decisions: [
       { label: 'Act', text: 'A practical opportunity to explore.' },
@@ -38,11 +38,11 @@ const copy = {
     heading: 'ИИ меняется быстро.',
     hook: 'Пойми, что важно.',
     body: 'Новостей об ИИ много. VKVstudio.pro объясняет, что они значат для твоего бизнеса: где ИИ может помочь, что потребуется и какие есть ограничения. Когда пора внедрять — следующий шаг связан с услугами VKVstudio.',
+    announcement: 'Я готовлю VKVstudio.pro, чтобы превращать новости об ИИ в практические решения для бизнеса: где ИИ поможет, что потребуется и какие есть ограничения. Когда пора внедрять — обсудим задачу письменно и согласуем понятный объём работ.',
     cta: 'Читать VKVstudio.pro',
     language: 'Материалы на английском для руководителей бизнеса.',
-    preview: 'Превью · публичный запуск ожидается',
+    preview: 'VKVstudio.pro · скоро',
     localPreview: t('ru', 'contact.proLocalPreview'),
-    pause: t('ru', 'contact.pauseMotion'),
     rail: 'От новости об ИИ к следующему шагу',
     decisions: [
       { label: 'Действовать', text: 'Есть практическая возможность для проверки.' },
@@ -57,11 +57,11 @@ const copy = {
     heading: string;
     hook: string;
     body: string;
+    announcement: string;
     cta: string;
     language: string;
     preview: string;
     localPreview: string;
-    pause: string;
     rail: string;
     decisions: Array<{ label: string; text: string }>;
   }
@@ -79,7 +79,7 @@ const c = copy[lang];
             <h2 id="pro-promo-heading" class="pro-promo__heading">
               {c.heading} <span>{c.hook}</span>
             </h2>
-            <p class="pro-promo__body">{c.body}</p>
+            <p class="pro-promo__body">{promo.href ? c.body : c.announcement}</p>
             <div class="pro-promo__action">
               {promo.href ? (
                 <a
@@ -110,10 +110,6 @@ const c = copy[lang];
                   {promo.href ? c.localPreview : c.preview}
                 </p>
               )}
-              <label class="pro-promo__motion">
-                <input type="checkbox" />
-                {c.pause}
-              </label>
               <p class="pro-promo__language">{c.language}</p>
             </div>
           </div>
@@ -307,31 +303,6 @@ const c = copy[lang];
     }
   }
 
-  .pro-promo__motion {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: 44px;
-    margin-top: var(--space-3);
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-  .pro-promo__motion input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent-green-300);
-  }
-  .pro-promo:has(.pro-promo__motion input:checked) *,
-  .pro-promo:has(.pro-promo__motion input:checked) *::before {
-    animation-play-state: paused;
-    transition: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .pro-promo__motion {
-      display: none;
-    }
-  }
   @media (prefers-reduced-motion: no-preference) {
     .pro-promo__signal::before {
       content: '';
@@ -340,7 +311,7 @@ const c = copy[lang];
       width: 2px;
       background: var(--accent-green-300);
       transform-origin: top;
-      animation: pro-signal-trace 8s ease-in-out infinite;
+      animation: pro-signal-trace 3s ease-in-out 1;
     }
     @keyframes pro-signal-trace {
       0%,

@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { PRO_PROMO_LAUNCHED, resolveProPromo } from '../../src/lib/pro-promo';
 
 describe('VKVstudio.pro public launch gate', () => {
-  it('keeps the unapproved public destination closed', () => {
-    expect(PRO_PROMO_LAUNCHED).toBe(false);
+  it('uses the owner-approved public destination', () => {
+    expect(PRO_PROMO_LAUNCHED).toBe(true);
   });
 
-  it('omits the promo from a normal production build before launch', () => {
+  it('shows the announcement without linking an unpublished destination', () => {
     expect(resolveProPromo({ launched: false, isDev: false, previewBuild: false })).toEqual({
-      visible: false,
+      visible: true,
       href: null,
     });
   });
@@ -42,7 +42,7 @@ describe('explicit loopback preview', () => {
     };
     expect(resolveProPromo(opts).href).toBe(opts.localPreviewUrl);
     expect(resolveProPromo({ ...opts, previewBuild: false })).toEqual({
-      visible: false,
+      visible: true,
       href: null,
     });
   });

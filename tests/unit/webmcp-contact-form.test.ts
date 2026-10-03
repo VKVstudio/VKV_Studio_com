@@ -3,7 +3,7 @@
  *
  * This reads the COMPONENT SOURCE rather than a rendered page, because the
  * attributes must be present in the server-rendered HTML — ContactFunnel is a
- * client:visible island, so anything added at hydration would arrive after an
+ * client:idle island, so anything added at hydration would arrive after an
  * agent has already parsed the form. The project has no component-rendering
  * test harness (28 suites, none of them mount anything), so source analysis is
  * the house idiom; what it costs in fidelity is paid back below by stripping
@@ -26,6 +26,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { t } from '@/i18n/utils';
 
 const RAW = readFileSync(
   resolve(process.cwd(), 'src/components/contact/ContactFunnel.svelte'),
@@ -51,7 +52,25 @@ const TEMPLATE = CODE.slice(CODE.indexOf('</script>'));
 
 /** The opening `<form ...>` tag, so form-level attributes cannot be satisfied
  *  by something sitting on an input somewhere else in the file. */
-const FORM_TAG = /<form\b[^>]*>/.exec(TEMPLATE)?.[0] ?? '';
+function openingTagAt(source: string, start: number): string {
+  if (start < 0) return '';
+  let braces = 0;
+  let quote = '';
+  for (let index = start; index < source.length; index++) {
+    const character = source[index];
+    if (quote) {
+      if (character === quote && source[index - 1] !== '\\') quote = '';
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    else if (character === '{') braces++;
+    else if (character === '}') braces--;
+    else if (character === '>' && braces === 0) return source.slice(start, index + 1);
+  }
+  return '';
+}
+
+const FORM_TAG = openingTagAt(TEMPLATE, TEMPLATE.search(/<form\b/));
 
 /** The opening tag of one named control, by its id. */
 function tagOf(id: string): string {
@@ -60,6 +79,7 @@ function tagOf(id: string): string {
 }
 
 const FIELDS = [
+  { id: 'funnel-reply-email', name: 'replyEmail' },
   { id: 'funnel-company', name: 'company' },
   { id: 'funnel-task', name: 'task' },
   { id: 'funnel-budget', name: 'budget' },
@@ -72,7 +92,7 @@ const DESCRIPTION_MAX = 500;
 const PARAM_MAX = 150;
 
 describe('ContactFunnel — declarative WebMCP', () => {
-  it('finds the form and all four controls to assert against', () => {
+  it('finds the form and all five controls to assert against', () => {
     // Guard on the guards: if the selectors above ever stop matching, every
     // assertion below would pass against an empty string. This test is what
     // makes the rest of the file non-vacuous.
@@ -117,13 +137,11 @@ describe('ContactFunnel — declarative WebMCP', () => {
     const tag = tagOf('funnel-website');
     expect(tag, 'honeypot control not found').not.toBe('');
     expect(tag).toMatch(/\bname="website"/);
-    expect(tag, 'honeypot is undescribed').toMatch(/\btoolparamdescription="[^"]+"/);
-    expect(tag, 'the honeypot description must say not to fill it').toMatch(
-      /toolparamdescription="[^"]*[Dd]o not fill/
-    );
+    expect(tag).toMatch(/toolparamdescription=\{t\(lang, 'contact\.agent\.honeypot'\)\}/);
+    expect(t('en', 'contact.agent.honeypot')).toMatch(/Do not fill/);
   });
 
-  it('declares all four answer fields required, so the published schema is honest', () => {
+  it('declares all five answer fields required, so the published schema is honest', () => {
     // Chrome synthesises the tool's inputSchema from the form. Without the
     // `required` content attribute it publishes `"required": []` — found in the
     // live PageSpeed report on 2026-09-20 — which invites a compliant agent to
@@ -161,83 +179,50 @@ describe('ContactFunnel — declarative WebMCP', () => {
     expect(FORM_TAG).toMatch(/\bmethod="dialog"/);
   });
 
-  it('holds every agent-facing string inside Chrome’s budgets', () => {
-    const block = CODE.slice(CODE.indexOf('const AGENT'), CODE.indexOf('let submitEl'));
-    expect(block.length, 'AGENT block not found').toBeGreaterThan(200);
-
-    // Both quote styles: Prettier rewrites a single-quoted string to double
-    // quotes the moment its text contains an apostrophe, and this file used to
-    // demand exactly ten single-quoted matches — so one English contraction in
-    // the copy would have broken the test rather than the code. (Apostrophes
-    // have bitten this repository three times already.)
-    const strings = [
-      ...block.matchAll(
-        /\b(tool|company|task|budget|timeline):\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g
-      ),
-    ];
-    expect(strings.length, 'expected ten agent strings (five per language)').toBe(10);
-
-    for (const [, key, single, double] of strings) {
-      const text = (single ?? double ?? '').replace(/\\u2019/g, '’').replace(/\\(['"])/g, '$1');
-      expect(text.length, `empty: ${key}`).toBeGreaterThan(0);
-      const limit = key === 'tool' ? DESCRIPTION_MAX : PARAM_MAX;
-      expect(text.length, `over budget: ${key} (${text.length} > ${limit})`).toBeLessThanOrEqual(
-        limit
-      );
+  it('holds localized agent descriptions inside Chrome’s budgets', () => {
+    for (const lang of ['en', 'ru'] as const) {
+      for (const key of ['tool', 'replyEmail', 'company', 'task', 'budget', 'timeline'] as const) {
+        const text = t(lang, 'contact.agent.' + key);
+        expect(text.length).toBeGreaterThan(0);
+        expect(text.length, lang + ':' + key).toBeLessThanOrEqual(
+          key === 'tool' ? DESCRIPTION_MAX : PARAM_MAX
+        );
+      }
     }
   });
 
-  it('answers an agent on success with the composed email', () => {
-    // Matched against comment-free CODE and against the CALL, not the bare
-    // identifier: an earlier version of this test passed while respondWith had
-    // been deleted, because the words survived in the comments explaining them.
-    expect(CODE, 'the agent branch is gone').toMatch(/agentEvent\.agentInvoked\s*===\s*true/);
-    expect(CODE, 'respondWith is never CALLED').toMatch(/agentEvent\.respondWith\s*\(/);
-    expect(CODE, 'respondWith is called unguarded').toMatch(
-      /typeof agentEvent\.respondWith === 'function'/
-    );
-    expect(CODE, 'the success path does not answer with the composed email').toMatch(
-      /answerAgent\(buildEmailText\(data, lang, context\)\)/
-    );
+  it('answers an agent with a review request and never approves its own email', () => {
+    expect(CODE).toMatch(/agentEvent\.agentInvoked\s*===\s*true/);
+    expect(CODE).toMatch(/agentEvent\.respondWith\s*\(/);
+    expect(CODE).toMatch(/typeof agentEvent\.respondWith === 'function'/);
+    const start = CODE.indexOf('if (byAgent) {');
+    const end = CODE.indexOf('agentReview = false;', start);
+    const branch = CODE.slice(start, end);
+    expect(branch).toMatch(/agentReview = true/);
+    expect(branch).toMatch(/answerAgent\(t\(lang, 'contact\.agent\.review'\)\)/);
+    expect(branch).not.toMatch(/sendEnquiry\(/);
+    expect(CODE.slice(end)).toMatch(/void sendEnquiry\(\)/);
   });
 
-  it('answers an agent when its submission FAILS validation', () => {
-    // The defect this test exists for (audit, 2026-09-20): the invalid branch
-    // ended in a bare `return`, so a compliant agent that omitted a field —
-    // which the published schema invited, since `required` was empty — got
-    // Chromium's "the site has a programming error" instead of the field
-    // errors. The ordering test below stayed green the whole time, because
-    // order was all it checked.
-    const invalidBlock = CODE.slice(
-      CODE.indexOf('if (!isValid(errors))'),
-      CODE.indexOf('if (byAgent) {', CODE.indexOf('if (!isValid(errors))') + 40)
-    );
-    expect(invalidBlock.length, 'the invalid-submit block was not found').toBeGreaterThan(20);
-    const failurePath = CODE.slice(
-      CODE.indexOf('if (!isValid(errors))'),
-      CODE.indexOf('// WebMCP: an agent filled')
-    );
-    expect(failurePath, 'the failure path never answers the agent').toMatch(/answerAgent\(/);
-    expect(failurePath, 'the failure path does not report which fields failed').toMatch(
-      /errors\[f\]/
-    );
+  it('answers an agent with the fields that fail validation', () => {
+    const start = CODE.indexOf('errors = validateSubmission');
+    const end = CODE.indexOf('if (honeypot.trim())', start);
+    const branch = CODE.slice(start, end);
+    expect(branch).toMatch(/answerAgent\(/);
+    expect(branch).toMatch(/errors\[field\]/);
+    expect(branch).toMatch(/focusFirstError\(/);
   });
 
-  it('orders the submit guards: validate, then agent, then honeypot', () => {
-    // Order is the whole safety argument. Validation runs first, so a real
-    // visitor's errors are never suppressed; the agent branch sits before the
-    // honeypot gate, so an agent that dutifully filled every field is not
-    // silently swallowed by the anti-script trap. Anchored on the guards
-    // themselves — `byAgent` is only a boolean read and may be computed
-    // anywhere above.
-    const validation = CODE.indexOf('errors = validate(data)');
-    const invalid = CODE.indexOf('if (!isValid(errors))');
-    const agentSuccess = CODE.indexOf('answerAgent(buildEmailText');
-    const gate = CODE.indexOf('isGateTripped(honeypot');
-    expect(validation, 'validation call not found').toBeGreaterThan(-1);
-    expect(invalid, 'invalid guard not found').toBeGreaterThan(validation);
-    expect(agentSuccess, 'agent success path not found').toBeGreaterThan(invalid);
-    expect(gate, 'honeypot gate not found').toBeGreaterThan(agentSuccess);
+  it('applies the same honeypot gate before agent review or direct delivery', () => {
+    const validation = CODE.indexOf('errors = validateSubmission');
+    const gate = CODE.indexOf('if (honeypot.trim())');
+    const review = CODE.indexOf('agentReview = true');
+    const send = CODE.indexOf('void sendEnquiry()');
+    expect(validation).toBeGreaterThan(-1);
+    expect(gate).toBeGreaterThan(validation);
+    expect(review).toBeGreaterThan(gate);
+    expect(send).toBeGreaterThan(review);
+    expect(CODE).toMatch(/deliveryCode === 'delivery-unknown'/);
   });
 
   it('keeps the island server-rendered, which is the only reason any of this reaches an agent', () => {
@@ -248,7 +233,7 @@ describe('ContactFunnel — declarative WebMCP', () => {
       resolve(process.cwd(), 'src/pages/[lang]/contact/index.astro'),
       'utf-8'
     );
-    expect(page).toMatch(/<ContactFunnel\b[^>]*\bclient:visible/);
+    expect(page).toMatch(/<ContactFunnel\b[^>]*\bclient:idle/);
     expect(page, 'client:only would strip the form from the served HTML').not.toMatch(
       /<ContactFunnel\b[^>]*\bclient:only/
     );

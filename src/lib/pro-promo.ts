@@ -1,5 +1,5 @@
 /** Open only after the owner approves the public .pro launch and destination. */
-export const PRO_PROMO_LAUNCHED: boolean = false;
+export const PRO_PROMO_LAUNCHED: boolean = true;
 
 interface ProPromoOptions {
   launched: boolean;
@@ -20,11 +20,9 @@ export function resolveProPromo({
   localPreviewUrl,
 }: ProPromoOptions): { visible: boolean; href: string | null } {
   return {
-    visible: launched || isDev || previewBuild,
-    href: launched
-      ? 'https://vkvstudio.pro/'
-      : isDev || previewBuild
-        ? resolveLocalProPreview(localPreviewUrl)
-        : null,
+    visible: true,
+    href:
+      ((isDev || previewBuild) && resolveLocalProPreview(localPreviewUrl)) ||
+      (launched ? 'https://vkvstudio.pro/' : null),
   };
 }

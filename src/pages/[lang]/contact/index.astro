@@ -1,11 +1,12 @@
 ---
-/** Written enquiry: prepare a draft locally, then send from your own mail app. */
+/** Written enquiry sent directly through the same-origin contact handler. */
 import { Image, Picture, getImage } from 'astro:assets';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import InnerHeader from '@components/layout/InnerHeader.astro';
 import NeuralPlexus from '@components/ui/NeuralPlexus.svelte';
 import FaqSection from '@components/sections/FaqSection.astro';
 import ContactFunnel from '@components/contact/ContactFunnel.svelte';
+import { CONTACT_LABELS } from '@/lib/contact-labels';
 import portrait from '@/assets/people/valerii-lens.png';
 import heroArt from '@/assets/contact/contact-hero.png';
 import { CONTACT_EMAIL } from '@/lib/site-config';
@@ -66,40 +67,18 @@ const copy = {
       'Hire an AI/web engineer directly — no sales inbox. You get a written reply within one business day: an honest read on fit, approach and budget.',
     h1: 'Start the conversation in writing',
     lede: t('en', 'contact.lede'),
-    formHeading: 'four questions',
+    formHeading: t('en', 'contact.formHeading'),
     directPre: 'Prefer plain email? Write to ',
     directPost: ' — same promise, same person.',
     answerer: t('en', 'contact.answerer'),
     answererAlt: 'Valerii Karpov, the engineer who replies, holding a lens to his eye',
-    backendNote:
-      'This form has no backend by design: your answers become an email in your own mail client, and nothing is sent or stored until you press Send there.',
+    backendNote: t('en', 'contact.backendNote'),
     linksLinePre: 'Not sure what to ask yet? The ',
     linksLineLadder: 'service ladder',
     linksLineMid: ' and prices are public, and ',
     linksLineTrust: 'Trust & Process',
     linksLinePost: ' answers the procurement questions in advance.',
-    labels: {
-      company: 'Company or website',
-      companyHint: 'acme.com',
-      task: 'What needs to be done?',
-      taskHint:
-        'A few sentences are enough: what you sell, what should change, what made you look for help now.',
-      budget: 'Budget range',
-      timeline: 'When',
-      choose: 'Choose…',
-      submit: 'Compose the email',
-      successHeading: 'Your email is drafted',
-      successBody:
-        'The button opens the draft in your own mail client — nothing is sent until you press Send there. This form has no backend, by design: your answers exist only in this tab and in the email you control. Send it, and a written reply lands within one business day. If no mail app opens, use the address below the form — same email, same promise.',
-      openMail: 'Open the email draft',
-      editAnswers: 'Edit your answers',
-      replyPromise: t('en', 'contact.replyPromise'),
-      errors: {
-        required: 'This one is needed to answer you properly.',
-        'too-short': 'Add a sentence or two — enough to answer in writing.',
-        'too-long': 'That is more than the field can hold — trim it a little.',
-      },
-    },
+    labels: CONTACT_LABELS.en,
   },
   ru: {
     title: 'Связаться с AI-инженером | VKVstudio',
@@ -107,13 +86,12 @@ const copy = {
       'Напишите инженеру напрямую — без отдела продаж. Письменный ответ в течение одного рабочего дня: честная оценка задачи, подхода и бюджета.',
     h1: 'Начните разговор с письма',
     lede: t('ru', 'contact.lede'),
-    formHeading: 'четыре вопроса',
+    formHeading: t('ru', 'contact.formHeading'),
     directPre: 'Привычнее написать напрямую? Пишите на ',
     directPost: ' — обещание то же, человек тот же.',
     answerer: t('ru', 'contact.answerer'),
     answererAlt: 'Валерий Карпов — инженер, который ответит, — с лупой у глаза',
-    backendNote:
-      'У этой формы намеренно нет бэкенда: ответы превращаются в письмо в вашем почтовом клиенте, и ничего не отправляется и не сохраняется, пока вы сами не нажмёте «Отправить».',
+    backendNote: t('ru', 'contact.backendNote'),
     linksLinePre: 'Не знаете, с чего начать? ',
     // The link label is the destination, not the whole clause — and the
     // fragment after it must not OPEN with punctuation: the template puts a
@@ -124,28 +102,7 @@ const copy = {
     linksLineMid: ' и цены открыты, а ',
     linksLineTrust: '«Доверие и процесс»',
     linksLinePost: ' заранее отвечает на вопросы отдела закупок.',
-    labels: {
-      company: 'Компания или сайт',
-      companyHint: 'acme.com',
-      task: 'Что нужно сделать?',
-      taskHint:
-        'Достаточно нескольких предложений: что вы продаёте, что должно измениться, почему стали искать помощь именно сейчас.',
-      budget: 'Вилка бюджета',
-      timeline: 'Когда',
-      choose: 'Выберите…',
-      submit: 'Составить письмо',
-      successHeading: 'Письмо готово',
-      successBody:
-        'Кнопка откроет черновик в вашем почтовом клиенте — ничего не отправится, пока вы сами не нажмёте «Отправить». Бэкенда у формы нет, намеренно: ваши ответы существуют только в этой вкладке и в письме, которым управляете вы. Отправьте — и письменный ответ придёт в течение одного рабочего дня. Если почтовый клиент не открылся, напишите на адрес под формой — то же письмо, то же обещание.',
-      openMail: 'Открыть черновик письма',
-      editAnswers: 'Изменить ответы',
-      replyPromise: t('ru', 'contact.replyPromise'),
-      errors: {
-        required: 'Без этого не получится ответить предметно.',
-        'too-short': 'Ещё предложение-два — чтобы ответить письменно и по делу.',
-        'too-long': 'Это больше, чем вмещает поле, — сократите немного.',
-      },
-    },
+    labels: CONTACT_LABELS.ru,
   },
 }[lang];
 
@@ -314,13 +271,13 @@ const jsonLd = [
           <p class="contact-answerer__text">{copy.answerer}</p>
         </div>
         <ContactFunnel
-          client:visible
+          client:idle
           lang={lang}
           labels={copy.labels}
           localPreviewUrl={localPreviewUrl}
         />
         {
-          /* The strongest trust claim on the page ("no backend, by design")
+          /* The delivery note describes the form's actual server behavior
              previously lived only inside the Svelte success panel — serialized
              island props a crawler never renders. This is the same claim as
              plain server-rendered text, so it ships in the HTML a machine
@@ -481,7 +438,7 @@ const jsonLd = [
    * this project before.
    *
    * The ContactFunnel island is deliberately NOT a target: it is
-   * `client:visible`, and hiding its wrapper would postpone hydration and tie
+   * an idle-hydrated island; hiding its wrapper must not tie
    * a working form to a motion library.
    */
   async function initContactMotion(): Promise<void> {

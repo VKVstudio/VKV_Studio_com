@@ -350,7 +350,11 @@
         })
       );
 
-      if (myRequestId !== latestRequestId) return; // superseded — discard the stale result
+      if (myRequestId !== latestRequestId || selectedModel.id !== model.id
+        || snapshot.some((item) => {
+          const current = blocks.find((block) => block.id === item.id);
+          return !current || getCountText(current) !== item.text;
+        })) return;
 
       if (hasChanges) {
         for (const res of results) {
@@ -398,10 +402,17 @@
     // the toggle flips or a variable value changes).
     const snapshot = blocks.map((b) => ({ id: b.id, text: getCountText(b) }));
     clearTimeout(debounceTimer);
+    activeController?.abort();
+    latestRequestId++;
+    isCalculating = true;
     debounceTimer = setTimeout(() => {
       void recomputeTokens(snapshot, currentModel);
     }, 300);
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      clearTimeout(debounceTimer);
+      activeController?.abort();
+      latestRequestId++;
+    };
   });
 
   // ─── DnD ───────────────────────────────────────────────────────────────────

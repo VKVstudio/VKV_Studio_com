@@ -58,7 +58,7 @@ const cards = [
     <div class="lab__grid" role="list">
       {
         cards.map((card, index) => (
-          <div class="lab__card-wrap js-lab-card" style={`--card-index: ${index}`} role="listitem">
+          <div class="lab__card-wrap js-lab-card" data-card-index={index} role="listitem">
             <MagneticCard client:visible strength={0.2}>
               <a
                 href={card.href}

@@ -1,0 +1,32 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import InnerHeader from '@components/layout/InnerHeader.astro';
+import LabSection from '@components/sections/LabSection.astro';
+import { supportedLangs, t, type Lang } from '@i18n/utils';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths = (() => supportedLangs.map((lang) => ({ params: { lang } }))) satisfies GetStaticPaths;
+const { lang } = Astro.params as { lang: Lang };
+const description = lang === 'en'
+  ? 'Try VKVstudio’s free AI tools: compare tokens, build structured prompts and explore embeddings. Then discuss a practical web or AI project in writing.'
+  : 'Бесплатные AI-инструменты VKVstudio: сравнение токенов, сборка промптов и исследование эмбеддингов. Обсудите практический веб- или AI-проект письменно.';
+---
+
+<BaseLayout title={`${t(lang, 'lab.title')} | VKVstudio`} description={description} lang={lang}>
+  <main id="main-content" class="lab-index">
+    <InnerHeader lang={lang} />
+    <header class="lab-index__heading container">
+      <p class="text-mono">VKVstudio / Lab</p>
+      <h1>{t(lang, 'lab.title')}</h1>
+      <p>{t(lang, 'lab.subtitle')}</p>
+    </header>
+    <LabSection lang={lang} />
+  </main>
+</BaseLayout>
+
+<style>
+  .lab-index { padding-top: var(--space-6); }
+  .lab-index__heading { padding-block: var(--space-12); }
+  h1 { margin-block: var(--space-4); font-size: var(--text-h1); line-height: var(--leading-tight); color: var(--text-primary); }
+  .lab-index__heading > p:last-child { max-width: 65ch; color: var(--text-secondary); font-size: var(--text-lg); }
+</style>

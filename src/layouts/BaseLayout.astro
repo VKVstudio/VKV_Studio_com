@@ -316,13 +316,9 @@ const ogImageAlt =
     <!-- One connected graph, not three disconnected copies of the same human.
          Every node carries an @id and references the others by @id, so a search
          engine resolves "Valerii Karpov", "VKVstudio" and this website to one
-         entity instead of guessing. The Organization node exists to state, in
-         machine-readable form, that there is a REGISTERED business behind the
-         site — the state registration number, taxpayer number and activity code
-         are public register data and are what separates a real company from a
-         personal page. Identity-document numbers are deliberately absent, and
-         the address is city-level: enough to establish jurisdiction, not enough
-         to locate a person. -->
+         entity instead of guessing. The graph describes the studio, its author,
+         the city-level business location and remote markets. Registration,
+         taxpayer and identity-document numbers are deliberately absent. -->
     <script
       type="application/ld+json"
       set:html={ldjson({
