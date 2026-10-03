@@ -65,6 +65,51 @@ function transport(
 }
 
 describe('same-origin direct contact delivery', () => {
+  it.each([302, 307])(
+    'rejects Turnstile redirect %i without invoking the email provider',
+    async (status) => {
+      const mock = vi.fn<typeof fetch>(async (url, init) => {
+        expect(String(url)).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        expect(init?.redirect).toBe('manual');
+        return new Response(null, {
+          status,
+          headers: { Location: 'https://untrusted.example/collect' },
+        });
+      });
+      const response = await handleContactRequest(request(), env, mock);
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ ok: false, code: 'unavailable' });
+      expect(mock).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each([302, 307])(
+    'rejects email provider redirect %i without retry or token forwarding',
+    async (status) => {
+      const mock = vi.fn<typeof fetch>(async (url, init) => {
+        expect(init?.redirect).toBe('manual');
+        if (String(url).endsWith('/siteverify')) {
+          return Response.json({
+            success: true,
+            hostname: 'vkvstudio.com',
+            action: 'project_enquiry',
+          });
+        }
+        expect(String(url)).toBe(
+          'https://api.cloudflare.com/client/v4/accounts/' + 'a'.repeat(32) + '/email/sending/send'
+        );
+        return new Response(null, {
+          status,
+          headers: { Location: 'https://untrusted.example/collect' },
+        });
+      });
+      const response = await handleContactRequest(request(), env, mock);
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ ok: false, code: 'unavailable' });
+      expect(mock).toHaveBeenCalledTimes(2);
+    }
+  );
+
   it('uses fixed destinations, first-class reply_to and plain text only', async () => {
     const mock = transport();
     const response = await handleContactRequest(request(), env, mock);
@@ -87,7 +132,7 @@ describe('same-origin direct contact delivery', () => {
     });
     expect(mail).not.toHaveProperty('html');
     expect(mail).not.toHaveProperty('headers');
-    expect(init?.redirect).toBe('error');
+    expect(init?.redirect).toBe('manual');
     expect(init?.signal).toBeInstanceOf(AbortSignal);
     const verification = JSON.parse(String(mock.mock.calls[0]?.[1]?.body)) as Record<
       string,

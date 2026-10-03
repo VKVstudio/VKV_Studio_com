@@ -64,7 +64,7 @@ function checkSignature(init: RequestInit | undefined, method: string, path: str
   expect(headers.get('X-VKV-Relay-Nonce')).toMatch(/^[A-Za-z\d_-]{32}$/);
   expect(headers.get('X-VKV-Relay-Time')).toMatch(/^[1-9]\d{9}$/);
   expect(headers.has('Authorization')).toBe(false);
-  expect(init?.redirect).toBe('error');
+  expect(init?.redirect).toBe('manual');
   expect(init?.signal).toBeInstanceOf(AbortSignal);
 }
 
@@ -217,6 +217,27 @@ describe('fixed Workspace relay transport', () => {
 });
 
 describe('authenticated readiness', () => {
+  it.each([302, 307])(
+    'rejects readiness redirect %i without following or caching it',
+    async (status) => {
+      const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
+      const mock = vi.fn<typeof fetch>(
+        async () =>
+          new Response(null, {
+            status,
+            headers: { Location: 'https://untrusted.example/collect' },
+          })
+      );
+      expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+      expect(mock).toHaveBeenCalledTimes(1);
+      expect(mock.mock.calls[0]?.[0]).toBe(CONTACT_RELAY_URL + '/readiness');
+      expect(mock.mock.calls[0]?.[1]?.redirect).toBe('manual');
+      expect(diagnostic.mock.calls).toEqual([[{ code: 'relay-http-status', status }]]);
+      expect(await contactRelayReady(env, mock, diagnostic)).toBe(false);
+      expect(mock).toHaveBeenCalledTimes(2);
+    }
+  );
+
   it('diagnoses invalid configuration without upstream work', async () => {
     const diagnostic = vi.fn<(event: ContactReadinessDiagnostic) => void>();
     const mock = vi.fn<typeof fetch>();
@@ -355,6 +376,48 @@ describe('authenticated readiness', () => {
 });
 
 describe('relay integration retains the Pages boundary', () => {
+  it.each([302, 307])(
+    'rejects Turnstile redirect %i before any relay submission',
+    async (status) => {
+      const mock = vi.fn<typeof fetch>(async (url, init) => {
+        if (String(url) === CONTACT_RELAY_URL + '/readiness') {
+          expect(init?.redirect).toBe('manual');
+          return Response.json({ ok: true, transport: 'workspace-smtp' });
+        }
+        expect(String(url)).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        expect(init?.redirect).toBe('manual');
+        return new Response(null, {
+          status,
+          headers: { Location: 'https://untrusted.example/collect' },
+        });
+      });
+      const response = await handleContactRequest(enquiry(), env, mock);
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ ok: false, code: 'unavailable' });
+      expect(mock).toHaveBeenCalledTimes(2);
+      expect(mock.mock.calls.map(([url]) => String(url))).toEqual([
+        CONTACT_RELAY_URL + '/readiness',
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      ]);
+    }
+  );
+
+  it.each([302, 307])(
+    'treats relay delivery redirect %i as unknown with no retry or forwarded credentials',
+    async (status) => {
+      const mock = vi.fn<typeof fetch>(async (url, init) => {
+        expect(String(url)).toBe(CONTACT_RELAY_URL);
+        expect(init?.redirect).toBe('manual');
+        return new Response(null, {
+          status,
+          headers: { Location: 'https://untrusted.example/collect' },
+        });
+      });
+      expect(await deliverContactRelay(env, mail, mock)).toBe('unknown');
+      expect(mock).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('throttles safe GET diagnostics across failures and never adds public fields or headers', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     // Advance beyond earlier test events; the throttle is shared across configurations.

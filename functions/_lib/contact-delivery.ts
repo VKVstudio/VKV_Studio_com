@@ -291,7 +291,7 @@ export async function handleContactRequest(
   try {
     const verification = await requestFetch(SITEVERIFY_URL, {
       method: 'POST',
-      redirect: 'error',
+      redirect: 'manual',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         secret: env.CONTACT_TURNSTILE_SECRET,
@@ -339,7 +339,7 @@ export async function handleContactRequest(
       `https://api.cloudflare.com/client/v4/accounts/${env.CONTACT_EMAIL_ACCOUNT_ID}/email/sending/send`,
       {
         method: 'POST',
-        redirect: 'error',
+        redirect: 'manual',
         headers: {
           Authorization: `Bearer ${env.CONTACT_EMAIL_API_TOKEN}`,
           'Content-Type': 'application/json',

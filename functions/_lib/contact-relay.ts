@@ -169,7 +169,8 @@ async function signedRequest(
     method,
     headers,
     ...(method === 'POST' ? { body } : {}),
-    redirect: 'error',
+    // workerd rejects redirect: 'error'; manual preserves the original status without following.
+    redirect: 'manual',
     signal: AbortSignal.timeout(method === 'GET' ? 3000 : 10_000),
   };
 }
