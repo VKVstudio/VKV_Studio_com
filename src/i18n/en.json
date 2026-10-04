@@ -50,18 +50,30 @@
   "auditProof": {
     "eyebrow": "Independent checks",
     "heading": "Measured, not promised.",
-    "lead": "Three A+ configuration ratings. A 100 desktop performance score and 99 on mobile. Open the original reports and see the measurements.",
+    "lead": "A beautiful website should be just as strong beneath the surface. Three A+ security configuration ratings. PageSpeed: 6/6 for AI agents and four 100s on desktop. The evidence is one click away.",
     "categories": {
       "tls": "TLS configuration",
       "headers": "HTTP headers",
       "browser": "Browser protections",
-      "pagespeed": "Lab performance"
+      "pagespeed": "Website quality"
     },
     "gradeContext": {
       "tls": "TLS grade",
       "headers": "Header grade",
       "browser": "Observatory grade",
-      "pagespeed": "Desktop performance"
+      "pagespeed": "Agentic browsing"
+    },
+    "hooks": {
+      "tls": "Trust from the first connection.",
+      "headers": "Protection before the first click.",
+      "browser": "Mozilla gives it top marks.",
+      "pagespeed": "A site AI agents can understand."
+    },
+    "descriptions": {
+      "tls": "Encryption protects data in transit. Our HTTPS configuration earns the highest grade.",
+      "headers": "Browser rules against harmful scripts and deceptive clicks.",
+      "browser": "Security configuration passed all 12 Mozilla checks.",
+      "pagespeed": "All 6 agentic browsing checks passed. Plus 100 in every desktop category."
     },
     "browserScore": "140/100 points · 12/12 checks · bonus points included",
     "pageSpeedMobile": "Mobile performance 99",
@@ -69,7 +81,7 @@
     "pageSpeedAgentic": "Agentic audit 6/6",
     "scanned": "Checked",
     "viewEvidence": "View evidence",
-    "openCapture": "View report snapshot",
+    "openCapture": "See the evidence",
     "darkPreview": "Colours adapted for dark viewing",
     "captureAlt": "Report capture from {source}",
     "captureAltMode": "Report capture from {source}, {mode} mode",
