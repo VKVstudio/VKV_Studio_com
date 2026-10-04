@@ -69,10 +69,30 @@
     "pageSpeedAgentic": "Agentic-аудит 6 из 6",
     "scanned": "Проверено",
     "viewEvidence": "Смотреть подтверждение",
-    "openCapture": "Открыть в полном размере",
+    "openCapture": "Посмотреть снимок отчёта",
     "darkPreview": "Цвета адаптированы для тёмного просмотра",
     "captureAlt": "Снимок отчёта {source}",
     "captureAltMode": "Снимок отчёта {source}, режим {mode}",
+    "modal": {
+      "close": "Закрыть отчёт",
+      "label": "Снимок отчёта",
+      "overview": "Обзор оценок",
+      "fullReport": "Открыть полный отчёт",
+      "deviceChoice": "Выбрать устройство",
+      "sourceNote": "Исходный отчёт на английском.",
+      "previousReport": "Предыдущий отчёт",
+      "nextReport": "Следующий отчёт",
+      "reportPosition": "Отчёт {current} из {total}",
+      "reportNavigation": "Просмотр отчётов",
+      "reportAnnouncement": "{source}, отчёт {current} из {total}"
+    },
+    "metrics": {
+      "performance": "Производительность",
+      "accessibility": "Доступность",
+      "bestPractices": "Рекомендации",
+      "seo": "SEO",
+      "agentic": "Агентный просмотр"
+    },
     "viewer": {
       "title": "{source} — снимок в полном размере",
       "label": "Снимок отчёта",

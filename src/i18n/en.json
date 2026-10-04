@@ -69,10 +69,30 @@
     "pageSpeedAgentic": "Agentic audit 6/6",
     "scanned": "Checked",
     "viewEvidence": "View evidence",
-    "openCapture": "Open full-size capture",
+    "openCapture": "View report snapshot",
     "darkPreview": "Colours adapted for dark viewing",
     "captureAlt": "Report capture from {source}",
     "captureAltMode": "Report capture from {source}, {mode} mode",
+    "modal": {
+      "close": "Close report",
+      "label": "Report snapshot",
+      "overview": "Score overview",
+      "fullReport": "View full report",
+      "deviceChoice": "Choose device",
+      "sourceNote": "Original report in English.",
+      "previousReport": "Previous report",
+      "nextReport": "Next report",
+      "reportPosition": "Report {current} of {total}",
+      "reportNavigation": "Browse audit reports",
+      "reportAnnouncement": "{source}, report {current} of {total}"
+    },
+    "metrics": {
+      "performance": "Performance",
+      "accessibility": "Accessibility",
+      "bestPractices": "Best Practices",
+      "seo": "SEO",
+      "agentic": "Agentic browsing"
+    },
     "viewer": {
       "title": "{source} — full-size capture",
       "label": "Report capture",

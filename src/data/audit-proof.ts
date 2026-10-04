@@ -4,6 +4,7 @@ interface AuditCapture {
   width: number;
   height: number;
   mode?: 'mobile' | 'desktop';
+  scores?: readonly { labelKey: string; value: string }[];
 }
 
 export interface AuditProof {
@@ -23,13 +24,13 @@ export const AUDIT_PROOFS: readonly AuditProof[] = [
     source: 'Qualys SSL Labs',
     grade: 'A+',
     gradeContextKey: 'auditProof.gradeContext.tls',
-    scannedAt: '2026-10-03T20:23:00Z',
+    scannedAt: '2026-10-04T16:48:15Z',
     reportUrl: 'https://www.ssllabs.com/ssltest/analyze.html?d=vkvstudio.com&hideResults=on&latest',
     captures: [
       {
-        src: '/audit-proofs/2026-10-04/ssl-labs.jpg',
-        width: 1707,
-        height: 932,
+        src: '/audit-proofs/2026-10-04/ssl-labs-summary-v3.jpg',
+        width: 1102,
+        height: 675,
       },
     ],
   },
@@ -76,16 +77,30 @@ export const AUDIT_PROOFS: readonly AuditProof[] = [
       'https://pagespeed.web.dev/analysis/https-vkvstudio-com-en/lgvn1qn9a2?form_factor=mobile&hl=en',
     captures: [
       {
-        src: '/audit-proofs/2026-10-04/pagespeed-mobile.jpg',
-        width: 1692,
-        height: 868,
+        src: '/audit-proofs/2026-10-04/pagespeed-mobile-summary-v3.jpg',
+        width: 1280,
+        height: 831,
         mode: 'mobile',
+        scores: [
+          { labelKey: 'auditProof.metrics.performance', value: '99' },
+          { labelKey: 'auditProof.metrics.accessibility', value: '100' },
+          { labelKey: 'auditProof.metrics.bestPractices', value: '100' },
+          { labelKey: 'auditProof.metrics.seo', value: '100' },
+          { labelKey: 'auditProof.metrics.agentic', value: '6/6' },
+        ],
       },
       {
-        src: '/audit-proofs/2026-10-04/pagespeed-desktop.jpg',
-        width: 1692,
-        height: 868,
+        src: '/audit-proofs/2026-10-04/pagespeed-desktop-summary-v3.jpg',
+        width: 1280,
+        height: 831,
         mode: 'desktop',
+        scores: [
+          { labelKey: 'auditProof.metrics.performance', value: '100' },
+          { labelKey: 'auditProof.metrics.accessibility', value: '100' },
+          { labelKey: 'auditProof.metrics.bestPractices', value: '100' },
+          { labelKey: 'auditProof.metrics.seo', value: '100' },
+          { labelKey: 'auditProof.metrics.agentic', value: '6/6' },
+        ],
       },
     ],
     scoreKeys: [

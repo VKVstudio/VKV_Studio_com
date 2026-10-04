@@ -14,6 +14,11 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
   year: 'numeric',
   timeZone: 'Asia/Yerevan',
 });
+const initialProof = AUDIT_PROOFS[0];
+if (!initialProof) throw new Error('Audit proof data must include at least one report.');
+const initialPosition = t(lang, 'auditProof.modal.reportPosition')
+  .replace('{current}', '1')
+  .replace('{total}', String(AUDIT_PROOFS.length));
 ---
 
 <section class="audit-proof" id="audit-proof" aria-labelledby="audit-proof-heading">
@@ -26,120 +31,726 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
 
     <ul class="audit-proof__grid">
       {
-        AUDIT_PROOFS.map((proof) => (
-          <li class="audit-proof__item">
-            <details class="audit-proof__details">
-              <summary class="audit-proof__summary">
-                <span class="audit-proof__category text-mono">
+        AUDIT_PROOFS.map((proof) => {
+          const capture = proof.captures[0];
+          if (!capture) return null;
+          return (
+            <li class="audit-proof__item">
+              <a
+                class="audit-proof__card"
+                href={`/${lang}/audit-proofs/${proof.id}${capture.mode ? `-${capture.mode}` : ''}/`}
+                data-audit-trigger
+                data-audit-proof={proof.id}
+                data-audit-panel={`audit-proof-panel-${proof.id}-${capture.mode ?? 'overview'}`}
+                aria-haspopup="dialog"
+                aria-controls="audit-proof-dialog"
+              >
+                <span class="audit-proof__card-top text-mono">
                   {t(lang, `auditProof.categories.${proof.id}`)}
                 </span>
-                <span class="audit-proof__grade text-mono">{proof.grade}</span>
-                <span class="audit-proof__grade-context">{t(lang, proof.gradeContextKey)}</span>
-                <span class="audit-proof__source">{proof.source}</span>
-                <span class="audit-proof__scores">
-                  {proof.scoreKeys?.map((key) => (
-                    <span>{t(lang, key)}</span>
-                  ))}
+                <span class="audit-proof__card-art" aria-hidden="true">
+                  <span class="audit-proof__grade text-mono">{proof.grade}</span>
                 </span>
-                <span class="audit-proof__date">
-                  {t(lang, 'auditProof.scanned')}:{' '}
-                  <time datetime={proof.scannedAt}>
-                    {dateFormatter.format(new Date(proof.scannedAt))}
-                  </time>
-                </span>
-                <span class="audit-proof__reveal text-mono">
-                  {t(lang, 'auditProof.viewEvidence')}
-                  <span class="audit-proof__toggle" aria-hidden="true">
-                    <span class="audit-proof__expand">+</span>
-                    <span class="audit-proof__collapse">−</span>
+                <span class="audit-proof__card-halo" aria-hidden="true" />
+                <span class="audit-proof__card-glass" aria-hidden="true" />
+                <span class="audit-proof__card-info">
+                  <span class="audit-proof__source">{proof.source}</span>
+                  <span class="audit-proof__verified">
+                    <span class="audit-proof__verified-value text-mono">{proof.grade}</span>
+                    <span class="audit-proof__grade-context">{t(lang, proof.gradeContextKey)}</span>
+                  </span>
+                  <span class="audit-proof__scores">
+                    {proof.scoreKeys?.map((key) => (
+                      <span>{t(lang, key)}</span>
+                    ))}
+                  </span>
+                  <span class="audit-proof__date">
+                    {t(lang, 'auditProof.scanned')}:{' '}
+                    <time datetime={proof.scannedAt}>
+                      {dateFormatter.format(new Date(proof.scannedAt))}
+                    </time>
+                  </span>
+                  <span class="audit-proof__reveal text-mono">
+                    {t(lang, 'auditProof.openCapture')}
+                    <span aria-hidden="true">↗</span>
                   </span>
                 </span>
-              </summary>
-
-              <div class="audit-proof__evidence">
-                {proof.captures.map((capture) => {
-                  const modeLabel = capture.mode
-                    ? t(lang, `auditProof.modes.${capture.mode}`)
-                    : null;
-                  const actionLabel = modeLabel
-                    ? `${t(lang, 'auditProof.openCapture')} — ${modeLabel}`
-                    : t(lang, 'auditProof.openCapture');
-                  const captureAlt = t(
-                    lang,
-                    modeLabel ? 'auditProof.captureAltMode' : 'auditProof.captureAlt'
-                  )
-                    .replace('{source}', proof.source)
-                    .replace('{mode}', modeLabel ?? '');
-
-                  return (
-                    <a
-                      class="audit-proof__capture"
-                      href={`/${lang}/audit-proofs/${proof.id}${capture.mode ? `-${capture.mode}` : ''}/`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {modeLabel && (
-                        <span class="audit-proof__capture-mode text-mono">{modeLabel}</span>
-                      )}
-                      <img
-                        class:list={{ 'audit-proof__capture-image--light': proof.id !== 'browser' }}
-                        src={capture.src}
-                        width={capture.width}
-                        height={capture.height}
-                        loading="lazy"
-                        decoding="async"
-                        alt={captureAlt}
-                      />
-                      {proof.id !== 'browser' && (
-                        <span class="audit-proof__capture-note">
-                          {t(lang, 'auditProof.darkPreview')}
-                        </span>
-                      )}
-                      <span class="audit-proof__capture-action text-mono">
-                        {actionLabel} <span aria-hidden="true">↗</span>
-                      </span>
-                    </a>
-                  );
-                })}
-                <a
-                  class="audit-proof__report-link text-mono"
-                  href={proof.reportUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${t(lang, 'auditProof.openReport')} — ${proof.source}`}
-                >
-                  {t(lang, 'auditProof.openReport')} <span aria-hidden="true">↗</span>
-                </a>
-              </div>
-            </details>
-          </li>
-        ))
+              </a>
+            </li>
+          );
+        })
       }
     </ul>
 
     <p class="audit-proof__scope">{t(lang, 'auditProof.scope')}</p>
   </div>
+
+  <dialog
+    class="audit-proof__dialog"
+    id="audit-proof-dialog"
+    aria-labelledby="audit-proof-dialog-heading"
+    aria-describedby="audit-proof-dialog-note"
+    data-lenis-prevent
+  >
+    <header class="audit-proof__dialog-header">
+      <div class="audit-proof__dialog-heading">
+        <p class="audit-proof__dialog-eyebrow text-mono" data-audit-category>
+          {t(lang, `auditProof.categories.${initialProof.id}`)}
+        </p>
+        <h3 id="audit-proof-dialog-heading" data-audit-heading>{initialProof.source}</h3>
+        <p class="audit-proof__dialog-date">
+          {t(lang, 'auditProof.scanned')}:{' '}
+          <time datetime={initialProof.scannedAt} data-audit-date>
+            {dateFormatter.format(new Date(initialProof.scannedAt))}
+          </time>
+        </p>
+      </div>
+      <div
+        class="audit-proof__report-navigation"
+        role="group"
+        aria-label={t(lang, 'auditProof.modal.reportNavigation')}
+      >
+        <button
+          class="audit-proof__report-nav-button"
+          type="button"
+          data-audit-previous
+          aria-label={t(lang, 'auditProof.modal.previousReport')}
+          aria-controls="audit-proof-reports"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m14 6-6 6 6 6" stroke="currentColor" stroke-width="1.5"></path>
+          </svg>
+        </button>
+        <span
+          class="audit-proof__report-position text-mono"
+          data-audit-position
+          data-audit-position-template={t(lang, 'auditProof.modal.reportPosition')}
+          aria-label={initialPosition}>1 / {AUDIT_PROOFS.length}</span
+        >
+        <button
+          class="audit-proof__report-nav-button"
+          type="button"
+          data-audit-next
+          aria-label={t(lang, 'auditProof.modal.nextReport')}
+          aria-controls="audit-proof-reports"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m10 6 6 6-6 6" stroke="currentColor" stroke-width="1.5"></path>
+          </svg>
+        </button>
+      </div>
+      <button
+        class="audit-proof__dialog-close"
+        type="button"
+        data-audit-close
+        aria-label={t(lang, 'auditProof.modal.close')}
+        autofocus
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.5"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div
+      class="audit-proof__dialog-body"
+      id="audit-proof-reports"
+      data-audit-scroll
+      data-lenis-prevent
+    >
+      {
+        AUDIT_PROOFS.map((proof, proofIndex) => (
+          <div
+            class="audit-proof__report-panel"
+            data-audit-report-panel
+            data-audit-proof={proof.id}
+            data-audit-source={proof.source}
+            data-audit-category-label={t(lang, `auditProof.categories.${proof.id}`)}
+            data-audit-scanned-at={proof.scannedAt}
+            data-audit-date-label={dateFormatter.format(new Date(proof.scannedAt))}
+            data-audit-report-label={`${t(lang, 'auditProof.openReport')} — ${proof.source}`}
+            hidden={proofIndex !== 0}
+          >
+            {proof.captures.length > 1 && (
+              <div
+                class="audit-proof__device-switch"
+                role="group"
+                aria-label={t(lang, 'auditProof.modal.deviceChoice')}
+              >
+                {proof.captures.map((capture, index) => (
+                  <button
+                    class="audit-proof__device-button text-mono"
+                    type="button"
+                    data-audit-select={`audit-proof-panel-${proof.id}-${capture.mode ?? 'overview'}`}
+                    aria-controls={`audit-proof-panel-${proof.id}-${capture.mode ?? 'overview'}`}
+                    aria-pressed={index === 0}
+                  >
+                    {t(lang, `auditProof.modes.${capture.mode}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {proof.captures.map((capture, index) => {
+              const panelId = `audit-proof-panel-${proof.id}-${capture.mode ?? 'overview'}`;
+              const modeLabel = capture.mode ? t(lang, `auditProof.modes.${capture.mode}`) : '';
+              const captureAlt = t(
+                lang,
+                capture.mode ? 'auditProof.captureAltMode' : 'auditProof.captureAlt'
+              )
+                .replace('{source}', proof.source)
+                .replace('{mode}', modeLabel);
+              const reportUrl = new URL(proof.reportUrl);
+              if (proof.id === 'pagespeed' && capture.mode) {
+                reportUrl.searchParams.set('form_factor', capture.mode);
+              }
+
+              return (
+                <div
+                  class="audit-proof__dialog-panel"
+                  id={panelId}
+                  data-audit-panel
+                  data-audit-report-url={reportUrl.href}
+                  hidden={index !== 0}
+                >
+                  {proof.id === 'pagespeed' && capture.scores && capture.scores.length > 0 && (
+                    <div class="audit-proof__score-summary">
+                      <p
+                        class="audit-proof__dialog-caption text-mono"
+                        id={`${panelId}-scores-heading`}
+                      >
+                        <span>{t(lang, 'auditProof.modal.overview')}</span>
+                        <span class="audit-proof__dialog-mode">{modeLabel}</span>
+                      </p>
+                      <dl
+                        class="audit-proof__score-grid"
+                        aria-labelledby={`${panelId}-scores-heading`}
+                      >
+                        {capture.scores.map((score) => (
+                          <div class="audit-proof__score-metric">
+                            <dt>{t(lang, score.labelKey)}</dt>
+                            <dd class="audit-proof__score-value text-mono">{score.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                  <figure class="audit-proof__dialog-snapshot">
+                    <figcaption class="audit-proof__dialog-caption text-mono">
+                      <span>{t(lang, 'auditProof.modal.label')}</span>
+                      {modeLabel && !capture.scores?.length && (
+                        <span class="audit-proof__dialog-mode">{modeLabel}</span>
+                      )}
+                    </figcaption>
+                    {proof.id === 'pagespeed' ? (
+                      <div class="audit-proof__dialog-image-frame">
+                        <img
+                          class="audit-proof__dialog-image audit-proof__capture-image--light"
+                          data-src={capture.src}
+                          width={capture.width}
+                          height={capture.height}
+                          decoding="async"
+                          alt={captureAlt}
+                        />
+                      </div>
+                    ) : (
+                      <img
+                        class:list={{
+                          'audit-proof__dialog-image': true,
+                          'audit-proof__capture-image--light': proof.id !== 'browser',
+                        }}
+                        data-src={capture.src}
+                        width={capture.width}
+                        height={capture.height}
+                        decoding="async"
+                        alt={captureAlt}
+                      />
+                    )}
+                  </figure>
+                </div>
+              );
+            })}
+          </div>
+        ))
+      }
+    </div>
+
+    <footer class="audit-proof__dialog-footer">
+      <p class="audit-proof__dialog-note" id="audit-proof-dialog-note">
+        {t(lang, 'auditProof.modal.sourceNote')}
+        <span data-audit-colour-note> {t(lang, 'auditProof.darkPreview')}.</span>
+      </p>
+      <a
+        class="audit-proof__dialog-report text-mono"
+        href={initialProof.reportUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-audit-report
+        aria-label={`${t(lang, 'auditProof.openReport')} — ${initialProof.source}`}
+      >
+        {t(lang, 'auditProof.modal.fullReport')}
+        <span aria-hidden="true">↗</span>
+      </a>
+    </footer>
+    <p
+      class="visually-hidden"
+      data-audit-announcement
+      data-audit-announcement-template={t(lang, 'auditProof.modal.reportAnnouncement')}
+      aria-live="polite"
+      aria-atomic="true"
+    >
+    </p>
+  </dialog>
 </section>
+
+<script>
+  interface AuditLenis {
+    readonly isStopped: boolean;
+    stop(): void;
+    start(): void;
+  }
+
+  interface AuditReportPanel {
+    element: HTMLElement;
+    id: string;
+    source: string;
+    category: string;
+    scannedAt: string;
+    dateLabel: string;
+    reportLabel: string;
+    captures: Map<string, HTMLElement>;
+    selectedCaptureId: string;
+  }
+
+  interface AuditSwipe {
+    pointerId: number;
+    x: number;
+    y: number;
+  }
+
+  const section = document.getElementById('audit-proof');
+  const dialog = section?.querySelector<HTMLDialogElement>('#audit-proof-dialog');
+
+  if (
+    section &&
+    typeof HTMLDialogElement !== 'undefined' &&
+    dialog &&
+    typeof dialog.showModal === 'function'
+  ) {
+    const motionAllowed = window.matchMedia('(prefers-reduced-motion: no-preference)');
+    const reports: AuditReportPanel[] = Array.from(
+      dialog.querySelectorAll<HTMLElement>('[data-audit-report-panel]')
+    ).flatMap((element): AuditReportPanel[] => {
+      const captures = new Map(
+        Array.from(element.querySelectorAll<HTMLElement>('[data-audit-panel]')).map((panel) => [
+          panel.id,
+          panel,
+        ])
+      );
+      const firstCaptureId = captures.keys().next().value;
+      const {
+        auditProof,
+        auditSource,
+        auditCategoryLabel,
+        auditScannedAt,
+        auditDateLabel,
+        auditReportLabel,
+      } = element.dataset;
+      if (
+        !firstCaptureId ||
+        !auditProof ||
+        !auditSource ||
+        !auditCategoryLabel ||
+        !auditScannedAt ||
+        !auditDateLabel ||
+        !auditReportLabel
+      )
+        return [];
+
+      return [
+        {
+          element,
+          id: auditProof,
+          source: auditSource,
+          category: auditCategoryLabel,
+          scannedAt: auditScannedAt,
+          dateLabel: auditDateLabel,
+          reportLabel: auditReportLabel,
+          captures,
+          selectedCaptureId: firstCaptureId,
+        },
+      ];
+    });
+    const heading = dialog.querySelector<HTMLElement>('[data-audit-heading]');
+    const category = dialog.querySelector<HTMLElement>('[data-audit-category]');
+    const date = dialog.querySelector<HTMLTimeElement>('[data-audit-date]');
+    const position = dialog.querySelector<HTMLElement>('[data-audit-position]');
+    const announcement = dialog.querySelector<HTMLElement>('[data-audit-announcement]');
+    const colourNote = dialog.querySelector<HTMLElement>('[data-audit-colour-note]');
+    const previousButton = dialog.querySelector<HTMLButtonElement>('[data-audit-previous]');
+    const nextButton = dialog.querySelector<HTMLButtonElement>('[data-audit-next]');
+    const closeButton = dialog.querySelector<HTMLButtonElement>('[data-audit-close]');
+    const reportLink = dialog.querySelector<HTMLAnchorElement>('[data-audit-report]');
+    const scrollArea = dialog.querySelector<HTMLElement>('[data-audit-scroll]');
+    const editableSelector =
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
+    const interactiveSelector = `a, button, summary, ${editableSelector}, [role="button"]`;
+    let activeIndex = 0;
+    let returnFocus: HTMLAnchorElement | null = null;
+    let preservedLock = false;
+    let pausedLenis: AuditLenis | null = null;
+    let pageIsLocked = false;
+    let closeRevision = 0;
+    let backdropPointerDown = false;
+    let swipe: AuditSwipe | null = null;
+
+    const getLenis = (): AuditLenis | undefined =>
+      (window as Window & { lenisInstance?: AuditLenis }).lenisInstance;
+
+    const lockPage = (): void => {
+      if (pageIsLocked) return;
+      preservedLock = document.documentElement.classList.contains('audit-proof-modal-open');
+      document.documentElement.classList.add('audit-proof-modal-open');
+      const lenis = getLenis();
+      if (lenis && !lenis.isStopped) {
+        pausedLenis = lenis;
+        lenis.stop();
+      }
+      pageIsLocked = true;
+    };
+
+    const unlockPage = (): void => {
+      if (!preservedLock) document.documentElement.classList.remove('audit-proof-modal-open');
+      if (pausedLenis && pausedLenis === getLenis() && pausedLenis.isStopped) {
+        pausedLenis.start();
+      }
+      pausedLenis = null;
+      pageIsLocked = false;
+    };
+
+    const resetReportMotion = (): void => {
+      reports.forEach((report) => {
+        report.element.getAnimations().forEach((animation) => animation.cancel());
+        delete report.element.dataset.direction;
+      });
+    };
+
+    const loadSelectedImage = (report: AuditReportPanel): void => {
+      if (!dialog.open) return;
+      const image = report.captures
+        .get(report.selectedCaptureId)
+        ?.querySelector<HTMLImageElement>('img[data-src]');
+      if (image?.dataset.src && !image.hasAttribute('src')) image.src = image.dataset.src;
+    };
+
+    const selectCapture = (report: AuditReportPanel, panelId: string): boolean => {
+      const selectedPanel = report.captures.get(panelId);
+      if (!selectedPanel) return false;
+      report.selectedCaptureId = panelId;
+      report.captures.forEach((panel) => {
+        panel.hidden = panel !== selectedPanel;
+      });
+      report.element
+        .querySelectorAll<HTMLButtonElement>('[data-audit-select]')
+        .forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.auditSelect === panelId));
+        });
+      if (reportLink && selectedPanel.dataset.auditReportUrl) {
+        reportLink.href = selectedPanel.dataset.auditReportUrl;
+        reportLink.setAttribute('aria-label', report.reportLabel);
+      }
+      loadSelectedImage(report);
+      if (scrollArea) scrollArea.scrollTop = 0;
+      return true;
+    };
+
+    const selectReport = (
+      index: number,
+      direction: 'next' | 'previous' | null,
+      panelId?: string
+    ): boolean => {
+      const selected = reports[index];
+      if (!selected || (panelId && !selected.captures.has(panelId))) return false;
+      const previous = reports[activeIndex];
+      const focusedBefore = document.activeElement;
+      const hidesFocusedControl =
+        previous !== selected &&
+        focusedBefore instanceof HTMLElement &&
+        previous?.element.contains(focusedBefore);
+      resetReportMotion();
+      reports.forEach((report) => {
+        report.element.hidden = report !== selected;
+      });
+      activeIndex = index;
+      if (heading) heading.textContent = selected.source;
+      if (category) category.textContent = selected.category;
+      if (date) {
+        date.dateTime = selected.scannedAt;
+        date.textContent = selected.dateLabel;
+      }
+      if (colourNote) colourNote.hidden = selected.id === 'browser';
+      dialog.classList.toggle('audit-proof__dialog--pagespeed', selected.id === 'pagespeed');
+      selectCapture(selected, panelId ?? selected.selectedCaptureId);
+      if (position) {
+        position.textContent = `${index + 1} / ${reports.length}`;
+        position.setAttribute(
+          'aria-label',
+          (position.dataset.auditPositionTemplate ?? '')
+            .replace('{current}', String(index + 1))
+            .replace('{total}', String(reports.length))
+        );
+      }
+      if (direction && previous !== selected) {
+        if (announcement)
+          announcement.textContent = (announcement.dataset.auditAnnouncementTemplate ?? '')
+            .replace('{source}', selected.source)
+            .replace('{current}', String(index + 1))
+            .replace('{total}', String(reports.length));
+        if (motionAllowed.matches) {
+          // Commit the cleared animation before starting this user-requested direction.
+          void selected.element.offsetWidth;
+          selected.element.dataset.direction = direction;
+        }
+        if (hidesFocusedControl)
+          (direction === 'next' ? nextButton : previousButton)?.focus({ preventScroll: true });
+      }
+      return true;
+    };
+
+    const navigateReport = (direction: 'next' | 'previous'): void => {
+      if (!dialog.open || dialog.dataset.closing === 'true' || reports.length < 2) return;
+      const delta = direction === 'next' ? 1 : -1;
+      selectReport((activeIndex + delta + reports.length) % reports.length, direction);
+    };
+
+    const requestClose = async (): Promise<void> => {
+      if (!dialog.open || dialog.dataset.closing === 'true') return;
+      const revision = ++closeRevision;
+      resetReportMotion();
+      swipe = null;
+      dialog.dataset.closing = 'true';
+      if (motionAllowed.matches) {
+        await Promise.allSettled(dialog.getAnimations().map((animation) => animation.finished));
+      }
+      if (revision === closeRevision && dialog.open) dialog.close();
+    };
+
+    const isBackdrop = (event: MouseEvent): boolean => {
+      if (event.target !== dialog) return false;
+      const bounds = dialog.getBoundingClientRect();
+      return (
+        event.clientX < bounds.left ||
+        event.clientX > bounds.right ||
+        event.clientY < bounds.top ||
+        event.clientY > bounds.bottom
+      );
+    };
+
+    previousButton?.addEventListener('click', () => navigateReport('previous'));
+    nextButton?.addEventListener('click', () => navigateReport('next'));
+    closeButton?.addEventListener('click', () => void requestClose());
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      void requestClose();
+    });
+    dialog.addEventListener('pointerdown', (event) => {
+      backdropPointerDown = isBackdrop(event);
+    });
+    dialog.addEventListener('click', (event) => {
+      if (backdropPointerDown && isBackdrop(event)) void requestClose();
+      backdropPointerDown = false;
+    });
+    dialog.addEventListener('close', () => {
+      if (dialog.open) return;
+      ++closeRevision;
+      resetReportMotion();
+      delete dialog.dataset.closing;
+      backdropPointerDown = false;
+      swipe = null;
+      if (pageIsLocked) unlockPage();
+      if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+      returnFocus = null;
+      if (announcement) announcement.textContent = '';
+    });
+    dialog.addEventListener('keydown', (event) => {
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.shiftKey ||
+        (event.target instanceof Element && event.target.closest(editableSelector))
+      )
+        return;
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      navigateReport(event.key === 'ArrowRight' ? 'next' : 'previous');
+    });
+
+    scrollArea?.addEventListener('pointerdown', (event) => {
+      swipe = null;
+      if (
+        event.pointerType !== 'touch' ||
+        !event.isPrimary ||
+        dialog.dataset.closing === 'true' ||
+        window.getSelection()?.isCollapsed === false ||
+        (event.target instanceof Element && event.target.closest(interactiveSelector))
+      )
+        return;
+      swipe = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    });
+    scrollArea?.addEventListener('pointercancel', () => {
+      swipe = null;
+    });
+    scrollArea?.addEventListener('pointerup', (event) => {
+      const start = swipe;
+      swipe = null;
+      if (
+        !start ||
+        event.pointerType !== 'touch' ||
+        event.pointerId !== start.pointerId ||
+        window.getSelection()?.isCollapsed === false ||
+        (event.target instanceof Element && event.target.closest(interactiveSelector))
+      )
+        return;
+      const deltaX = event.clientX - start.x;
+      const deltaY = event.clientY - start.y;
+      if (Math.abs(deltaX) >= 60 && Math.abs(deltaX) >= Math.abs(deltaY) * 1.5) {
+        navigateReport(deltaX < 0 ? 'next' : 'previous');
+      }
+    });
+
+    reports.forEach((report) => {
+      report.element
+        .querySelectorAll<HTMLButtonElement>('[data-audit-select]')
+        .forEach((button) => {
+          button.addEventListener('click', () => {
+            if (
+              dialog.open &&
+              dialog.dataset.closing !== 'true' &&
+              report === reports[activeIndex] &&
+              button.dataset.auditSelect
+            ) {
+              selectCapture(report, button.dataset.auditSelect);
+            }
+          });
+        });
+    });
+
+    section.querySelectorAll<HTMLAnchorElement>('a[data-audit-trigger]').forEach((trigger) => {
+      trigger.addEventListener('click', (event) => {
+        if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+
+        const index = reports.findIndex((report) => report.id === trigger.dataset.auditProof);
+        const panelId = trigger.dataset.auditPanel;
+        if (index < 0 || !panelId || !reports[index]?.captures.has(panelId)) return;
+        ++closeRevision;
+        dialog.getAnimations().forEach((animation) => animation.cancel());
+        delete dialog.dataset.closing;
+        if (!selectReport(index, null, panelId)) return;
+        try {
+          if (!dialog.open) dialog.showModal();
+        } catch {
+          return;
+        }
+        lockPage();
+        returnFocus = trigger;
+        const selected = reports[index];
+        if (selected) loadSelectedImage(selected);
+        closeButton?.focus({ preventScroll: true });
+        event.preventDefault();
+      });
+    });
+  }
+
+  // Keep the Stack-style glass movement local; no global selectors or new animation imports.
+  if (section) {
+    const glassMotion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    section.querySelectorAll<HTMLAnchorElement>('.audit-proof__card').forEach((card) => {
+      let bounds: DOMRect | null = null;
+      let frame: number | null = null;
+      let x = 0;
+      let y = 0;
+      const reset = (): void => {
+        if (frame !== null) window.cancelAnimationFrame(frame);
+        frame = null;
+        bounds = null;
+        card.style.removeProperty('--audit-glass-x');
+        card.style.removeProperty('--audit-glass-y');
+      };
+      card.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'touch' || !glassMotion.matches || !finePointer.matches) return;
+        bounds = card.getBoundingClientRect();
+      });
+      card.addEventListener('pointermove', (event) => {
+        if (!bounds || event.pointerType === 'touch') return;
+        if (!glassMotion.matches || !finePointer.matches) {
+          reset();
+          return;
+        }
+        x = Math.max(-4, Math.min(4, -((event.clientX - bounds.left) / bounds.width - 0.5) * 8));
+        y = Math.max(-4, Math.min(4, -((event.clientY - bounds.top) / bounds.height - 0.5) * 8));
+        if (frame !== null) return;
+        frame = window.requestAnimationFrame(() => {
+          card.style.setProperty('--audit-glass-x', x + 'px');
+          card.style.setProperty('--audit-glass-y', y + 'px');
+          frame = null;
+        });
+      });
+      card.addEventListener('pointerleave', reset);
+      card.addEventListener('pointercancel', reset);
+      card.addEventListener('blur', reset);
+      card.addEventListener('click', reset);
+      glassMotion.addEventListener('change', reset);
+      finePointer.addEventListener('change', reset);
+    });
+  }
+</script>
 
 <style>
   .audit-proof {
-    padding-block: var(--space-20);
-    background: var(--bg-graphite);
+    position: relative;
+    padding-block: var(--section-gap);
+    background: linear-gradient(to bottom, var(--bg-obsidian), var(--bg-graphite));
+    isolation: isolate;
+  }
+
+  .audit-proof::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(var(--accent-glow) 1px, transparent 1px),
+      linear-gradient(90deg, var(--accent-glow) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.35;
+    pointer-events: none;
   }
 
   .audit-proof__intro {
     max-width: var(--container-narrow);
-    margin-bottom: var(--space-10);
+    margin-bottom: var(--space-12);
   }
 
   .audit-proof__eyebrow {
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
     color: var(--accent-green-300);
     text-transform: uppercase;
   }
 
   .audit-proof__intro h2 {
     margin-bottom: var(--space-4);
+    font-size: var(--text-h1);
   }
 
   .audit-proof__lead {
@@ -157,69 +768,155 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
   }
 
   .audit-proof__item {
-    align-self: start;
     min-width: 0;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    background: var(--bg-obsidian);
-    overflow: hidden;
   }
 
-  .audit-proof__item:has(.audit-proof__summary:hover),
-  .audit-proof__item:has(.audit-proof__summary:focus-visible),
-  .audit-proof__item:has(.audit-proof__details[open]) {
-    border-color: var(--border-accent);
-  }
-
-  .audit-proof__details {
+  .audit-proof__card {
+    --audit-glass-x: 0px;
+    --audit-glass-y: 0px;
+    position: relative;
+    display: block;
+    min-height: 28rem;
     height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    background: radial-gradient(ellipse at 50% 30%, var(--accent-glow), var(--bg-obsidian) 68%);
+    box-shadow: var(--glass-shadow);
+    color: var(--text-primary);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .audit-proof__summary {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-height: 26rem;
-    padding: var(--space-5);
-    cursor: pointer;
-    list-style: none;
+  .audit-proof__card:focus-visible {
+    outline: 2px solid var(--accent-green-200);
+    outline-offset: 4px;
   }
 
-  .audit-proof__summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .audit-proof__summary:focus-visible,
-  .audit-proof__evidence a:focus-visible {
-    outline: 2px solid var(--accent-green-300);
-    outline-offset: 2px;
-  }
-
-  .audit-proof__category {
-    color: var(--text-muted);
+  .audit-proof__card-top {
+    position: absolute;
+    top: var(--space-5);
+    inset-inline: var(--space-5);
+    z-index: 3;
+    color: var(--text-secondary);
     font-size: var(--text-xs);
     text-transform: uppercase;
-    letter-spacing: var(--tracking-widest);
+    letter-spacing: var(--tracking-wider);
+  }
+
+  .audit-proof__card-art {
+    position: absolute;
+    inset: 10% 8% 60%;
+    display: grid;
+    place-items: center;
+    z-index: 1;
   }
 
   .audit-proof__grade {
-    margin-block: var(--space-4) var(--space-1);
     color: var(--accent-green-200);
-    font-size: var(--text-display);
+    font-size: clamp(4rem, 6.8vw, 7.5rem);
     font-weight: var(--weight-bold);
-    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+    text-shadow: 0 0 28px var(--accent-glow-strong);
+  }
+
+  .audit-proof__card-halo {
+    position: absolute;
+    inset: 10% 10% 60%;
+    z-index: 1;
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glow-green);
+    opacity: 0;
+    transform: scale(0.94);
+    pointer-events: none;
+  }
+
+  .audit-proof__card-glass {
+    position: absolute;
+    inset: -6px;
+    z-index: 2;
+    border: 1px solid var(--glass-border);
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--bg-graphite) 88%, transparent);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 7%, transparent);
+    transform: translate3d(var(--audit-glass-x), var(--audit-glass-y), 0);
+    pointer-events: none;
+  }
+
+  .audit-proof__card-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      115deg,
+      transparent 22%,
+      color-mix(in srgb, var(--text-primary) 6%, transparent) 38%,
+      transparent 62%
+    );
+    border-radius: inherit;
+  }
+
+  .audit-proof__card-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    background-size: 90px 90px;
+    mix-blend-mode: overlay;
+    opacity: 0.3;
+    border-radius: inherit;
+  }
+
+  .audit-proof__card-info {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    min-height: 17.5rem;
+    padding: var(--space-4) var(--space-5);
+    border-top: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--bg-obsidian) 88%, transparent);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .audit-proof__card-glass,
+    .audit-proof__card-info {
+      backdrop-filter: blur(10px) saturate(150%);
+    }
+  }
+
+  .audit-proof__source {
+    min-height: 2.75rem;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+  }
+
+  .audit-proof__verified {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .audit-proof__verified-value {
+    color: var(--accent-green-200);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 
   .audit-proof__grade-context {
     color: var(--text-secondary);
-    font-size: var(--text-sm);
-  }
-
-  .audit-proof__source {
-    color: var(--text-primary);
-    margin-top: var(--space-3);
-    font-size: var(--text-base);
-    font-weight: var(--weight-semibold);
+    font-size: var(--text-xs);
     line-height: var(--leading-snug);
   }
 
@@ -239,92 +936,22 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
 
   .audit-proof__date {
     margin-top: auto;
-    padding-top: var(--space-4);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
+    padding-top: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
   }
 
   .audit-proof__reveal {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
     gap: var(--space-2);
-    margin-top: var(--space-3);
-    padding-top: var(--space-3);
-    border-top: 1px solid var(--border-subtle);
-    color: var(--accent-green-200);
-    font-size: var(--text-sm);
-  }
-
-  .audit-proof__collapse,
-  .audit-proof__details[open] .audit-proof__expand {
-    display: none;
-  }
-
-  .audit-proof__details[open] .audit-proof__collapse {
-    display: inline;
-  }
-
-  .audit-proof__evidence {
-    border-top: 1px solid var(--border-subtle);
-    padding: var(--space-4);
-  }
-
-  .audit-proof__capture {
-    display: block;
-    color: var(--accent-green-200);
-    text-decoration: none;
-  }
-
-  .audit-proof__capture + .audit-proof__capture {
-    margin-top: var(--space-5);
-  }
-
-  .audit-proof__capture-mode {
-    display: block;
-    margin-bottom: var(--space-2);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
-  }
-
-  .audit-proof__capture img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: var(--radius-sm);
-  }
-
-  /* Match the full-size viewer's CSS treatment; the source JPG stays untouched. */
-  .audit-proof__capture-image--light {
-    filter: invert(0.9) hue-rotate(180deg);
-  }
-
-  .audit-proof__capture-note {
-    display: block;
+    min-height: 44px;
     margin-top: var(--space-2);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-  }
-
-  .audit-proof__capture-action {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    font-size: var(--text-sm);
-    text-decoration: underline;
-    text-underline-offset: var(--space-1);
-  }
-
-  .audit-proof__report-link {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    margin-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
     color: var(--accent-green-200);
-    font-size: var(--text-sm);
-    text-decoration: underline;
-    text-underline-offset: var(--space-1);
+    font-size: var(--text-xs);
   }
 
   .audit-proof__scope {
@@ -335,44 +962,468 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
     line-height: var(--leading-relaxed);
   }
 
+  .audit-proof__capture-image--light {
+    filter: invert(0.9) hue-rotate(180deg);
+  }
+
+  .audit-proof__card:focus-visible .audit-proof__card-glass {
+    opacity: 0.3;
+  }
+  .audit-proof__card:focus-visible .audit-proof__card-halo {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .audit-proof__card:hover {
+      border-color: var(--border-accent);
+    }
+    .audit-proof__card:hover .audit-proof__card-glass {
+      opacity: 0.3;
+    }
+    .audit-proof__card:hover .audit-proof__card-halo {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+    .audit-proof__card-glass {
+      opacity: 0.3;
+    }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
-    .audit-proof__item {
+    .audit-proof__card {
       transition: border-color var(--duration-normal) var(--ease-out);
     }
+    .audit-proof__card-glass {
+      transition:
+        opacity 0.65s var(--ease-out),
+        transform 0.5s cubic-bezier(0.23, 1, 0.32, 1.25);
+    }
+    .audit-proof__card-halo {
+      transition:
+        opacity 0.5s var(--ease-out),
+        transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  }
 
-    .audit-proof__details[open] .audit-proof__evidence {
-      animation: evidence-reveal var(--duration-slow) var(--ease-out) both;
+  :global(html.audit-proof-modal-open) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+  }
+
+  .audit-proof__dialog {
+    width: min(900px, calc(100vw - var(--space-8)));
+    max-width: none;
+    max-height: 92dvh;
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--accent-green-300) 40%, var(--border-default));
+    border-radius: var(--radius-xl);
+    color: var(--text-secondary);
+    background: var(--bg-graphite);
+    box-shadow: var(--shadow-xl), var(--glow-green);
+  }
+
+  .audit-proof__dialog--pagespeed {
+    width: min(1080px, calc(100vw - var(--space-8)));
+  }
+
+  .audit-proof__dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .audit-proof__dialog::backdrop {
+    background: color-mix(in srgb, var(--bg-void) 86%, transparent);
+  }
+
+  .audit-proof__dialog-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    flex-shrink: 0;
+    align-items: start;
+    gap: var(--space-3) var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-obsidian);
+  }
+
+  .audit-proof__dialog-heading {
+    min-width: 0;
+  }
+
+  .audit-proof__dialog-eyebrow {
+    margin-bottom: var(--space-1);
+    color: var(--accent-green-200);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wider);
+  }
+
+  .audit-proof__dialog-heading h3 {
+    font-size: var(--text-h4);
+    line-height: var(--leading-snug);
+    overflow-wrap: anywhere;
+  }
+
+  .audit-proof__dialog--pagespeed .audit-proof__dialog-heading h3 {
+    font-size: var(--text-h3);
+  }
+
+  .audit-proof__dialog-date {
+    margin-top: var(--space-1);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+
+  .audit-proof__report-navigation {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    gap: var(--space-1);
+    padding: var(--space-1);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    background: var(--bg-graphite);
+  }
+
+  .audit-proof__report-nav-button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    color: var(--accent-green-200);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .audit-proof__report-nav-button:hover {
+    border-color: var(--accent-glow-strong);
+    color: var(--accent-green-100);
+    background: var(--accent-glow);
+  }
+
+  .audit-proof__report-position {
+    min-width: var(--space-16);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+
+  .audit-proof__dialog-close {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    background: var(--bg-graphite);
+    cursor: pointer;
+  }
+
+  .audit-proof__dialog-close:hover {
+    border-color: var(--accent-green-300);
+    color: var(--text-primary);
+    background: var(--bg-slate);
+  }
+
+  .audit-proof__dialog-close:focus-visible,
+  .audit-proof__report-nav-button:focus-visible,
+  .audit-proof__device-button:focus-visible,
+  .audit-proof__dialog-report:focus-visible {
+    outline: 2px solid var(--accent-green-200);
+    outline-offset: 3px;
+  }
+
+  .audit-proof__device-switch {
+    display: inline-flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-4);
+    padding: var(--space-1);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-graphite);
+  }
+
+  .audit-proof__device-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 8rem;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-5);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    background: transparent;
+  }
+
+  .audit-proof__device-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-slate);
+  }
+
+  .audit-proof__device-button[aria-pressed='true'] {
+    border-color: var(--accent-glow-strong);
+    color: var(--accent-green-100);
+    background: var(--accent-glow);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .audit-proof__dialog-body {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-default) var(--bg-graphite);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .audit-proof__dialog-panel,
+  .audit-proof__dialog-snapshot {
+    margin: 0;
+  }
+
+  .audit-proof__dialog-panel[hidden],
+  .audit-proof__report-panel[hidden] {
+    display: none;
+  }
+
+  .audit-proof__dialog-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wider);
+  }
+
+  .audit-proof__dialog-mode {
+    color: var(--accent-green-200);
+  }
+
+  .audit-proof__score-summary {
+    /* The report carries these scores on desktop; keep a text equivalent for AT. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .audit-proof__score-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin: 0;
+  }
+
+  .audit-proof__score-metric {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-obsidian);
+  }
+
+  .audit-proof__score-metric dt {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+    overflow-wrap: anywhere;
+  }
+
+  .audit-proof__score-value {
+    margin: auto 0 0;
+    padding-top: var(--space-2);
+    color: var(--accent-green-200);
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .audit-proof__dialog-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-void);
+  }
+
+  .audit-proof__dialog-image-frame {
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-void);
+  }
+
+  .audit-proof__dialog-image-frame .audit-proof__dialog-image {
+    /* The 1280px capture has exterior gutters at x0..160 and x1120..1280.
+       Show the full x160..1120 performance card without cropping its height. */
+    width: 133.333333%;
+    max-width: none;
+    margin-inline-start: -16.666667%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .audit-proof__dialog-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-2) var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-obsidian);
+  }
+
+  .audit-proof__dialog-note {
+    max-width: var(--container-narrow);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+  }
+
+  .audit-proof__dialog-report {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--accent-green-200);
+    font-size: var(--text-xs);
+    background: var(--bg-graphite);
+  }
+
+  .audit-proof__dialog-report:hover {
+    border-color: var(--accent-green-300);
+    color: var(--accent-green-100);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .audit-proof__dialog[open] {
+      animation: audit-dialog-enter var(--duration-normal) var(--ease-out) both;
     }
 
-    @keyframes evidence-reveal {
+    .audit-proof__dialog[open]::backdrop {
+      animation: audit-backdrop-enter var(--duration-normal) var(--ease-out) both;
+    }
+
+    .audit-proof__dialog[open][data-closing='true'] {
+      animation: audit-dialog-exit var(--duration-normal) var(--ease-in-out) both;
+    }
+
+    .audit-proof__dialog[open][data-closing='true']::backdrop {
+      animation: audit-backdrop-exit var(--duration-normal) var(--ease-in-out) both;
+    }
+
+    .audit-proof__dialog-close,
+    .audit-proof__report-nav-button,
+    .audit-proof__device-button,
+    .audit-proof__dialog-report {
+      transition: var(--transition-colors);
+    }
+
+    .audit-proof__report-panel[data-direction='next'] {
+      animation: audit-report-next var(--duration-normal) var(--ease-out) both;
+    }
+
+    .audit-proof__report-panel[data-direction='previous'] {
+      animation: audit-report-previous var(--duration-normal) var(--ease-out) both;
+    }
+
+    @keyframes audit-report-next {
       from {
         opacity: 0;
-        transform: translateY(calc(-1 * var(--space-2)));
+        transform: translateX(var(--space-4));
       }
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
       }
     }
 
-    @supports (interpolate-size: allow-keywords) and (transition-behavior: allow-discrete) {
-      .audit-proof__details {
-        interpolate-size: allow-keywords;
-      }
-
-      .audit-proof__details::details-content {
-        block-size: 0;
-        overflow: clip;
+    @keyframes audit-report-previous {
+      from {
         opacity: 0;
-        transition:
-          block-size var(--duration-slow) var(--ease-out),
-          opacity var(--duration-normal) var(--ease-out),
-          content-visibility var(--duration-slow) allow-discrete;
+        transform: translateX(calc(-1 * var(--space-4)));
       }
-
-      .audit-proof__details[open]::details-content {
-        block-size: auto;
+      to {
         opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes audit-dialog-enter {
+      from {
+        opacity: 0;
+        transform: translateY(var(--space-4)) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes audit-dialog-exit {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(var(--space-3)) scale(0.985);
+      }
+    }
+
+    @keyframes audit-backdrop-enter {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes audit-backdrop-exit {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
       }
     }
   }
@@ -384,17 +1435,25 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
   }
 
   @media (max-width: 767px) {
+    .audit-proof__intro h2 {
+      font-size: var(--text-h2);
+    }
+    .audit-proof__card {
+      min-height: 27rem;
+    }
+    .audit-proof__grade {
+      font-size: 7rem;
+    }
+    .audit-proof__card-info {
+      min-height: 13rem;
+    }
+
     .audit-proof {
       padding-block: var(--space-12);
     }
 
     .audit-proof__grid {
       grid-template-columns: 1fr;
-    }
-
-    .audit-proof__summary {
-      min-height: 0;
-      padding: var(--space-5);
     }
 
     .audit-proof__source,
@@ -404,6 +1463,88 @@ const dateFormatter = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-GB',
 
     .audit-proof__scores:empty {
       display: none;
+    }
+
+    .audit-proof__dialog,
+    .audit-proof__dialog--pagespeed {
+      width: calc(100vw - var(--space-4));
+      border-radius: var(--radius-lg);
+    }
+
+    .audit-proof__dialog-header {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-3);
+      padding: var(--space-4);
+    }
+
+    .audit-proof__report-navigation {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: start;
+    }
+
+    .audit-proof__dialog-close {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .audit-proof__dialog-heading h3,
+    .audit-proof__dialog--pagespeed .audit-proof__dialog-heading h3 {
+      font-size: var(--text-h4);
+    }
+
+    .audit-proof__dialog-eyebrow {
+      letter-spacing: var(--tracking-wide);
+    }
+
+    .audit-proof__device-switch {
+      width: 100%;
+    }
+
+    .audit-proof__device-button {
+      flex: 1;
+      min-width: 0;
+      padding-inline: var(--space-3);
+    }
+
+    .audit-proof__dialog-body {
+      padding: var(--space-4);
+    }
+
+    .audit-proof__dialog-caption {
+      letter-spacing: var(--tracking-wide);
+    }
+
+    .audit-proof__score-summary {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0 0 var(--space-5);
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+    }
+
+    .audit-proof__score-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .audit-proof__score-metric:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
+    .audit-proof__dialog-footer {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+    }
+
+    .audit-proof__dialog-note {
+      flex-basis: 100%;
+    }
+
+    .audit-proof__dialog-report {
+      width: 100%;
     }
   }
 </style>
