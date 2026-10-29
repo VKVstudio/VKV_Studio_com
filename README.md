@@ -96,3 +96,13 @@ to be redeployed as someone else's site. An OSI licence would grant exactly that
 is the accurate state rather than an oversight — you retain no rights to reuse this code.
 
 Questions, or something here that looks wrong: **hello@vkvstudio.com**.
+
+---
+
+<div align="center">
+  <a href="https://github.com/VKVstudio/.github/blob/main/DONATE.md">
+    <img src="https://raw.githubusercontent.com/VKVstudio/.github/main/assets/support-button.svg" alt="Support the work" height="40" />
+  </a>
+  <br>
+  <sub>If this project saved you time, consider supporting its development.</sub>
+</div>
